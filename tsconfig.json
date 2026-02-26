@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "composite": true
+  },
+  "references": [
+    { "path": "apps/client" },
+    { "path": "apps/server" },
+    { "path": "packages/schemas" },
+    { "path": "packages/types" },
+    { "path": "packages/utils" }
+  ],
+  "files": []
+}
