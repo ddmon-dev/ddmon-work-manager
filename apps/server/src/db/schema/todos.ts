@@ -20,8 +20,8 @@ export const todos = pgTable("todos", {
   todoDate: date("todo_date").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
   color: text("color").notNull().default("slate"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   // soft delete 없음 (기존 시스템에서 제거됨)
 });
 
@@ -38,8 +38,8 @@ export const todoTimeBlocks = pgTable(
     blockDate: date("block_date").notNull(),
     startSlot: integer("start_slot").notNull(), // 0~47 (30분 단위)
     durationSlots: integer("duration_slots").notNull().default(2),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique().on(t.todoId, t.blockDate)]
 );

@@ -1,4 +1,3 @@
-export type Example = {
-  id: string;
-  name: string;
-};
+export * from "./results";
+export * from "./constants";
+export * from "./common";

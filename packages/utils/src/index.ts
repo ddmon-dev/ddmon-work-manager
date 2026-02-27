@@ -1,3 +1,2 @@
-export function formatDate(date: Date): string {
-  return date.toISOString().split("T")[0];
-}
+export * from "./result";
+export * from "./amount-calculator";

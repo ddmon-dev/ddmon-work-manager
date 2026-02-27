@@ -18,7 +18,7 @@ export const schedules = pgTable("schedules", {
   recurrenceEndDate: date("recurrence_end_date"),
   author: text("author"),
   updatedBy: text("updated_by"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deleted: boolean("deleted").notNull().default(false),
 });

@@ -1,0 +1,1 @@
+ALTER TABLE "estimate_series" ADD CONSTRAINT "estimate_series_final_estimate_id_estimates_id_fk" FOREIGN KEY ("final_estimate_id") REFERENCES "public"."estimates"("id") ON DELETE set null ON UPDATE no action;

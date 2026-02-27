@@ -36,8 +36,8 @@ export const projects = pgTable("projects", {
   taxType: text("tax_type"),
   author: text("author"),
   updatedBy: text("updated_by"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deleted: boolean("deleted").notNull().default(false),
 });
 
@@ -49,8 +49,8 @@ export const projectPayments = pgTable("project_payments", {
   description: text("description").notNull(),
   amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
   paidDate: date("paid_date").notNull().default(new Date().toISOString().split("T")[0]),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deleted: boolean("deleted").notNull().default(false),
 });
 
@@ -61,7 +61,7 @@ export const projectMemos = pgTable("project_memos", {
     .references(() => projects.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   author: text("author"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deleted: boolean("deleted").notNull().default(false),
 });

@@ -2,9 +2,10 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
 import { auth } from "./auth";
-import { requireAuth } from "./middleware/auth";
+import apiRoutes from "./routes";
+import type { AppVariables } from "./lib/types";
 
-const app = new Hono();
+const app = new Hono<{ Variables: AppVariables }>();
 
 app.use(
   "*",
@@ -20,12 +21,10 @@ app.get("/", (c) => {
   return c.json({ message: "Work Manager API" });
 });
 
-app.get("/api/protected", requireAuth, (c) => {
-  const user = c.get("user");
-  return c.json({ user });
-});
+app.route("/api", apiRoutes);
 
-serve({ fetch: app.fetch, port: 3001 }, (info) => {
+const port = Number(process.env.PORT) || 3001;
+serve({ fetch: app.fetch, port }, (info) => {
   console.log(`Server running at http://localhost:${info.port}`);
 });
 

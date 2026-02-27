@@ -8,6 +8,20 @@
       "when": 1772189769087,
       "tag": "0000_parched_colonel_america",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772191755399,
+      "tag": "0001_illegal_wolverine",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772197828523,
+      "tag": "0002_perpetual_lester",
+      "breakpoints": true
     }
   ]
 }
