@@ -1,6 +1,6 @@
 import { Radar } from "lucide-react";
-import { Link } from "react-router";
-import { cn } from "@/shared/utils/classnames";
+import { cn } from '../utils/classnames';
+import Link from 'next/link';
 
 export function ProjectSymbol({
   className,
@@ -12,12 +12,12 @@ export function ProjectSymbol({
   return (
     <Wrapper
       className={cn(
-        "inline-flex items-center justify-center text-primary-foreground bg-foreground/80 size-[2.5em] rounded-[0.8em] shrink-0 dark:bg-primary-light dark:text-primary-light-foreground",
+        'inline-flex items-center justify-center text-primary-foreground bg-foreground/80 size-[2.5em] rounded-[0.8em] shrink-0 dark:bg-primary-light dark:text-primary-light-foreground',
         className
       )}
       linkToHome={linkToHome}
     >
-      <Radar className={cn("size-[1.5em]")} />
+      <Radar className={cn('size-[1.5em]')} />
     </Wrapper>
   );
 }
@@ -33,7 +33,7 @@ function Wrapper({
 }) {
   if (linkToHome) {
     return (
-      <Link to="/" className={cn(className)}>
+      <Link href="/" className={cn(className)}>
         {children}
       </Link>
     );

@@ -1,0 +1,167 @@
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type UseQueryOptions,
+} from "@tanstack/react-query";
+import { toast } from "sonner";
+import { api } from "@/shared/lib/api-client";
+import { queryKeys } from "@/shared/lib/query-keys";
+import type { ClientDTO, ClientWithMemos, ClientListResponse } from "./types";
+import type { ClientWriteInput } from "@work-manager/schemas";
+
+type ListParams = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+};
+
+// ── 목록 조회 ────────────────────────────────────────────────
+
+export function useClientList(params: ListParams = {}) {
+  return useQuery({
+    queryKey: queryKeys.clients.list(params),
+    queryFn: () =>
+      api.get<ClientListResponse>("/clients", {
+        page: params.page,
+        pageSize: params.pageSize,
+        search: params.search,
+      }),
+  });
+}
+
+// ── 상세 조회 ────────────────────────────────────────────────
+
+export function useClient(id: string, options?: Partial<UseQueryOptions<ClientWithMemos>>) {
+  return useQuery({
+    queryKey: queryKeys.clients.detail(id),
+    queryFn: () => api.get<ClientWithMemos>(`/clients/${id}`),
+    enabled: !!id,
+    ...options,
+  });
+}
+
+// ── fetchFn (ManageSheet용) ─────────────────────────────────
+
+export const fetchClient = (id: string) =>
+  api.get<ClientWithMemos>(`/clients/${id}`);
+
+// ── 생성 ────────────────────────────────────────────────────
+
+export function useCreateClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: ClientWriteInput) =>
+      api.post<ClientDTO>("/clients", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
+      toast.success("클라이언트가 생성되었습니다.");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "생성에 실패했습니다.");
+    },
+  });
+}
+
+// ── 수정 ────────────────────────────────────────────────────
+
+export function useUpdateClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<ClientWriteInput> }) =>
+      api.patch<ClientDTO>(`/clients/${id}`, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.clients.detail(id) });
+      toast.success("클라이언트가 수정되었습니다.");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "수정에 실패했습니다.");
+    },
+  });
+}
+
+// ── 삭제 ────────────────────────────────────────────────────
+
+export function useDeleteClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.delete<{ id: string }>(`/clients/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
+      toast.success("클라이언트가 삭제되었습니다.");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "삭제에 실패했습니다.");
+    },
+  });
+}
+
+// ── 메모 ────────────────────────────────────────────────────
+
+export function useCreateClientMemo() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ clientId, content }: { clientId: string; content: string }) =>
+      api.post(`/clients/${clientId}/memos`, { content }),
+    onSuccess: (_, { clientId }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.clients.detail(clientId),
+      });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "메모 생성에 실패했습니다.");
+    },
+  });
+}
+
+export function useUpdateClientMemo() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      memoId,
+      content,
+    }: {
+      clientId: string;
+      memoId: string;
+      content: string;
+    }) => api.patch(`/clients/memos/${memoId}`, { content }),
+    onSuccess: (_, { clientId }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.clients.detail(clientId),
+      });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "메모 수정에 실패했습니다.");
+    },
+  });
+}
+
+export function useDeleteClientMemo() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      memoId,
+    }: {
+      clientId: string;
+      memoId: string;
+    }) => api.delete(`/clients/memos/${memoId}`),
+    onSuccess: (_, { clientId }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.clients.detail(clientId),
+      });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "메모 삭제에 실패했습니다.");
+    },
+  });
+}

@@ -1,13 +1,5 @@
-import { AppHeader } from "@/shared/ui/app-header";
-import { Container } from "@/shared/ui/container";
+import { DashboardModule } from "@/features/dashboard";
 
 export function DashboardPage() {
-  return (
-    <>
-      <AppHeader title="대시보드" />
-      <Container>
-        <p className="text-muted-foreground">대시보드 (구현 예정)</p>
-      </Container>
-    </>
-  );
+  return <DashboardModule />;
 }

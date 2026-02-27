@@ -30,7 +30,7 @@ export function LoadingButton({
   return (
     <Button
       {...props}
-      className={cn(className, isLoading && "opacity-100!")}
+      className={cn(className, isLoading && 'opacity-100!')}
       variant={variant}
       disabled={isLoading || disabled}
     >

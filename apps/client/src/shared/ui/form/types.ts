@@ -14,7 +14,8 @@ export type FormBaseProps<
   V extends FieldValues = FieldValues,
   N extends FieldPath<V> = FieldPath<V>,
 > = {
-  control: Control<V>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  control: Control<V, any, any>;
   name: N;
   label?: ReactNode;
   description?: ReactNode;

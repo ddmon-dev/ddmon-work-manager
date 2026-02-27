@@ -1,5 +1,11 @@
 export { FormField } from "./form-field";
 export { FormTextInput } from "./form-text-input";
 export { FormPasswordInput } from "./form-password-input";
+export { FormTextarea } from "./form-textarea";
+export { FormSelect } from "./form-select";
+export { FormNativeSelect } from "./form-native-select";
+export { FormNumberInput } from "./form-number-input";
+export { FormCheckbox } from "./form-checkbox";
 export { FormRootError } from "./form-errors";
 export type { FormBaseProps, ExcludedFormProps } from "./types";
+export type { SelectOption } from "./form-select";

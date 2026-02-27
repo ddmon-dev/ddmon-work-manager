@@ -13,7 +13,7 @@ export type FormTextInputProps<
   V extends FieldValues = FieldValues,
   N extends FieldPath<V> = FieldPath<V>,
 > = FormBaseProps<V, N> &
-  Omit<React.InputHTMLAttributes<HTMLInputElement>, ExcludedFormProps | "type"> & {
+  Omit<React.InputHTMLAttributes<HTMLInputElement>, ExcludedFormProps> & {
     customFilter?: (value: string) => string;
     valueTransform?: (displayValue: string) => string;
   };
