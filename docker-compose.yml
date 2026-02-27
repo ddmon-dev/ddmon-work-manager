@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: wm-postgres
+    environment:
+      POSTGRES_USER: wm_user
+      POSTGRES_PASSWORD: REDACTED
+      POSTGRES_DB: work_manager
+    ports:
+      - "5432:5432"
+    volumes:
+      - wm_pgdata:/var/lib/postgresql/data
+
+volumes:
+  wm_pgdata:
