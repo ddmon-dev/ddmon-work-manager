@@ -8,7 +8,12 @@ import {
   type AdminUpdateInput,
 } from "@work-manager/schemas";
 import { FieldGroup } from "@/shared/ui/field";
-import { FormTextInput, FormPasswordInput, FormCheckbox } from "@/shared/ui/form";
+import {
+  FormTextInput,
+  FormPasswordInput,
+  FormPhoneInput,
+  FormCheckbox,
+} from "@/shared/ui/form";
 import {
   SheetFooter,
   SheetBody,
@@ -118,7 +123,7 @@ function CreateForm() {
                 label="비밀번호 확인"
                 placeholder="비밀번호를 다시 입력해주세요."
               />
-              <FormTextInput
+              <FormPhoneInput
                 control={form.control}
                 name="phone"
                 label="연락처"
@@ -231,7 +236,7 @@ function UpdateForm({
                 placeholder="비밀번호를 다시 입력해주세요."
                 optional
               />
-              <FormTextInput
+              <FormPhoneInput
                 control={form.control}
                 name="phone"
                 label="연락처"

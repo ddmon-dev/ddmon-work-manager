@@ -1,9 +1,7 @@
-import { RowActionButtons } from "../_base/ui/row-action-buttons";
-import { useManageSheet } from "../_base/ui/manage-sheet";
+import { toast } from "sonner";
 import { useConfirm } from "@/shared/ui/confirm-dialog";
+import { RowActions } from "../_base/ui";
 import { useDeleteAdmin } from "./api";
-import { Eye, SquarePen, Trash2 } from "lucide-react";
-import type { RowActionItem } from "../_base/ui";
 
 export function AdminRowActions({
   id,
@@ -12,11 +10,14 @@ export function AdminRowActions({
   id: string;
   superAdmin: boolean;
 }) {
-  const manageSheet = useManageSheet();
   const { confirm } = useConfirm();
   const deleteAdmin = useDeleteAdmin();
 
   const handleDelete = () => {
+    if (superAdmin) {
+      toast.error("최고 관리자는 삭제할 수 없습니다.");
+      return;
+    }
     confirm({
       title: "관리자 삭제",
       description:
@@ -29,25 +30,12 @@ export function AdminRowActions({
     });
   };
 
-  const items: RowActionItem[] = [
-    {
-      label: "상세보기",
-      icon: <Eye />,
-      onClick: () => manageSheet.open({ id, mode: "view" }),
-    },
-    {
-      label: "수정",
-      icon: <SquarePen />,
-      onClick: () => manageSheet.open({ id, mode: "modify" }),
-    },
-    {
-      label: "삭제",
-      icon: <Trash2 />,
-      variant: "destructive",
-      onClick: handleDelete,
-      disabled: superAdmin,
-    },
-  ];
-
-  return <RowActionButtons items={items} />;
+  return (
+    <RowActions
+      type="buttons"
+      id={id}
+      actions={["view", "modify", "delete"]}
+      onDelete={handleDelete}
+    />
+  );
 }
