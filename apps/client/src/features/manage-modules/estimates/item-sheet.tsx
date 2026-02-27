@@ -48,8 +48,6 @@ export function ItemSheet() {
     refetch,
   };
 
-  const isWide = mode === "view" || mode === "modify" || mode === "clone";
-
   const renderContent = () => {
     if (mode === "create") {
       return <WriteForm id={undefined} prevValues={null} />;
@@ -90,14 +88,14 @@ export function ItemSheet() {
     <Sheet open={isOpen} onOpenChange={(open) => !open && manageSheet.closeWithGuard()}>
       <SheetContent
         className={cn(
-          "w-[440px] max-w-full md:w-full",
+          "w-[440px] max-w-full md:w-full md:rounded-l-xl",
           "md:transition-[max-width] md:duration-300 md:ease-in-out",
-          isWide ? "md:max-w-[1100px]" : "md:max-w-2xl"
+          mode === "view" ? "md:max-w-[1440px]" : "md:max-w-full"
         )}
       >
         <ManageSheetDataContext.Provider value={dataContextValue}>
           {!error && mode && (
-            <SheetHeader className={isWide ? "sr-only" : undefined}>
+            <SheetHeader className={mode !== "create" ? "sr-only" : undefined}>
               <SheetTitle className="text-lg">
                 {CONFIG.moduleName}{" "}
                 {mode === "create"

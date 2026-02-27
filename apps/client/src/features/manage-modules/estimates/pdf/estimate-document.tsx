@@ -551,3 +551,9 @@ export async function generateEstimatePdfBlob(estimate: EstimateWithDetails): Pr
   const { pdf } = await import('@react-pdf/renderer');
   return pdf(<EstimateDocument data={data} />).toBlob();
 }
+
+/** EstimateDocumentData -> PDF Blob 생성 (폼 미리보기용) */
+export async function generateEstimateDocumentPdfBlob(data: EstimateDocumentData): Promise<Blob> {
+  const { pdf } = await import('@react-pdf/renderer');
+  return pdf(<EstimateDocument data={data} />).toBlob();
+}

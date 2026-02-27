@@ -1,8 +1,8 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useForm, useFormContext, FormProvider, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { addMonths, format } from "date-fns";
+import { addMonths, format, parseISO } from "date-fns";
 import { z } from "zod";
 import { estimateWriteSchema } from "@work-manager/schemas";
 import { calculateTotal, buildPriceSummaryDisplay } from "@work-manager/utils";
@@ -11,13 +11,17 @@ import {
   FormTextInput,
   FormTextarea,
   FormNativeSelect,
+  FormDatePicker,
   FormNumberInput,
   FormCheckbox,
 } from "@/shared/ui/form";
-import { SheetFooter, SheetBody, SheetScrollColumn, SheetContainer } from "@/shared/ui/sheet";
+import { SheetFooter, SheetBody } from "@/shared/ui/sheet";
+import { PdfPreview } from "@/shared/ui/pdf-preview";
 import { formatCurrency } from "@/shared/utils/format";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import {
   useManageSheet,
+  useManageSheetData,
   ManageFormSubmit,
   ManageSheetClose,
   ManageSheetModeChange,
@@ -28,10 +32,16 @@ import { useCreateEstimate, useUpdateEstimate } from "./api";
 import { TAX_OPTIONS, DISCOUNT_OPTIONS, DEFAULT_UNIT } from "./constants";
 import type { EstimateWithDetails } from "./types";
 import { ItemGroupEditor } from "./item-group-editor";
+import {
+  type EstimateDocumentData,
+  generateEstimateDocumentPdfBlob,
+} from "./pdf/estimate-document";
 
-// 로컬 폼 스키마 (서버 스키마 + clientName 추가)
+// 로컬 폼 스키마: 서버 스키마 확장 (날짜를 Date 객체로 override, clientName 추가)
 const formSchema = estimateWriteSchema.extend({
   clientName: z.string(),
+  issuedDate: z.date().nullable().optional(),
+  validUntil: z.date().nullable().optional(),
 });
 type FormValues = z.infer<typeof formSchema>;
 
@@ -41,9 +51,9 @@ const formDefaultValues: FormValues = {
   title: "",
   description: "",
   versionLabel: "",
-  issuedDate: format(new Date(), "yyyy-MM-dd"),
+  issuedDate: new Date(),
   issuer: "",
-  validUntil: format(addMonths(new Date(), 1), "yyyy-MM-dd"),
+  validUntil: addMonths(new Date(), 1),
   taxType: "exclusive",
   discountType: "none",
   discountValue: 0,
@@ -66,9 +76,9 @@ function toFormValues(data: EstimateWithDetails): FormValues {
     title: data.title,
     description: data.description ?? "",
     versionLabel: data.versionLabel ?? "",
-    issuedDate: data.issuedDate ?? format(new Date(), "yyyy-MM-dd"),
+    issuedDate: data.issuedDate ? parseISO(data.issuedDate) : null,
     issuer: data.issuer ?? "",
-    validUntil: data.validUntil ?? null,
+    validUntil: data.validUntil ? parseISO(data.validUntil) : null,
     taxType: (data.taxType as "inclusive" | "exclusive") ?? "exclusive",
     discountType: (data.discountType as "none" | "amount" | "percentage") ?? "none",
     discountValue: Number(data.discountValue) || 0,
@@ -96,6 +106,8 @@ interface WriteFormProps {
 
 export function WriteForm({ id, prevValues }: WriteFormProps) {
   const sheet = useManageSheet();
+  const { refetch } = useManageSheetData();
+  const { user } = useAuth();
   const isClone = sheet.data?.mode === "clone";
 
   const createEstimate = useCreateEstimate();
@@ -103,7 +115,10 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
-    defaultValues: prevValues ? toFormValues(prevValues) : formDefaultValues,
+    defaultValues: prevValues ? toFormValues(prevValues) : {
+      ...formDefaultValues,
+      issuer: user?.name ?? "",
+    },
   });
   useFormGuard(form);
 
@@ -112,20 +127,32 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
       const values = toFormValues(prevValues);
       if (isClone) {
         const now = new Date();
-        values.issuedDate = format(now, "yyyy-MM-dd");
-        values.validUntil = format(addMonths(now, 1), "yyyy-MM-dd");
+        values.issuedDate = now;
+        values.validUntil = addMonths(now, 1);
       }
       form.reset(values);
     } else {
       const now = new Date();
       form.reset({
         ...formDefaultValues,
-        issuedDate: format(now, "yyyy-MM-dd"),
-        validUntil: format(addMonths(now, 1), "yyyy-MM-dd"),
+        issuer: user?.name ?? "",
+        issuedDate: now,
+        validUntil: addMonths(now, 1),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prevValues]);
+
+  const issuedDate = form.watch("issuedDate");
+
+  useEffect(() => {
+    if (!issuedDate) return;
+    // 기존 저장된 발행일과 같으면 유효기간 자동변경 안 함
+    const prevDate = prevValues?.issuedDate;
+    if (prevDate && format(issuedDate, "yyyy-MM-dd") === prevDate) return;
+    form.setValue("validUntil", addMonths(issuedDate, 1));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [issuedDate]);
 
   async function onSubmit(values: FormValues) {
     try {
@@ -133,6 +160,12 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
       const { clientName, ...serverValues } = values;
       const submitData = {
         ...serverValues,
+        issuedDate: values.issuedDate
+          ? format(values.issuedDate, "yyyy-MM-dd")
+          : undefined,
+        validUntil: values.validUntil
+          ? format(values.validUntil, "yyyy-MM-dd")
+          : undefined,
         groups: serverValues.groups.map((g, gi) => ({
           ...g,
           sortOrder: gi,
@@ -152,6 +185,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
 
       toast.success(id && !isClone ? "수정되었습니다." : "저장되었습니다.");
       sheet.open({ id: createdId, mode: "view" });
+      if (id && !isClone) refetch();
     } catch {
       toast.error("저장에 실패했습니다.");
     }
@@ -161,10 +195,11 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
     <SheetBody>
       <FormProvider {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="h-full space-y-0!">
-          <div className="flex flex-col lg:grid lg:grid-cols-2 lg:divide-x flex-1 min-h-0">
-            {/* 1단: 기본 정보 */}
-            <SheetScrollColumn>
-              <SheetContainer>
+          <div className="grid grid-cols-[1fr_800px] gap-0 flex-1 min-h-0 divide-x">
+            {/* 폼 영역 */}
+            <div className="overflow-y-auto 2xl:overflow-hidden hide-scrollbar 2xl:grid 2xl:grid-cols-[2fr_3fr] 2xl:divide-x min-h-0">
+              {/* 1단: 기본 정보 */}
+              <div className="px-6 py-5 2xl:overflow-y-auto hide-scrollbar">
                 <FieldGroup>
                   <ClientSelect
                     disabled={!!id && !isClone}
@@ -195,19 +230,18 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                     name="issuer"
                     label="발행자"
                     placeholder="발행자를 입력해주세요."
-                    optional
                   />
-                  <FormTextInput
+                  <FormDatePicker
                     control={form.control}
                     name="issuedDate"
                     label="발행일"
-                    type="date"
+                    placeholder="발행일을 선택해주세요."
                   />
-                  <FormTextInput
+                  <FormDatePicker
                     control={form.control}
                     name="validUntil"
                     label="유효기간"
-                    type="date"
+                    placeholder="유효기간을 선택해주세요."
                     optional
                   />
                   <FormTextarea
@@ -227,56 +261,71 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                     rows={3}
                   />
                 </FieldGroup>
-              </SheetContainer>
-            </SheetScrollColumn>
-
-            {/* 2단: 견적 항목 + 금액 요약 */}
-            <div className="flex flex-col min-h-0">
-              <div className="flex-1 overflow-y-auto hide-scrollbar px-4 md:px-8 py-5">
-                <ItemGroupEditor />
               </div>
 
-              {/* 금액 설정 + 요약 (하단 고정) */}
-              <div className="sticky bottom-0 border-t bg-background/80 backdrop-blur-sm">
-                <div className="px-4 md:px-8 pt-4 pb-2 space-y-2">
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1">
-                      <FormNativeSelect
-                        control={form.control}
-                        name="taxType"
-                        label="세금 타입"
-                        options={[...TAX_OPTIONS]}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <FormNativeSelect
-                        control={form.control}
-                        name="discountType"
-                        label="할인 타입"
-                        options={[...DISCOUNT_OPTIONS]}
-                      />
-                    </div>
-                    {form.watch("discountType") !== "none" && (
-                      <div className="flex-1">
-                        <FormNumberInput
-                          control={form.control}
-                          name="discountValue"
-                          label={form.watch("discountType") === "percentage" ? "할인율 (%)" : "할인 금액 (원)"}
-                          suffix={form.watch("discountType") === "percentage" ? "%" : "원"}
-                          thousandSeparator={form.watch("discountType") !== "percentage"}
-                          placeholder="0"
-                        />
-                      </div>
-                    )}
+              {/* 2단: 견적 항목 + 금액 요약 */}
+              <div className="2xl:relative 2xl:overflow-y-auto hide-scrollbar">
+                <div className="2xl:min-h-full 2xl:flex 2xl:flex-col">
+                  <div className="flex-1 px-6 py-5">
+                    <ItemGroupEditor />
                   </div>
-                  <FormCheckbox
-                    control={form.control}
-                    name="showTaxAmount"
-                    label="부가세 금액 표기"
-                  />
+                  <div className="sticky bottom-0 border-t border-border-dark/50 bg-background/60 backdrop-blur-md">
+                    <div className="px-6 pt-4 pb-2 space-y-2">
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                          <FormNativeSelect
+                            control={form.control}
+                            name="taxType"
+                            label="세금 타입"
+                            options={[...TAX_OPTIONS]}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <FormNativeSelect
+                            control={form.control}
+                            name="discountType"
+                            label="할인 타입"
+                            options={[...DISCOUNT_OPTIONS]}
+                          />
+                        </div>
+                        {form.watch("discountType") !== "none" && (
+                          <div className="flex-1">
+                            <FormNumberInput
+                              control={form.control}
+                              name="discountValue"
+                              label={
+                                form.watch("discountType") === "percentage"
+                                  ? "할인율 (%)"
+                                  : "할인 금액 (원)"
+                              }
+                              suffix={
+                                form.watch("discountType") === "percentage"
+                                  ? "%"
+                                  : "원"
+                              }
+                              thousandSeparator={
+                                form.watch("discountType") !== "percentage"
+                              }
+                              placeholder="0"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <FormCheckbox
+                        control={form.control}
+                        name="showTaxAmount"
+                        label="부가세 금액 표기"
+                      />
+                    </div>
+                    <EstimateTotalSummary />
+                  </div>
                 </div>
-                <EstimateTotalSummary />
               </div>
+            </div>
+
+            {/* 3단: PDF 실시간 미리보기 */}
+            <div className="flex flex-col min-h-0">
+              <EstimateFormPdfPreview prevValues={prevValues} />
             </div>
           </div>
 
@@ -292,7 +341,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
 }
 
 function EstimateTotalSummary() {
-  const { watch } = useFormContext();
+  const { watch } = useFormContext<FormValues>();
 
   const groups = watch("groups") ?? [];
   const taxType = watch("taxType") ?? "exclusive";
@@ -305,16 +354,20 @@ function EstimateTotalSummary() {
     buildPriceSummaryDisplay(totals, taxType, showTaxAmount);
 
   return (
-    <div className="px-4 md:px-8 py-4 space-y-2">
+    <div className="px-6 py-4 space-y-2">
       {hasDiscount && (
         <>
           <div className="flex justify-between text-sm">
             <span className="text-foreground/80">합계</span>
-            <span className="tabular-nums text-muted-foreground">{formatCurrency(totals.subtotal)}원</span>
+            <span className="tabular-nums text-muted-foreground">
+              {formatCurrency(totals.subtotal)}원
+            </span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-foreground/80">할인</span>
-            <span className="tabular-nums text-red-600">-{formatCurrency(totals.discountAmount)}원</span>
+            <span className="tabular-nums text-red-600">
+              -{formatCurrency(totals.discountAmount)}원
+            </span>
           </div>
         </>
       )}
@@ -322,15 +375,21 @@ function EstimateTotalSummary() {
         <>
           <div className="flex justify-between text-sm">
             <span className="text-foreground/80">공급가액</span>
-            <span className="tabular-nums text-muted-foreground">{formatCurrency(totals.supplyAmount)}원</span>
+            <span className="tabular-nums text-muted-foreground">
+              {formatCurrency(totals.supplyAmount)}원
+            </span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-foreground/80">부가세</span>
-            <span className="tabular-nums text-muted-foreground">{formatCurrency(totals.taxAmount)}원</span>
+            <span className="tabular-nums text-muted-foreground">
+              {formatCurrency(totals.taxAmount)}원
+            </span>
           </div>
         </>
       )}
-      <div className={`${hasDetails ? "border-t border-border/50 pt-2.5" : ""} flex justify-between items-baseline`}>
+      <div
+        className={`${hasDetails ? "border-t border-border/50 pt-2.5" : ""} flex justify-between items-baseline`}
+      >
         <span className="text-sm font-semibold">{totalLabel}</span>
         <span className="font-bold text-lg tabular-nums tracking-tight">
           {formatCurrency(totalValue)}
@@ -338,5 +397,67 @@ function EstimateTotalSummary() {
         </span>
       </div>
     </div>
+  );
+}
+
+function EstimateFormPdfPreview({
+  prevValues,
+}: {
+  prevValues: EstimateWithDetails | null;
+}) {
+  const { watch } = useFormContext<FormValues>();
+  const { user } = useAuth();
+  const values = watch();
+
+  const documentData: EstimateDocumentData = {
+    title: values.title || "(제목 없음)",
+    description: values.description || undefined,
+    clientName: values.clientName || undefined,
+    estimateNumber: prevValues?.estimateNumber,
+    version: prevValues?.version,
+    versionLabel: values.versionLabel || undefined,
+    issuedDate: values.issuedDate
+      ? format(values.issuedDate, "yyyy-MM-dd")
+      : undefined,
+    validUntil: values.validUntil
+      ? format(values.validUntil, "yyyy-MM-dd")
+      : undefined,
+    issuer: values.issuer || undefined,
+    issuerPhone: user?.phone ?? undefined,
+    issuerEmail: user?.email || undefined,
+    taxType: values.taxType,
+    showTaxAmount: values.showTaxAmount ?? true,
+    discountType: values.discountType,
+    discountValue: values.discountValue,
+    notes: values.notes || undefined,
+    groups: (values.groups ?? []).map((g) => ({
+      name: g.name,
+      items: g.items.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        amount: item.amount,
+      })),
+    })),
+  };
+
+  const dependencyKey = JSON.stringify(documentData);
+
+  const generateBlob = useCallback(
+    () => generateEstimateDocumentPdfBlob(documentData),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dependencyKey]
+  );
+
+  const fileName = prevValues
+    ? `견적서_${prevValues.estimateNumber}.pdf`
+    : "견적서.pdf";
+
+  return (
+    <PdfPreview
+      generateBlob={generateBlob}
+      downloadFileName={fileName}
+      dependencyKey={dependencyKey}
+    />
   );
 }

@@ -6,7 +6,6 @@ import {
   SheetScrollColumn,
   SheetContainer,
 } from "@/shared/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { NewlineText } from "@/shared/ui/newline-text";
@@ -99,87 +98,78 @@ export function DetailView({ data, refetch }: DetailViewProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="info" className="flex flex-col flex-1 min-h-0 gap-0">
-        <div className="border-b px-4 md:px-8">
-          <TabsList className="h-9">
-            <TabsTrigger value="info">정보</TabsTrigger>
-            <TabsTrigger value="pdf">PDF</TabsTrigger>
-          </TabsList>
-        </div>
-
-        <TabsContent value="info" className="flex flex-col flex-1 min-h-0">
-          <SheetBody>
-            <SheetScrollColumn>
-              {/* 히어로 영역 */}
-              <SheetContainer>
-                <div className="space-y-1">
-                  <h2 className="text-xl font-semibold tracking-tight">{data.title}</h2>
-                  {data.description && (
-                    <p className="text-sm text-muted-foreground">{data.description}</p>
-                  )}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground pt-1">
-                    <span className="font-medium text-foreground">
-                      {data.estimateNumber}
-                      {data.version > 1 && ` v${data.version}`}
-                    </span>
-                    <span className="text-border">|</span>
-                    <span>{data.client?.companyName}</span>
-                  </div>
-                </div>
-              </SheetContainer>
-
-              {/* 메타 정보 */}
-              <SheetContainer>
-                <EstimateInfo data={data} />
-              </SheetContainer>
-
-              {/* 견적 항목 */}
-              <SheetContainer>
-                <ItemGroups groups={data.groups} />
-              </SheetContainer>
-
-              {/* 금액 요약 */}
-              <SheetContainer>
-                <PriceSummary
-                  groups={data.groups}
-                  taxType={data.taxType}
-                  discountType={data.discountType}
-                  discountValue={Number(data.discountValue) || 0}
-                  showTaxAmount={data.showTaxAmount ?? true}
-                />
-              </SheetContainer>
-
-              {/* 비고/메모 */}
-              {(data.notes || data.memo) && (
-                <SheetContainer>
-                  <div className="space-y-4">
-                    {data.notes && (
-                      <DetailInfoRow
-                        label="비고"
-                        value={<NewlineText>{data.notes}</NewlineText>}
-                        vertical
-                        valueClassName="text-left"
-                      />
-                    )}
-                    {data.memo && (
-                      <DetailInfoRow
-                        label="내부 메모"
-                        value={<NewlineText>{data.memo}</NewlineText>}
-                        vertical
-                        valueClassName="text-left"
-                      />
-                    )}
-                  </div>
-                </SheetContainer>
+      <SheetBody className="lg:grid-cols-[1fr_800px]">
+        {/* 좌측: 상세 정보 */}
+        <SheetScrollColumn>
+          {/* 히어로 영역 */}
+          <SheetContainer>
+            <div className="space-y-1">
+              <h2 className="text-xl font-semibold tracking-tight">{data.title}</h2>
+              {data.description && (
+                <p className="text-sm text-muted-foreground">{data.description}</p>
               )}
-            </SheetScrollColumn>
-          </SheetBody>
-        </TabsContent>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground pt-1">
+                <span className="font-medium text-foreground">
+                  {data.estimateNumber}
+                  {data.version > 1 && ` v${data.version}`}
+                </span>
+                <span className="text-border">|</span>
+                <span>{data.client?.companyName}</span>
+              </div>
+            </div>
+          </SheetContainer>
 
-        <TabsContent value="pdf" className="flex flex-col flex-1 min-h-0">
+          {/* 메타 정보 */}
+          <SheetContainer>
+            <EstimateInfo data={data} />
+          </SheetContainer>
+
+          {/* 견적 항목 */}
+          <SheetContainer>
+            <ItemGroups groups={data.groups} />
+          </SheetContainer>
+
+          {/* 금액 요약 */}
+          <SheetContainer>
+            <PriceSummary
+              groups={data.groups}
+              taxType={data.taxType}
+              discountType={data.discountType}
+              discountValue={Number(data.discountValue) || 0}
+              showTaxAmount={data.showTaxAmount ?? true}
+            />
+          </SheetContainer>
+
+          {/* 비고/메모 */}
+          {(data.notes || data.memo) && (
+            <SheetContainer>
+              <div className="space-y-4">
+                {data.notes && (
+                  <DetailInfoRow
+                    label="비고"
+                    value={<NewlineText>{data.notes}</NewlineText>}
+                    vertical
+                    valueClassName="text-left"
+                  />
+                )}
+                {data.memo && (
+                  <DetailInfoRow
+                    label="내부 메모"
+                    value={<NewlineText>{data.memo}</NewlineText>}
+                    vertical
+                    valueClassName="text-left"
+                  />
+                )}
+              </div>
+            </SheetContainer>
+          )}
+        </SheetScrollColumn>
+
+        {/* 우측: PDF 미리보기 */}
+        <div className="hidden lg:flex flex-col min-h-0">
           <EstimatePdfPreview estimate={data} />
-        </TabsContent>
-      </Tabs>
+        </div>
+      </SheetBody>
 
       <SheetFooter>
         <ManageSheetClose />
