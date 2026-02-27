@@ -1,5 +1,6 @@
 export { FormField } from "./form-field";
 export { FormTextInput } from "./form-text-input";
+export { FormPhoneInput } from "./form-phone-input";
 export { FormPasswordInput } from "./form-password-input";
 export { FormTextarea } from "./form-textarea";
 export { FormSelect } from "./form-select";

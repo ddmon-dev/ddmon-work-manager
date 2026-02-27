@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { clientWriteSchema, type ClientWriteInput } from "@work-manager/schemas";
 import { FieldGroup } from "@/shared/ui/field";
-import { FormTextInput } from "@/shared/ui/form";
+import { FormTextInput, FormPhoneInput } from "@/shared/ui/form";
 import {
   SheetFooter,
   SheetBody,
@@ -95,7 +95,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                 placeholder="담당자명을 입력해주세요."
                 optional
               />
-              <FormTextInput
+              <FormPhoneInput
                 control={form.control}
                 name="phone"
                 label="연락처"
