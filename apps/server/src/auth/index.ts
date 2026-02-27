@@ -24,5 +24,6 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30일
   },
-  trustedOrigins: [process.env.CLIENT_URL ?? "http://localhost:5173"],
+  trustedOrigins: [process.env.CLIENT_URL ?? "http://localhost:4000"],
+
 });
