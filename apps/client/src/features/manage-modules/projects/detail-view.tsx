@@ -137,7 +137,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
 
   return (
     <>
-      <SheetBody>
+      <SheetBody className="lg:grid-cols-[2.5fr_3fr]">
         <SheetScrollColumn>
           {/* 기본 정보 */}
           <SheetContainer>
