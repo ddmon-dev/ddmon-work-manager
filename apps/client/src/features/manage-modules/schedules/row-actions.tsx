@@ -1,11 +1,8 @@
-import { RowActionButtons } from "../_base/ui/row-action-buttons";
-import { useManageSheet } from "../_base/ui/manage-sheet";
 import { useConfirm } from "@/shared/ui/confirm-dialog";
+import { RowActions } from "../_base/ui";
 import { useDeleteSchedule } from "./api";
-import { Eye, SquarePen, Trash2 } from "lucide-react";
 
 export function ScheduleRowActions({ id }: { id: string }) {
-  const manageSheet = useManageSheet();
   const { confirm } = useConfirm();
   const deleteSchedule = useDeleteSchedule();
 
@@ -22,25 +19,11 @@ export function ScheduleRowActions({ id }: { id: string }) {
   };
 
   return (
-    <RowActionButtons
-      items={[
-        {
-          label: "상세보기",
-          icon: <Eye />,
-          onClick: () => manageSheet.open({ id, mode: "view" }),
-        },
-        {
-          label: "수정",
-          icon: <SquarePen />,
-          onClick: () => manageSheet.open({ id, mode: "modify" }),
-        },
-        {
-          label: "삭제",
-          icon: <Trash2 />,
-          variant: "destructive",
-          onClick: handleDelete,
-        },
-      ]}
+    <RowActions
+      type="buttons"
+      id={id}
+      actions={["view", "modify", "delete"]}
+      onDelete={handleDelete}
     />
   );
 }
