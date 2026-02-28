@@ -1,3 +1,5 @@
+import { APP_CONFIG } from "@/app.config";
+
 const API_BASE = "/api";
 
 type ApiResponse<T> =
@@ -15,7 +17,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
 
   if (res.status === 401) {
-    window.location.href = "/auth/sign-in";
+    window.location.href = APP_CONFIG.AUTH.PATHS.SIGN_IN;
     throw new Error("Unauthorized");
   }
 

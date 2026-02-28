@@ -1,5 +1,6 @@
 import { use, createContext, useRef, useState } from "react";
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { atLeast } from "@/shared/utils/delays";
 import {
   Sheet,
   SheetContent,
@@ -207,7 +208,7 @@ export function ManageSheet<T>({
     refetch,
   } = useQuery({
     queryKey: id ? queryKeyFn(id) : ["__disabled__"],
-    queryFn: () => fetchFn(id!),
+    queryFn: () => atLeast(() => fetchFn(id!)),
     enabled: !!id && isOpen && mode !== "create",
     staleTime: 0,
   } as UseQueryOptions<T>);

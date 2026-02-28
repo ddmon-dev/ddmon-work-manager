@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
+import { CRUD_ERRORS } from "@/shared/constants/error-messages";
+import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import type {
   ProjectDTO,
   ProjectWithDetails,
@@ -47,10 +49,10 @@ export function useCreateProject() {
       api.post<ProjectDTO>("/projects", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      toast.success("프로젝트가 생성되었습니다.");
+      toast.success(SUCCESS_MESSAGES.CREATE_SUCCESS("프로젝트"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "생성에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("프로젝트"));
     },
   });
 }
@@ -66,10 +68,10 @@ export function useUpdateProject() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(id) });
-      toast.success("프로젝트가 수정되었습니다.");
+      toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("프로젝트"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "수정에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("프로젝트"));
     },
   });
 }
@@ -84,10 +86,10 @@ export function useDeleteProject() {
       api.delete<{ id: string }>(`/projects/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      toast.success("프로젝트가 삭제되었습니다.");
+      toast.success(SUCCESS_MESSAGES.DELETE_SUCCESS("프로젝트"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "삭제에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("프로젝트"));
     },
   });
 }
@@ -113,7 +115,7 @@ export function useUpdateProjectStatus() {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(id) });
     },
     onError: (error: Error) => {
-      toast.error(error.message || "상태 변경에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("프로젝트"));
     },
   });
 }
@@ -136,10 +138,10 @@ export function useCreatePayment() {
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      toast.success("수금이 등록되었습니다.");
+      toast.success(SUCCESS_MESSAGES.CREATE_SUCCESS("수금"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "수금 등록에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("수금"));
     },
   });
 }
@@ -162,10 +164,10 @@ export function useUpdatePayment() {
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      toast.success("수금이 수정되었습니다.");
+      toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("수금"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "수금 수정에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("수금"));
     },
   });
 }
@@ -179,10 +181,10 @@ export function useDeletePayment() {
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      toast.success("수금이 삭제되었습니다.");
+      toast.success(SUCCESS_MESSAGES.DELETE_SUCCESS("수금"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "수금 삭제에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("수금"));
     },
   });
 }
@@ -199,7 +201,7 @@ export function useCreateProjectMemo() {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
     },
     onError: (error: Error) => {
-      toast.error(error.message || "메모 생성에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("메모"));
     },
   });
 }
@@ -221,7 +223,7 @@ export function useUpdateProjectMemo() {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
     },
     onError: (error: Error) => {
-      toast.error(error.message || "메모 수정에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("메모"));
     },
   });
 }
@@ -236,7 +238,7 @@ export function useDeleteProjectMemo() {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
     },
     onError: (error: Error) => {
-      toast.error(error.message || "메모 삭제에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("메모"));
     },
   });
 }

@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { GENERAL_ERRORS } from "@/shared/constants/error-messages";
+import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import {
   Dialog,
   DialogContent,
@@ -123,7 +125,7 @@ export function UpdateProfileDialog({ children }: UpdateProfileDialogProps) {
         });
       }
 
-      toast.success("프로필이 수정되었습니다.");
+      toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("프로필"));
       setOpen(false);
       form.reset({
         name: values.name,
@@ -134,7 +136,7 @@ export function UpdateProfileDialog({ children }: UpdateProfileDialogProps) {
         confirmPassword: "",
       });
     } catch {
-      form.setError("root", { message: "예기치 않은 오류가 발생했습니다." });
+      form.setError("root", { message: GENERAL_ERRORS.UNEXPECTED });
     }
   };
 

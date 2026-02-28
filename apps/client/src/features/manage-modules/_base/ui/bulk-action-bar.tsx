@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/shared/utils/classnames";
+import { GENERAL_ERRORS } from "@/shared/constants/error-messages";
 import { Button } from "@/shared/ui/button";
 import { LoadingButton } from "@/shared/ui/loading-button";
 import { useDialog } from "@/shared/ui/app-dialog";
@@ -55,7 +56,7 @@ export function BulkActionBar<TData extends { id?: string }>({
           onClearSelection();
         } catch (error) {
           console.error(error);
-          toast.error("예기치 않은 오류가 발생했습니다.");
+          toast.error(GENERAL_ERRORS.UNEXPECTED);
         }
       },
     });

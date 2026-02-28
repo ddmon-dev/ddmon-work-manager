@@ -6,6 +6,8 @@ import {
 import { toast } from "sonner";
 import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
+import { CRUD_ERRORS } from "@/shared/constants/error-messages";
+import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import type { AdminDTO, AdminListResponse } from "./types";
 
 type ListParams = {
@@ -49,10 +51,10 @@ export function useCreateAdmin() {
     }) => api.post<AdminDTO>("/admins", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.admins.all });
-      toast.success("관리자가 생성되었습니다.");
+      toast.success(SUCCESS_MESSAGES.CREATE_SUCCESS("관리자"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "생성에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("관리자"));
     },
   });
 }
@@ -79,10 +81,10 @@ export function useUpdateAdmin() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.admins.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.admins.detail(id) });
-      toast.success("관리자가 수정되었습니다.");
+      toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("관리자"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "수정에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("관리자"));
     },
   });
 }
@@ -96,10 +98,10 @@ export function useDeleteAdmin() {
     mutationFn: (id: string) => api.delete<{ id: string }>(`/admins/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.admins.all });
-      toast.success("관리자가 삭제되었습니다.");
+      toast.success(SUCCESS_MESSAGES.DELETE_SUCCESS("관리자"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "삭제에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("관리자"));
     },
   });
 }

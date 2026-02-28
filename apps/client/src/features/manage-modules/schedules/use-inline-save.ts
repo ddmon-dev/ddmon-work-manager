@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { useUpdateSchedule } from "./api";
+import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import type { ScheduleDTO } from "./types";
 
 type RecurrenceType = "none" | "daily" | "weekly" | "monthly";
@@ -148,7 +149,7 @@ export function useInlineSave({ data }: { data: ScheduleDTO }) {
             delete next[key as FieldName];
           return next;
         });
-        toast.error("수정에 실패했습니다.");
+        toast.error(CRUD_ERRORS.UPDATE_FAILED("일정"));
       } finally {
         setSavingField(null);
       }

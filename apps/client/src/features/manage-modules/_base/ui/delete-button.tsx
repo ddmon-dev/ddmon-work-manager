@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { GENERAL_ERRORS } from "@/shared/constants/error-messages";
 import { LoadingButton } from "@/shared/ui/loading-button";
 import type { VariantProps } from "class-variance-authority";
 import { buttonVariants } from "@/shared/ui/button";
@@ -82,7 +83,7 @@ export function DeleteButton({
           return true;
         } catch (error) {
           console.error(error);
-          toast.error("예기치 않은 오류가 발생했습니다.");
+          toast.error(GENERAL_ERRORS.UNEXPECTED);
           return false;
         } finally {
           setIsLoading(false);

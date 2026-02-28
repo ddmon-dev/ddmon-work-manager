@@ -7,6 +7,7 @@ import {
   FolderKanban,
   Users,
 } from "lucide-react";
+import { APP_CONFIG } from "@/app.config";
 
 interface MenuConfig {
   navMain: MenuData[];
@@ -15,7 +16,7 @@ interface MenuConfig {
 export const navigationConfig: MenuConfig = {
   navMain: [
     {
-      title: "Work Manager",
+      title: APP_CONFIG.META.TITLE,
       items: [
         { title: "클라이언트 관리", url: "/clients", icon: Briefcase },
         { title: "견적서 관리", url: "/estimates", icon: FileSpreadsheet },

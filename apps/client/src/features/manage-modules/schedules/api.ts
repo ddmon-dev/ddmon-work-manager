@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
+import { CRUD_ERRORS } from "@/shared/constants/error-messages";
+import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import type { ScheduleDTO, ScheduleListResponse, CalendarSchedule } from "./types";
 import type { ScheduleWriteInput } from "@work-manager/schemas";
 
@@ -86,10 +88,10 @@ export function useCreateSchedule() {
       api.post<ScheduleDTO>("/schedules", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
-      toast.success("일정이 생성되었습니다.");
+      toast.success(SUCCESS_MESSAGES.CREATE_SUCCESS("일정"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "생성에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("일정"));
     },
   });
 }
@@ -105,10 +107,10 @@ export function useUpdateSchedule() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.detail(id) });
-      toast.success("일정이 수정되었습니다.");
+      toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("일정"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "수정에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("일정"));
     },
   });
 }
@@ -123,10 +125,10 @@ export function useDeleteSchedule() {
       api.delete<{ id: string }>(`/schedules/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
-      toast.success("일정이 삭제되었습니다.");
+      toast.success(SUCCESS_MESSAGES.DELETE_SUCCESS("일정"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "삭제에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("일정"));
     },
   });
 }

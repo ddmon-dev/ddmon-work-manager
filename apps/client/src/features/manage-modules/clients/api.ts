@@ -7,6 +7,8 @@ import {
 import { toast } from "sonner";
 import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
+import { CRUD_ERRORS } from "@/shared/constants/error-messages";
+import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import type { ClientDTO, ClientWithMemos, ClientListResponse } from "./types";
 import type { ClientWriteInput } from "@work-manager/schemas";
 
@@ -56,10 +58,10 @@ export function useCreateClient() {
       api.post<ClientDTO>("/clients", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
-      toast.success("클라이언트가 생성되었습니다.");
+      toast.success(SUCCESS_MESSAGES.CREATE_SUCCESS("클라이언트"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "생성에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("클라이언트"));
     },
   });
 }
@@ -75,10 +77,10 @@ export function useUpdateClient() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.clients.detail(id) });
-      toast.success("클라이언트가 수정되었습니다.");
+      toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("클라이언트"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "수정에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("클라이언트"));
     },
   });
 }
@@ -93,10 +95,10 @@ export function useDeleteClient() {
       api.delete<{ id: string }>(`/clients/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.clients.all });
-      toast.success("클라이언트가 삭제되었습니다.");
+      toast.success(SUCCESS_MESSAGES.DELETE_SUCCESS("클라이언트"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "삭제에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("클라이언트"));
     },
   });
 }
@@ -115,7 +117,7 @@ export function useCreateClientMemo() {
       });
     },
     onError: (error: Error) => {
-      toast.error(error.message || "메모 생성에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("메모"));
     },
   });
 }
@@ -139,7 +141,7 @@ export function useUpdateClientMemo() {
       });
     },
     onError: (error: Error) => {
-      toast.error(error.message || "메모 수정에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("메모"));
     },
   });
 }
@@ -161,7 +163,7 @@ export function useDeleteClientMemo() {
       });
     },
     onError: (error: Error) => {
-      toast.error(error.message || "메모 삭제에 실패했습니다.");
+      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("메모"));
     },
   });
 }

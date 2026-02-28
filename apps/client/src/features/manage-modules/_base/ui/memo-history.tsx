@@ -2,6 +2,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { PencilIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
+import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import { Button } from "@/shared/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/shared/ui/popover";
 import { ListEmpty } from "@/shared/ui/data-list";
@@ -71,7 +72,7 @@ function MemoActions({
         try {
           await onDelete(memo.id);
         } catch {
-          toast.error("메모 삭제에 실패했습니다.");
+          toast.error(CRUD_ERRORS.DELETE_FAILED("메모"));
         }
       },
     });

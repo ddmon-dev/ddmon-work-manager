@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
+import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 
 import type { Todo, TimeBlockWithTodo } from "./types";
 import {
@@ -105,7 +106,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
         setIncompleteTodos([]);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "투두를 불러오지 못했습니다.");
+      toast.error(e instanceof Error ? e.message : CRUD_ERRORS.READ_FAILED("투두"));
     } finally {
       setIsLoading(false);
     }
@@ -142,7 +143,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
         });
         setTodos((prev) => [...prev, created]);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "투두 추가에 실패했습니다.");
+        toast.error(e instanceof Error ? e.message : CRUD_ERRORS.CREATE_FAILED("투두"));
       }
     },
     [todos, date]
@@ -179,7 +180,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
                 : b
             )
           );
-          toast.error("상태 변경에 실패했습니다.");
+          toast.error(CRUD_ERRORS.UPDATE_FAILED("투두"));
         });
         return;
       }
@@ -196,7 +197,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
                 a.sortOrder - b.sortOrder
             )
           );
-          toast.error("상태 변경에 실패했습니다.");
+          toast.error(CRUD_ERRORS.UPDATE_FAILED("투두"));
         });
       }
     },
@@ -230,7 +231,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
               : b
           )
         );
-        toast.error("색상 변경에 실패했습니다.");
+        toast.error(CRUD_ERRORS.UPDATE_FAILED("투두"));
       });
     },
     [todos]
@@ -263,7 +264,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
               : b
           )
         );
-        toast.error("내용 수정에 실패했습니다.");
+        toast.error(CRUD_ERRORS.UPDATE_FAILED("투두"));
       });
     },
     [todos]
@@ -282,7 +283,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
         } catch {
           setTodos(snapshot.todos);
           setTimeBlocks(snapshot.timeBlocks);
-          toast.error("삭제에 실패했습니다.");
+          toast.error(CRUD_ERRORS.DELETE_FAILED("투두"));
         }
         return;
       }
@@ -301,7 +302,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
                 a.sortOrder - b.sortOrder
             )
           );
-          toast.error("삭제에 실패했습니다.");
+          toast.error(CRUD_ERRORS.DELETE_FAILED("투두"));
         }
       }
     },
@@ -380,7 +381,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
           setTimeBlocks((prev) =>
             prev.filter((b) => b.id !== `temp-${todoId}`)
           );
-          toast.error("타임블록 배치에 실패했습니다.");
+          toast.error(CRUD_ERRORS.CREATE_FAILED("타임블록"));
         });
     },
     [todos, date]
@@ -405,7 +406,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
             b.id === blockId ? { ...b, startSlot: block.startSlot } : b
           )
         );
-        toast.error("타임블록 이동에 실패했습니다.");
+        toast.error(CRUD_ERRORS.UPDATE_FAILED("타임블록"));
       });
     },
     [timeBlocks]
@@ -432,7 +433,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
               : b
           )
         );
-        toast.error("타임블록 리사이즈에 실패했습니다.");
+        toast.error(CRUD_ERRORS.UPDATE_FAILED("타임블록"));
       });
     },
     [timeBlocks]
@@ -445,7 +446,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
 
       apiDeleteTimeBlock(blockId).catch(() => {
         setTimeBlocks(snapshot);
-        toast.error("타임블록 삭제에 실패했습니다.");
+        toast.error(CRUD_ERRORS.DELETE_FAILED("타임블록"));
       });
     },
     [timeBlocks]
@@ -529,7 +530,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
             pendingSync.current.delete(key);
           }
         });
-        toast.error("이월에 실패했습니다.");
+        toast.error(CRUD_ERRORS.UPDATE_FAILED("이월"));
         return;
       }
 
@@ -552,7 +553,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
           setTimeBlocks((prev) =>
             prev.filter((b) => b.id !== `temp-${carried.id}`)
           );
-          toast.error("타임블록 생성에 실패했습니다.");
+          toast.error(CRUD_ERRORS.CREATE_FAILED("타임블록"));
         }
       }
     },

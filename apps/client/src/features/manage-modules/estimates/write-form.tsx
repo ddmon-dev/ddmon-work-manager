@@ -2,6 +2,8 @@ import { useCallback, useEffect } from "react";
 import { useForm, useFormContext, FormProvider, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { CRUD_ERRORS } from "@/shared/constants/error-messages";
+import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import { addMonths, format, parseISO } from "date-fns";
 import { z } from "zod";
 import { estimateWriteSchema } from "@work-manager/schemas";
@@ -183,11 +185,11 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
         createdId = (result as { id: string }).id;
       }
 
-      toast.success(id && !isClone ? "수정되었습니다." : "저장되었습니다.");
+      toast.success(id && !isClone ? SUCCESS_MESSAGES.UPDATE_SUCCESS("견적서") : SUCCESS_MESSAGES.CREATE_SUCCESS("견적서"));
       sheet.open({ id: createdId, mode: "view" });
       if (id && !isClone) refetch();
     } catch {
-      toast.error("저장에 실패했습니다.");
+      toast.error(id && !isClone ? CRUD_ERRORS.UPDATE_FAILED("견적서") : CRUD_ERRORS.CREATE_FAILED("견적서"));
     }
   }
 

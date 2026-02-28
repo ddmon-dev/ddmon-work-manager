@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import { CRUD_ERRORS } from "@/shared/constants/error-messages";
+import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import { cn } from "@/shared/utils/classnames";
 import { Badge, badgeVariants } from "@/shared/ui/badge";
 import type { VariantProps } from "class-variance-authority";
@@ -50,14 +52,14 @@ export function StatusButtons({
       if (newFinalEstimateId) {
         await updateFinal.mutateAsync({ estimateNumber, finalEstimateId: newFinalEstimateId });
       }
-      toast.success("상태가 변경되었습니다.");
+      toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("상태"));
       if (newFinalEstimateId && newFinalEstimateId !== currentId) {
         sheet.open({ id: newFinalEstimateId, mode: "view" });
       } else {
         onSuccess();
       }
     } catch {
-      toast.error("상태 변경에 실패했습니다.");
+      toast.error(CRUD_ERRORS.UPDATE_FAILED("상태"));
     } finally {
       setIsUpdating(false);
     }
@@ -67,14 +69,14 @@ export function StatusButtons({
     setIsUpdating(true);
     try {
       await updateFinal.mutateAsync({ estimateNumber, finalEstimateId: estimateId });
-      toast.success("계약 버전이 변경되었습니다.");
+      toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("계약 버전"));
       if (estimateId !== currentId) {
         sheet.open({ id: estimateId, mode: "view" });
       } else {
         onSuccess();
       }
     } catch {
-      toast.error("변경에 실패했습니다.");
+      toast.error(CRUD_ERRORS.UPDATE_FAILED("계약 버전"));
     } finally {
       setIsUpdating(false);
     }
