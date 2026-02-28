@@ -1,9 +1,9 @@
-import { useConfirm } from "@/shared/ui/confirm-dialog";
+import { useDialog } from "@/shared/ui/app-dialog";
 import { RowActions } from "../_base/ui";
 import { useDeleteProject } from "./api";
 
 export function ProjectRowActions({ id }: { id: string }) {
-  const { confirm } = useConfirm();
+  const dialog = useDialog();
   const deleteProject = useDeleteProject();
 
   return (
@@ -16,7 +16,7 @@ export function ProjectRowActions({ id }: { id: string }) {
         {
           action: "delete",
           onClick: () =>
-            confirm({
+            dialog.confirm({
               title: "프로젝트 삭제",
               description: "이 프로젝트를 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.",
               variant: "destructive",

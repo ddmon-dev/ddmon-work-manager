@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,14 +13,18 @@ import {
   DialogTrigger,
 } from "@/shared/ui/dialog";
 import { Button } from "@/shared/ui/button";
+import { LoadingButton } from "@/shared/ui/loading-button";
 import { FieldGroup } from "@/shared/ui/field";
 import {
   FormTextInput,
+  FormEmailInput,
   FormPasswordInput,
   FormPhoneInput,
+  FormRootError,
 } from "@/shared/ui/form";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { authClient } from "@/features/auth/lib/auth-client";
+import { useDialog } from "@/shared/ui/app-dialog";
 import { api } from "@/shared/lib/api-client";
 import { APP_CONFIG } from "@/app.config";
 
@@ -58,6 +61,7 @@ interface UpdateProfileDialogProps {
 
 export function UpdateProfileDialog({ children }: UpdateProfileDialogProps) {
   const [open, setOpen] = useState(false);
+  const dialog = useDialog();
   const auth = useAuth();
   const user = auth.status === "authenticated" ? auth.user : undefined;
 
@@ -83,14 +87,30 @@ export function UpdateProfileDialog({ children }: UpdateProfileDialogProps) {
           revokeOtherSessions: false,
         });
         if (result.error) {
-          form.setError("currentPassword", {
-            message: result.error.message ?? "비밀번호 변경에 실패했습니다.",
-          });
+          const message =
+            result.error.message === "Invalid password"
+              ? "현재 비밀번호가 올바르지 않습니다."
+              : "비밀번호 변경에 실패했습니다.";
+          form.setError("root", { message });
           return;
         }
-        toast.success("비밀번호가 변경되었습니다. 다시 로그인해주세요.");
-        await authClient.signOut();
-        window.location.href = APP_CONFIG.AUTH.PATHS.SIGN_IN;
+        setOpen(false);
+        dialog.alert({
+          title: (
+            <>
+              비밀번호가 변경되었습니다.
+              <br />
+              다시 로그인해주세요.
+            </>
+          ),
+          variant: "success",
+          layout: "vertical",
+          size: "sm",
+          onConfirm: async () => {
+            await authClient.signOut();
+            window.location.href = APP_CONFIG.AUTH.PATHS.SIGN_IN;
+          },
+        });
         return;
       }
 
@@ -105,8 +125,16 @@ export function UpdateProfileDialog({ children }: UpdateProfileDialogProps) {
 
       toast.success("프로필이 수정되었습니다.");
       setOpen(false);
+      form.reset({
+        name: values.name,
+        email: values.email,
+        phone: values.phone ?? "",
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
     } catch {
-      form.setError("root", { message: "수정에 실패했습니다." });
+      form.setError("root", { message: "예기치 않은 오류가 발생했습니다." });
     }
   };
 
@@ -129,7 +157,7 @@ export function UpdateProfileDialog({ children }: UpdateProfileDialogProps) {
               label="이름"
               placeholder="이름을 입력하세요"
             />
-            <FormTextInput
+            <FormEmailInput
               control={form.control}
               name="email"
               label="이메일"
@@ -154,6 +182,7 @@ export function UpdateProfileDialog({ children }: UpdateProfileDialogProps) {
                 name="currentPassword"
                 label="현재 비밀번호"
                 placeholder="현재 비밀번호"
+                autoComplete="current-password"
                 optional
               />
               <FormPasswordInput
@@ -161,6 +190,7 @@ export function UpdateProfileDialog({ children }: UpdateProfileDialogProps) {
                 name="newPassword"
                 label="새 비밀번호"
                 placeholder="새 비밀번호 (최소 6자)"
+                autoComplete="new-password"
                 optional
               />
               <FormPasswordInput
@@ -168,15 +198,14 @@ export function UpdateProfileDialog({ children }: UpdateProfileDialogProps) {
                 name="confirmPassword"
                 label="비밀번호 확인"
                 placeholder="비밀번호 확인"
+                autoComplete="new-password"
                 optional
               />
             </FieldGroup>
           </div>
 
           {form.formState.errors.root && (
-            <p className="text-sm text-destructive">
-              {form.formState.errors.root.message}
-            </p>
+            <FormRootError>{form.formState.errors.root.message}</FormRootError>
           )}
 
           <DialogFooter>
@@ -187,12 +216,12 @@ export function UpdateProfileDialog({ children }: UpdateProfileDialogProps) {
             >
               취소
             </Button>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting && (
-                <Loader2 className="size-4 animate-spin" />
-              )}
+            <LoadingButton
+              type="submit"
+              isLoading={form.formState.isSubmitting}
+            >
               수정
-            </Button>
+            </LoadingButton>
           </DialogFooter>
         </form>
       </DialogContent>

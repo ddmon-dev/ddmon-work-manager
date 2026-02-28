@@ -11,7 +11,7 @@ import {
 } from "@/shared/ui/sheet";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/utils/classnames";
-import { useConfirm } from "@/shared/ui/confirm-dialog";
+import { useDialog } from "@/shared/ui/app-dialog";
 import type { ManageSheetMode } from "../types";
 
 // ── Sheet 상태 Context ──────────────────────────────────────
@@ -50,7 +50,7 @@ export function ManageSheetProvider({
   const [manageSheetData, setManageSheetData] =
     useState<ManageSheetData | null>(null);
   const closeGuardRef = useRef<(() => boolean) | null>(null);
-  const { confirm } = useConfirm();
+  const dialog = useDialog();
 
   const openManageSheet = (data: ManageSheetData) => {
     setManageSheetData(data);
@@ -71,7 +71,7 @@ export function ManageSheetProvider({
       return;
     }
 
-    confirm({
+    dialog.confirm({
       title: "변경사항이 있습니다",
       description: "저장하지 않은 변경사항이 있습니다. 계속하시겠습니까?",
       confirmText: "확인",

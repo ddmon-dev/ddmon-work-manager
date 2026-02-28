@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { cn } from "@/shared/utils/classnames";
 import { Button } from "@/shared/ui/button";
 import { LoadingButton } from "@/shared/ui/loading-button";
-import { useConfirm } from "@/shared/ui/confirm-dialog";
+import { useDialog } from "@/shared/ui/app-dialog";
 import type { ActionResult } from "@work-manager/types";
 
 interface BulkActionBarProps<TData extends { id?: string }> {
@@ -18,7 +18,7 @@ export function BulkActionBar<TData extends { id?: string }>({
   onClearSelection,
   bulkDeleteFn,
 }: BulkActionBarProps<TData>) {
-  const { confirm } = useConfirm();
+  const dialog = useDialog();
   const [isLoading, setIsLoading] = useState(false);
 
   const selectedCount = selectedRows.length;
@@ -27,7 +27,7 @@ export function BulkActionBar<TData extends { id?: string }>({
   const handleBulkDelete = async () => {
     setIsLoading(true);
 
-    await confirm({
+    await dialog.confirm({
       title: "데이터 일괄 삭제",
       description: (
         <>

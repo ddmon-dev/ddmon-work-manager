@@ -1,5 +1,4 @@
-import { toast } from "sonner";
-import { useConfirm } from "@/shared/ui/confirm-dialog";
+import { useDialog } from "@/shared/ui/app-dialog";
 import { RowActions } from "../_base/ui";
 import { useDeleteAdmin } from "./api";
 
@@ -10,15 +9,21 @@ export function AdminRowActions({
   id: string;
   superAdmin: boolean;
 }) {
-  const { confirm } = useConfirm();
+  const dialog = useDialog();
   const deleteAdmin = useDeleteAdmin();
 
   const handleDelete = () => {
     if (superAdmin) {
-      toast.error("최고 관리자는 삭제할 수 없습니다.");
+      dialog.alert({
+        title: "삭제할 수 없습니다.",
+        description: "최고 관리자는 삭제할 수 없습니다.",
+        variant: "error",
+        layout: "vertical",
+        size: "sm",
+      });
       return;
     }
-    confirm({
+    dialog.confirm({
       title: "관리자 삭제",
       description:
         "이 관리자를 삭제하시겠습니까? 삭제된 계정은 복구할 수 없습니다.",

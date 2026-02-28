@@ -26,7 +26,7 @@ import {
   FormNumberInput,
   FormDatePicker,
 } from "@/shared/ui/form";
-import { useConfirm } from "@/shared/ui/confirm-dialog";
+import { useDialog } from "@/shared/ui/app-dialog";
 import {
   DetailSectionTitle,
   DetailInfoRow,
@@ -460,11 +460,11 @@ interface PaymentHistoryProps {
 }
 
 function PaymentHistory({ projectId, payments, refetch }: PaymentHistoryProps) {
-  const { confirm } = useConfirm();
+  const dialog = useDialog();
   const deletePayment = useDeletePayment();
 
   const handleDelete = (paymentId: string) => {
-    confirm({
+    dialog.confirm({
       title: "수금 삭제",
       description: "이 수금 내역을 삭제하시겠습니까?",
       variant: "destructive",

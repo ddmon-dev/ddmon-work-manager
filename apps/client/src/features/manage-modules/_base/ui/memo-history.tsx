@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/shared/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/shared/ui/popover";
 import { ListEmpty } from "@/shared/ui/data-list";
-import { useConfirm } from "@/shared/ui/confirm-dialog";
+import { useDialog } from "@/shared/ui/app-dialog";
 import type { MemoItem } from "../types";
 import { MemoForm } from "./memo-form";
 
@@ -58,11 +58,11 @@ function MemoActions({
   onUpdate: (memoId: string, content: string) => Promise<void>;
   onDelete: (memoId: string) => Promise<void>;
 }) {
-  const { confirm } = useConfirm();
+  const dialog = useDialog();
   const [editOpen, setEditOpen] = useState(false);
 
   const handleDelete = () => {
-    confirm({
+    dialog.confirm({
       title: "메모 삭제",
       description: "이 메모를 삭제하시겠습니까?",
       variant: "destructive",

@@ -4,13 +4,15 @@ import { toast } from "sonner";
 import { LoadingButton } from "@/shared/ui/loading-button";
 import type { VariantProps } from "class-variance-authority";
 import { buttonVariants } from "@/shared/ui/button";
-import { useConfirm } from "@/shared/ui/confirm-dialog";
+import { useDialog } from "@/shared/ui/app-dialog";
 import type { ActionResult } from "@work-manager/types";
 
 interface DeleteButtonProps {
   deleteFn: () => Promise<ActionResult<unknown>>;
   children?: React.ReactNode;
   dataLabel?: string;
+  disabled?: boolean;
+  onDisabled?: () => void;
   size?: VariantProps<typeof buttonVariants>["size"];
   variant?: VariantProps<typeof buttonVariants>["variant"];
   onSuccess?: () => void;
@@ -20,17 +22,34 @@ export function DeleteButton({
   deleteFn,
   children,
   dataLabel,
+  disabled,
+  onDisabled,
   size = "icon-sm",
   variant = "destructive-light",
   onSuccess,
 }: DeleteButtonProps) {
-  const { confirm } = useConfirm();
+  const dialog = useDialog();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleClick = () => {
+    if (disabled) {
+      if (onDisabled) {
+        onDisabled();
+      } else {
+        dialog.alert({
+          title: "Error!",
+          description: "삭제할 수 없는 데이터입니다.",
+          variant: "error",
+          layout: "vertical",
+          size: "sm",
+        });
+      }
+      return;
+    }
+
     const dataLabelText = dataLabel ? `[${dataLabel}]` : "";
 
-    confirm({
+    dialog.confirm({
       title: "데이터 삭제하기",
       description: (
         <>
@@ -52,7 +71,7 @@ export function DeleteButton({
           const result = await deleteFn();
           if (!result.success) {
             toast.error(result.error);
-            return;
+            return false;
           }
           toast.success(
             dataLabel
@@ -60,9 +79,11 @@ export function DeleteButton({
               : "데이터가 삭제되었습니다."
           );
           onSuccess?.();
+          return true;
         } catch (error) {
           console.error(error);
           toast.error("예기치 않은 오류가 발생했습니다.");
+          return false;
         } finally {
           setIsLoading(false);
         }
