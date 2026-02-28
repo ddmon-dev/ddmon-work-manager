@@ -1,0 +1,150 @@
+/**
+ * CKEditor 5 Custom Theme
+ *
+ * - 글로벌 CSS 변수와 연결하여 라이트/다크 모드 자동 적용
+ * - Rounded corners (다른 필드들과 일관된 스타일)
+ */
+
+/* ============================================================ */
+/* CKEditor CSS Variables (글로벌 변수와 연결) */
+/* ============================================================ */
+:root {
+  /* Border Radius */
+  --ck-border-radius: calc(var(--radius) - 10px);
+
+  /* Base Colors */
+  --ck-color-base-background: var(--background);
+  --ck-color-base-foreground: var(--background-secondary);
+  --ck-color-base-border: var(--border);
+  --ck-color-base-text: var(--foreground);
+  --ck-color-base-active: var(--primary);
+  --ck-color-base-active-focus: var(--primary-dark);
+
+  /* Focus */
+  --ck-color-focus-border: var(--primary);
+  --ck-color-focus-outer-shadow: var(--primary);
+  --ck-focus-ring: 1px solid var(--ck-color-base-border);
+  --ck-focus-outer-shadow: 0 0 0 1px var(--ck-color-focus-outer-shadow);
+
+  /* Text */
+  --ck-color-text: var(--foreground);
+  --ck-content-font-color: var(--foreground);
+
+  /* Buttons */
+  --ck-color-button-default-background: transparent;
+  --ck-color-button-default-hover-background: var(--muted);
+  --ck-color-button-default-active-background: var(--muted-dark);
+  --ck-color-button-default-disabled-background: transparent;
+  --ck-color-button-on-background: var(--muted);
+  --ck-color-button-on-hover-background: var(--muted-dark);
+  --ck-color-button-on-active-background: var(--muted-dark);
+  --ck-color-button-on-color: var(--foreground);
+  --ck-color-button-on-disabled-background: var(--muted);
+
+  /* Action Buttons (Save, Submit 등 - 기존 초록색 → primary) */
+  --ck-color-button-save: var(--primary);
+  --ck-color-button-cancel: var(--destructive);
+  --ck-color-button-action-background: var(--primary);
+  --ck-color-button-action-hover-background: var(--primary-dark);
+  --ck-color-button-action-active-background: var(--primary-dark);
+  --ck-color-button-action-text: var(--primary-foreground);
+  --ck-color-button-action-disabled-background: var(--primary-light);
+
+  /* Dropdown */
+  --ck-color-dropdown-panel-background: var(--popover);
+  --ck-color-dropdown-panel-border: var(--border);
+
+  /* Input */
+  --ck-color-input-background: var(--background);
+  --ck-color-input-border: var(--input);
+  --ck-color-input-text: var(--foreground);
+  --ck-color-input-disabled-background: var(--muted);
+  --ck-color-input-disabled-border: var(--border);
+  --ck-color-input-disabled-text: var(--muted-foreground);
+
+  /* Panel */
+  --ck-color-panel-background: var(--popover);
+  --ck-color-panel-border: var(--border);
+
+  /* Toolbar */
+  --ck-color-toolbar-background: var(--background);
+  --ck-color-toolbar-border: var(--border);
+
+  /* List */
+  --ck-color-list-background: var(--popover);
+  --ck-color-list-button-hover-background: var(--muted);
+  --ck-color-list-button-on-background: var(--primary);
+  --ck-color-list-button-on-background-focus: var(--primary-dark);
+  --ck-color-list-button-on-text: var(--primary-foreground);
+
+  /* Tooltip */
+  --ck-color-tooltip-background: var(--foreground);
+  --ck-color-tooltip-text: var(--background);
+
+  /* Labeled Field */
+  --ck-color-labeled-field-label-background: var(--popover);
+
+  /* Split Button */
+  --ck-color-split-button-hover-background: var(--muted);
+  --ck-color-split-button-hover-border: var(--border-dark);
+
+  /* Switch Button (토글) */
+  --ck-color-switch-button-off-background: var(--muted);
+  --ck-color-switch-button-off-hover-background: var(--muted-dark);
+  --ck-color-switch-button-on-background: var(--primary);
+  --ck-color-switch-button-on-hover-background: var(--primary-dark);
+  --ck-color-switch-button-inner-background: var(--background);
+
+  /* Z-index */
+  --ck-z-default: 100 !important;
+}
+
+/* ============================================================ */
+/* Balloon Panel (Powered by) */
+/* ============================================================ */
+.ck.ck-balloon-panel.ck-powered-by-balloon {
+  z-index: 100;
+  border-radius: 100px;
+  border-color: var(--input) !important;
+}
+
+/* ============================================================ */
+/* Body Wrapper (Portal) */
+/* ============================================================ */
+.ck-body-wrapper {
+  pointer-events: initial !important;
+}
+
+/* ============================================================ */
+/* Sticky Panel (Toolbar) */
+/* ============================================================ */
+.ck.ck-sticky-panel .ck-sticky-panel__content_sticky {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ============================================================ */
+/* Editor Content Area */
+/* ============================================================ */
+.ck-rounded-corners .ck.ck-editor__main > .ck-editor__editable,
+.ck.ck-editor__main > .ck-editor__editable.ck-rounded-corners {
+  box-shadow: none !important;
+}
+
+.ck-content {
+  min-height: 200px !important;
+}
+
+/* 리스트 스타일 */
+.ck-content :where(ul, ol) {
+  padding-left: 2.5em;
+}
+
+/* ============================================================ */
+/* Table Insert Grid */
+/* ============================================================ */
+.ck .ck-insert-table-dropdown-grid-box.ck-on {
+  background-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  border-color: var(--primary);
+}

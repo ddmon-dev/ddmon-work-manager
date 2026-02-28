@@ -17,11 +17,17 @@ export const listColumns: ColumnDef<ClientDTO>[] = [
     accessorKey: "contactName",
     header: "담당자",
     size: 120,
+    meta: {
+      className: "text-left",
+    },
   },
   {
     accessorKey: "phone",
     header: "연락처",
     size: 140,
+    meta: {
+      className: "text-left",
+    },
     cell: ({ row }) => {
       const phone = row.original.phone;
       return phone ? formatPhoneNumber(phone) : "";
@@ -32,6 +38,7 @@ export const listColumns: ColumnDef<ClientDTO>[] = [
     header: "이메일",
     size: 200,
     meta: {
+      className: "text-left",
       truncate: true,
     },
   },
@@ -39,6 +46,9 @@ export const listColumns: ColumnDef<ClientDTO>[] = [
     accessorKey: "createdAt",
     header: "등록일",
     size: 120,
+    meta: {
+      className: "text-center",
+    },
     cell: ({ row }) => {
       return format(new Date(row.original.createdAt), "yyyy-MM-dd");
     },

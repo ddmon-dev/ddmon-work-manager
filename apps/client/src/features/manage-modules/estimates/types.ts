@@ -4,7 +4,9 @@ export interface EstimateVersion {
   id: string;
   version: number;
   versionLabel?: string | null;
-  createdAt: string;
+  issuedDate?: string | null;
+  isFinal: boolean;
+  createdAt?: string;
 }
 
 export interface EstimateItemDTO {

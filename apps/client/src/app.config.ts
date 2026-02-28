@@ -31,4 +31,7 @@ export const APP_CONFIG = {
       MOBILE_MAX_VISIBLE_PAGES: 5,
     },
   },
+  UX: {
+    MIN_LOADING_TIME: 350,
+  },
 } as const;

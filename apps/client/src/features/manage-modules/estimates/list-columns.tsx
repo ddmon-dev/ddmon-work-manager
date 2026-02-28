@@ -50,7 +50,7 @@ export const listColumns: ColumnDef<EstimateListItem>[] = [
     accessorKey: "clientCompanyName",
     header: "고객명",
     size: 180,
-    meta: { className: "text-center" },
+    meta: { className: "text-left" },
   },
   {
     id: "supplyAmount",

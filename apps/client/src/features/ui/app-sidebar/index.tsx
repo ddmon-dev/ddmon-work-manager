@@ -26,8 +26,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMenu data={navigationConfig.navMain} />
       </SidebarContent>
       <SidebarFooter className="gap-2">
-        <TodoTrigger />
         <NavUser />
+        <TodoTrigger />
         <ThemeToggle />
       </SidebarFooter>
     </Sidebar>

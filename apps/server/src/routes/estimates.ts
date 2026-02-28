@@ -110,16 +110,28 @@ app.get("/", async (c) => {
 app.get("/series/:estimateNumber/versions", async (c) => {
   const estimateNumber = c.req.param("estimateNumber");
 
-  const versions = await db.query.estimates.findMany({
-    where: and(
-      eq(estimates.estimateNumber, estimateNumber),
-      eq(estimates.deleted, false)
-    ),
-    orderBy: [asc(estimates.version)],
-    with: { client: true },
-  });
+  const [series, versions] = await Promise.all([
+    db.query.estimateSeries.findFirst({
+      where: eq(estimateSeries.estimateNumber, estimateNumber),
+    }),
+    db.query.estimates.findMany({
+      where: and(
+        eq(estimates.estimateNumber, estimateNumber),
+        eq(estimates.deleted, false)
+      ),
+      orderBy: [asc(estimates.version)],
+    }),
+  ]);
 
-  return successResponse(c, versions);
+  const result = versions.map((v) => ({
+    id: v.id,
+    version: v.version,
+    versionLabel: v.versionLabel,
+    issuedDate: v.issuedDate,
+    isFinal: v.id === series?.finalEstimateId,
+  }));
+
+  return successResponse(c, result);
 });
 
 // PATCH /estimates/series/:estimateNumber/status — 계열 상태 변경
