@@ -14,7 +14,7 @@ export function ItemSheet() {
       formComponent={WriteForm}
       viewComponent={DetailView}
       moduleName={CONFIG.moduleName}
-      size="lg"
+      size={{ view: "2xl", modify: "lg", create: "lg" }}
     />
   );
 }

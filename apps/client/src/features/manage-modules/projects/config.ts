@@ -5,7 +5,7 @@ export const CONFIG = {
 } as const;
 
 export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
-  pending: "대기",
+  pending: "대기중",
   active: "진행중",
   settling: "정산중",
   completed: "완료",
@@ -13,10 +13,10 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 };
 
 export const WORK_PHASE_LABELS: Record<WorkPhase, string> = {
-  preparing: "준비",
-  working: "작업",
-  reviewing: "검토",
-  delivered: "납품",
+  preparing: "착수대기",
+  working: "작업중",
+  reviewing: "검수중",
+  delivered: "납품완료",
 };
 
 export const PROJECT_STATUS_OPTIONS = Object.entries(PROJECT_STATUS_LABELS).map(

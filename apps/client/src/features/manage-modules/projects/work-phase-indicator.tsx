@@ -1,4 +1,4 @@
-import { cn } from "@/shared/utils/classnames";
+import { Fragment } from "react";
 import { useUpdateProjectStatus } from "./api";
 import { WORK_PHASE_LABELS } from "./config";
 import type { WorkPhase } from "./types";
@@ -17,38 +17,36 @@ export function WorkPhaseIndicator({
   readonly = false,
 }: WorkPhaseIndicatorProps) {
   const updateStatus = useUpdateProjectStatus();
-  const currentIndex = PHASES.indexOf(workPhase);
 
-  const handleClick = async (phase: WorkPhase) => {
+  async function handleClick(phase: WorkPhase) {
     if (readonly || phase === workPhase) return;
     await updateStatus.mutateAsync({ id: projectId, workPhase: phase });
-  };
+  }
 
   return (
-    <div className="flex items-center gap-1">
-      {PHASES.map((phase, index) => {
-        const isCompleted = index < currentIndex;
-        const isCurrent = index === currentIndex;
-        return (
-          <button
-            key={phase}
-            type="button"
-            disabled={readonly}
-            onClick={() => handleClick(phase)}
-            className={cn(
-              "text-xs px-2 py-0.5 rounded-sm transition-colors",
-              isCurrent && "bg-primary text-primary-foreground font-semibold",
-              isCompleted && "bg-primary/20 text-primary",
-              !isCurrent && !isCompleted && "bg-muted text-muted-foreground",
-              !readonly && "cursor-pointer hover:opacity-80",
-              readonly && "cursor-default"
-            )}
-            title={WORK_PHASE_LABELS[phase]}
-          >
-            {WORK_PHASE_LABELS[phase]}
-          </button>
-        );
-      })}
+    <div className="flex items-center">
+      {PHASES.map((phase, i) => (
+        <Fragment key={phase}>
+          {i > 0 && <div className="w-1.5 h-px bg-destructive/50" />}
+          {phase === workPhase ? (
+            <span className="inline-flex items-center justify-center rounded-full bg-destructive-light text-destructive-light-foreground min-w-[60px] px-2.5 py-1 text-xs font-medium whitespace-nowrap">
+              {WORK_PHASE_LABELS[phase]}
+            </span>
+          ) : !readonly ? (
+            <button
+              type="button"
+              onClick={() => handleClick(phase)}
+              className="inline-flex items-center justify-center size-6 rounded-full border border-destructive/50 text-xs text-destructive-light-foreground/80 hover:border-destructive/70 hover:text-destructive-light-foreground cursor-pointer"
+            >
+              {i + 1}
+            </button>
+          ) : (
+            <span className="inline-flex items-center justify-center size-6 rounded-full border border-destructive/50 text-xs text-destructive-light-foreground/80">
+              {i + 1}
+            </span>
+          )}
+        </Fragment>
+      ))}
     </div>
   );
 }
