@@ -9,6 +9,7 @@ import { FieldGroup } from "@/shared/ui/field";
 import {
   FormTextInput,
   FormTextarea,
+  FormRadioGroup,
   FormSelect,
   FormDatePicker,
   FormNumberInput,
@@ -136,22 +137,11 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
       <FormProvider {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <div className="divide-y">
-            <SheetContainer>
+            <SheetContainer className="space-y-6">
               <FieldGroup>
-                <ClientSelect disabled={!!id} />
-                <FormTextInput
-                  control={form.control}
-                  name="name"
-                  label="프로젝트명"
-                  placeholder="프로젝트명을 입력해주세요."
-                />
-                <FormTextarea
-                  control={form.control}
-                  name="description"
-                  label="설명"
-                  placeholder="프로젝트 설명을 입력해주세요."
-                  optional
-                  rows={3}
+                <ClientSelect
+                  disabled={!!id}
+                  description={id ? "프로젝트 생성 후 변경할 수 없습니다." : undefined}
                 />
                 <FormTextInput
                   control={form.control}
@@ -159,53 +149,58 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                   label="견적서 번호"
                   placeholder="견적서 번호 (선택)"
                   optional
+                  disabled={!!id}
+                  description={id ? "프로젝트 생성 후 변경할 수 없습니다." : undefined}
                 />
-              </FieldGroup>
-            </SheetContainer>
-
-            <SheetContainer>
-              <FieldGroup>
-                <FormSelect
+                <FormTextInput
                   control={form.control}
-                  name="status"
-                  label="상태"
-                  options={PROJECT_STATUS_OPTIONS}
+                  name="name"
+                  label="프로젝트명"
+                  placeholder="프로젝트명을 입력해주세요."
                 />
-                <FormSelect
+                <FormTextInput
+                  control={form.control}
+                  name="description"
+                  label="프로젝트 설명"
+                  placeholder="프로젝트 설명을 입력해주세요."
+                  optional
+                />
+                <FormRadioGroup
                   control={form.control}
                   name="workPhase"
                   label="작업단계"
                   options={WORK_PHASE_OPTIONS}
                 />
+                <FormRadioGroup
+                  control={form.control}
+                  name="status"
+                  label="프로젝트 상태"
+                  options={PROJECT_STATUS_OPTIONS}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormDatePicker
+                    control={form.control}
+                    name="contractDate"
+                    label="계약일"
+                    placeholder="계약일을 선택해주세요."
+                  />
+                  <FormDatePicker
+                    control={form.control}
+                    name="deliveredDate"
+                    label="납품일"
+                    placeholder="납품일을 선택해주세요."
+                    optional
+                  />
+                  <FormDatePicker
+                    control={form.control}
+                    name="completedDate"
+                    label="완료일"
+                    placeholder="완료일을 선택해주세요."
+                    optional
+                  />
+                </div>
               </FieldGroup>
-            </SheetContainer>
 
-            <SheetContainer>
-              <FieldGroup>
-                <FormDatePicker
-                  control={form.control}
-                  name="contractDate"
-                  label="계약일"
-                  placeholder="계약일을 선택해주세요."
-                />
-                <FormDatePicker
-                  control={form.control}
-                  name="deliveredDate"
-                  label="납품일"
-                  placeholder="납품일을 선택해주세요."
-                  optional
-                />
-                <FormDatePicker
-                  control={form.control}
-                  name="completedDate"
-                  label="완료일"
-                  placeholder="완료일을 선택해주세요."
-                  optional
-                />
-              </FieldGroup>
-            </SheetContainer>
-
-            <SheetContainer>
               <FieldGroup>
                 <FormNumberInput
                   control={form.control}
@@ -229,7 +224,6 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                   label="비고"
                   placeholder="비고를 입력해주세요."
                   optional
-                  rows={3}
                 />
               </FieldGroup>
             </SheetContainer>

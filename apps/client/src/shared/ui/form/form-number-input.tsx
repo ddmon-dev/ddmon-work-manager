@@ -97,7 +97,7 @@ function NumberInputInner({
   }, [value, thousandSeparator]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
+    const raw = e.target.value.replace(/[^0-9.,\-]/g, "");
     setDisplay(raw);
     const num = parseRawInput(raw);
     onChange(num);

@@ -18,5 +18,5 @@ export function formatPhoneNumber(phone: string): string {
   if (cleaned.length === 10) {
     return cleaned.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3");
   }
-  return phone;
+  return cleaned;
 }

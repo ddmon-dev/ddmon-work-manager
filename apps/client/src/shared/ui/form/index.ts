@@ -8,6 +8,8 @@ export { FormSelect } from "./form-select";
 export { FormNativeSelect } from "./form-native-select";
 export { FormNumberInput } from "./form-number-input";
 export { FormCheckbox } from "./form-checkbox";
+export { FormRadioGroup } from "./form-radio-group";
+export type { FormRadioGroupProps } from "./form-radio-group";
 export { FormRootError } from "./form-errors";
 export type { FormBaseProps, ExcludedFormProps } from "./types";
 export type { SelectOption } from "./form-select";
