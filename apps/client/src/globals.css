@@ -12,9 +12,9 @@
 
 @theme inline {
   /* Fonts */
-  --font-primary: "Poppins", system-ui, sans-serif;
+  --font-primary: "Poppins", var(--font-secondary), system-ui, sans-serif;
   --font-secondary: "Pretendard", system-ui, sans-serif;
-  --font-tertiary: "Oswald", system-ui, sans-serif;
+  --font-tertiary: "Oswald", var(--font-secondary), system-ui, sans-serif;
 
   /* Colors - Background & Foreground */
   --color-background: var(--background);
@@ -301,7 +301,7 @@
   }
   html,
   body {
-    @apply bg-background-secondary text-foreground font-primary tracking-tighter;
+    @apply bg-background-secondary text-foreground font-primary tracking-tighter antialiased;
   }
   button:not([disabled]) {
     @apply cursor-pointer;
