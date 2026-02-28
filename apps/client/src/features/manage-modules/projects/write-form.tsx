@@ -95,6 +95,22 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [createFrom]);
 
+  // workPhase → delivered 시 납품일 자동 입력
+  const watchedWorkPhase = form.watch("workPhase");
+  useEffect(() => {
+    if (watchedWorkPhase === "delivered" && !form.getValues("deliveredDate")) {
+      form.setValue("deliveredDate", new Date());
+    }
+  }, [watchedWorkPhase, form]);
+
+  // status → completed 시 완료일 자동 입력
+  const watchedStatus = form.watch("status");
+  useEffect(() => {
+    if (watchedStatus === "completed" && !form.getValues("completedDate")) {
+      form.setValue("completedDate", new Date());
+    }
+  }, [watchedStatus, form]);
+
   async function onSubmit(values: FormValues) {
     const submitData: ProjectWriteInput = {
       ...values,

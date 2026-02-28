@@ -144,6 +144,32 @@ export function useCreatePayment() {
   });
 }
 
+export function useUpdatePayment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      paymentId,
+      ...data
+    }: {
+      projectId: string;
+      paymentId: string;
+      description: string;
+      amount: number;
+      paidDate: string;
+    }) => api.patch<PaymentDTO>(`/projects/payments/${paymentId}`, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      toast.success("수금이 수정되었습니다.");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "수금 수정에 실패했습니다.");
+    },
+  });
+}
+
 export function useDeletePayment() {
   const queryClient = useQueryClient();
 
