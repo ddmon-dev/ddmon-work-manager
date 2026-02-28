@@ -131,6 +131,13 @@ function CreateForm() {
                 label="이메일"
                 placeholder="이메일을 입력해주세요."
               />
+              <FormPhoneInput
+                control={form.control}
+                name="phone"
+                label="연락처"
+                placeholder="010-1234-5678"
+                optional
+              />
               <FormPasswordInput
                 control={form.control}
                 name="password"
@@ -142,13 +149,6 @@ function CreateForm() {
                 name="passwordConfirm"
                 label="비밀번호 확인"
                 placeholder="비밀번호를 다시 입력해주세요."
-              />
-              <FormPhoneInput
-                control={form.control}
-                name="phone"
-                label="연락처"
-                placeholder="010-1234-5678"
-                optional
               />
             </FieldGroup>
           </SheetContainer>
@@ -243,6 +243,13 @@ function UpdateForm({
                 label="이메일"
                 placeholder="이메일을 입력해주세요."
               />
+              <FormPhoneInput
+                control={form.control}
+                name="phone"
+                label="연락처"
+                placeholder="010-1234-5678"
+                optional
+              />
               <FormPasswordInput
                 control={form.control}
                 name="password"
@@ -255,13 +262,6 @@ function UpdateForm({
                 name="passwordConfirm"
                 label="비밀번호 확인"
                 placeholder="비밀번호를 다시 입력해주세요."
-                optional
-              />
-              <FormPhoneInput
-                control={form.control}
-                name="phone"
-                label="연락처"
-                placeholder="010-1234-5678"
                 optional
               />
             </FieldGroup>
