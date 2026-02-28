@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { APP_CONFIG } from "@/app.config";
 import { type ColumnDef } from "@tanstack/react-table";
 import { DataList, useDataList, createSelectionColumn } from "@/shared/ui/data-list";
+import { ListSkeleton } from "@/shared/ui/skeletons/list-skeleton";
 import type { ManageSheetMode } from "../types";
 import { useManageSheet } from "./manage-sheet";
 
@@ -67,6 +68,10 @@ export function ManageList<TData extends { id?: string }>({
     setSelectedRows(rows);
   }, []);
 
+  if (isLoading) {
+    return <ListSkeleton />;
+  }
+
   return (
     <DataList
       key={enableBulkAction ? selectionKey : undefined}
@@ -81,7 +86,6 @@ export function ManageList<TData extends { id?: string }>({
       onSortingChange={setSort}
       onRowClick={handleRowClick}
       onSelectionChange={enableBulkAction ? handleSelectionChange : undefined}
-      isLoading={isLoading}
     />
   );
 }

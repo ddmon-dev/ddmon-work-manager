@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
+import { atLeast } from "@/shared/utils/delays";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import type { ScheduleDTO, ScheduleListResponse, CalendarSchedule } from "./types";
@@ -65,11 +66,13 @@ export function useScheduleList(params: ListParams = {}) {
   return useQuery({
     queryKey: queryKeys.schedules.list(params),
     queryFn: () =>
-      api.get<ScheduleListResponse>("/schedules", {
-        page: params.page,
-        pageSize: params.pageSize,
-        search: params.search,
-      }),
+      atLeast(() =>
+        api.get<ScheduleListResponse>("/schedules", {
+          page: params.page,
+          pageSize: params.pageSize,
+          search: params.search,
+        })
+      ),
   });
 }
 
