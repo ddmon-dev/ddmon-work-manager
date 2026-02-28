@@ -1,18 +1,16 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   adminCreateSchema,
-  adminUpdateSchema,
   type AdminCreateInput,
-  type AdminUpdateInput,
 } from "@work-manager/schemas";
 import { FieldGroup } from "@/shared/ui/field";
 import {
   FormTextInput,
   FormPasswordInput,
   FormPhoneInput,
-  FormCheckbox,
 } from "@/shared/ui/form";
 import {
   SheetFooter,
@@ -23,7 +21,6 @@ import {
   useManageSheet,
   ManageFormSubmit,
   ManageSheetClose,
-  ManageSheetModeChange,
 } from "../_base/ui";
 import { useFormGuard } from "../_base/hooks";
 import { useCreateAdmin, useUpdateAdmin } from "./api";
@@ -37,14 +34,38 @@ const createDefaults: AdminCreateInput = {
   password: "",
   passwordConfirm: "",
   phone: "",
-  superAdmin: false,
 };
 
-const updateDefaults: AdminUpdateInput = {
+// UpdateForm 로컬 스키마 (username은 disabled 표시용)
+const updateFormSchema = z
+  .object({
+    username: z.string().default(""),
+    name: z.string().min(1, "이름을 입력해주세요."),
+    email: z.string().email("올바른 이메일을 입력해주세요."),
+    phone: z.string().optional(),
+    password: z
+      .string()
+      .min(6, "비밀번호는 6자 이상이어야 합니다.")
+      .optional()
+      .or(z.literal("")),
+    passwordConfirm: z.string().optional().or(z.literal("")),
+  })
+  .refine(
+    (data) => {
+      if (data.password && data.password.length > 0) {
+        return data.password === data.passwordConfirm;
+      }
+      return true;
+    },
+    { message: "비밀번호가 일치하지 않습니다.", path: ["passwordConfirm"] }
+  );
+type UpdateFormValues = z.infer<typeof updateFormSchema>;
+
+const updateDefaults: UpdateFormValues = {
+  username: "",
   name: "",
   email: "",
   phone: "",
-  superAdmin: false,
   password: "",
   passwordConfirm: "",
 };
@@ -82,7 +103,6 @@ function CreateForm() {
       username: values.username,
       password: values.password,
       phone: values.phone || undefined,
-      superAdmin: values.superAdmin,
     });
     sheet.close();
   }
@@ -96,8 +116,8 @@ function CreateForm() {
               <FormTextInput
                 control={form.control}
                 name="username"
-                label="사용자명"
-                placeholder="로그인에 사용할 사용자명"
+                label="아이디"
+                placeholder="로그인에 사용할 아이디"
               />
               <FormTextInput
                 control={form.control}
@@ -130,11 +150,6 @@ function CreateForm() {
                 placeholder="010-1234-5678"
                 optional
               />
-              <FormCheckbox
-                control={form.control}
-                name="superAdmin"
-                label="최고 관리자 권한"
-              />
             </FieldGroup>
           </SheetContainer>
         </div>
@@ -158,14 +173,14 @@ function UpdateForm({
   const sheet = useManageSheet();
   const updateAdmin = useUpdateAdmin();
 
-  const form = useForm<AdminUpdateInput>({
-    resolver: zodResolver(adminUpdateSchema) as Resolver<AdminUpdateInput>,
+  const form = useForm<UpdateFormValues>({
+    resolver: zodResolver(updateFormSchema) as Resolver<UpdateFormValues>,
     defaultValues: prevValues
       ? {
+          username: prevValues.username ?? "",
           name: prevValues.name,
           email: prevValues.email,
           phone: prevValues.phone ?? "",
-          superAdmin: prevValues.superAdmin,
           password: "",
           passwordConfirm: "",
         }
@@ -178,10 +193,10 @@ function UpdateForm({
     form.reset(
       prevValues
         ? {
+            username: prevValues.username ?? "",
             name: prevValues.name,
             email: prevValues.email,
             phone: prevValues.phone ?? "",
-            superAdmin: prevValues.superAdmin,
             password: "",
             passwordConfirm: "",
           }
@@ -190,12 +205,11 @@ function UpdateForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prevValues]);
 
-  async function onSubmit(values: AdminUpdateInput) {
+  async function onSubmit(values: UpdateFormValues) {
     const data: Record<string, unknown> = {
       name: values.name,
       email: values.email,
       phone: values.phone || undefined,
-      superAdmin: values.superAdmin,
     };
     if (values.password && values.password.length > 0) {
       data.password = values.password;
@@ -210,6 +224,13 @@ function UpdateForm({
         <div className="divide-y">
           <SheetContainer>
             <FieldGroup>
+              <FormTextInput
+                control={form.control}
+                name="username"
+                label="아이디"
+                description="아이디는 수정할 수 없습니다."
+                disabled
+              />
               <FormTextInput
                 control={form.control}
                 name="name"
@@ -243,18 +264,12 @@ function UpdateForm({
                 placeholder="010-1234-5678"
                 optional
               />
-              <FormCheckbox
-                control={form.control}
-                name="superAdmin"
-                label="최고 관리자 권한"
-              />
             </FieldGroup>
           </SheetContainer>
         </div>
 
         <SheetFooter>
           <ManageSheetClose />
-          <ManageSheetModeChange mode="view" />
           <ManageFormSubmit isLoading={form.formState.isSubmitting} />
         </SheetFooter>
       </form>

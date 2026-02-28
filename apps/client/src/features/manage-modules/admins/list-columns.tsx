@@ -1,13 +1,13 @@
 import { format } from "date-fns";
 import { type ColumnDef } from "@tanstack/react-table";
-import { Badge } from "@/shared/ui/badge";
+import { APP_CONFIG } from "@/app.config";
 import type { AdminDTO } from "./types";
 import { AdminRowActions } from "./row-actions";
 
 export const listColumns: ColumnDef<AdminDTO>[] = [
   {
     accessorKey: "username",
-    header: "사용자명",
+    header: "아이디",
     size: 140,
   },
   {
@@ -17,14 +17,12 @@ export const listColumns: ColumnDef<AdminDTO>[] = [
   },
   {
     accessorKey: "superAdmin",
-    header: "권한",
+    header: "구분",
     size: 100,
     cell: ({ row }) =>
-      row.original.superAdmin ? (
-        <Badge variant="default">최고 관리자</Badge>
-      ) : (
-        <Badge variant="secondary">일반</Badge>
-      ),
+      row.original.superAdmin
+        ? APP_CONFIG.AUTH.ADMIN_LABELS.SUPER_ADMIN
+        : APP_CONFIG.AUTH.ADMIN_LABELS.ADMIN,
   },
   {
     accessorKey: "createdAt",

@@ -34,7 +34,7 @@ export function AdminRowActions({
     <RowActions
       type="buttons"
       id={id}
-      actions={["view", "modify", "delete"]}
+      actions={["modify", "delete"]}
       onDelete={handleDelete}
     />
   );

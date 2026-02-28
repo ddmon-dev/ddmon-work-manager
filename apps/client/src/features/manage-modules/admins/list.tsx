@@ -15,7 +15,6 @@ export function List({ data, totalCount, isLoading }: ListProps) {
       totalCount={totalCount}
       isLoading={isLoading}
       listColumns={listColumns}
-      rowClickMode="view"
     />
   );
 }
