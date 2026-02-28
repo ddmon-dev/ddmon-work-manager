@@ -106,6 +106,22 @@ app.post("/", async (c) => {
 
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
+  // superAdmin 중복 체크
+  if (parsed.data.superAdmin) {
+    const [existing] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(and(eq(user.superAdmin, true), eq(user.deleted, false)))
+      .limit(1);
+    if (existing) {
+      return errorResponse(
+        c,
+        { code: "CREATE_FAILED", message: "최고 관리자는 하나만 존재할 수 있습니다." },
+        400
+      );
+    }
+  }
+
   const { password, ...userData } = parsed.data;
   const hashedPassword = await hashPassword(password);
   const userId = crypto.randomUUID();
@@ -164,6 +180,22 @@ app.patch("/:id", async (c) => {
     .safeParse(body);
 
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  // superAdmin으로 변경 시 중복 체크 (본인 제외)
+  if (parsed.data.superAdmin === true) {
+    const [existing] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(and(eq(user.superAdmin, true), eq(user.deleted, false)))
+      .limit(1);
+    if (existing && existing.id !== id) {
+      return errorResponse(
+        c,
+        { code: "UPDATE_FAILED", message: "최고 관리자는 하나만 존재할 수 있습니다." },
+        400
+      );
+    }
+  }
 
   const { password, ...updateData } = parsed.data;
 
