@@ -11,6 +11,9 @@ export const listColumns: ColumnDef<ProjectDTO>[] = [
     accessorKey: "projectNumber",
     header: "프로젝트번호",
     size: 140,
+    meta: {
+      className: "text-left",
+    },
   },
   {
     accessorKey: "name",
