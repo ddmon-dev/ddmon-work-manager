@@ -408,12 +408,8 @@ export function DetailView({ data, refetch }: DetailViewProps) {
               value={<WorkPhaseIndicator projectId={data.id} workPhase={data.workPhase} />}
             />
             <DetailInfoRow label="계약일" value={data.contractDate} />
-            {data.deliveredDate && (
-              <DetailInfoRow label="납품일" value={data.deliveredDate} />
-            )}
-            {data.completedDate && (
-              <DetailInfoRow label="완료일" value={data.completedDate} />
-            )}
+            <DetailInfoRow label="납품일" value={data.deliveredDate} />
+            <DetailInfoRow label="완료일" value={data.completedDate} />
           </SheetContainer>
 
           {/* 비고 */}
