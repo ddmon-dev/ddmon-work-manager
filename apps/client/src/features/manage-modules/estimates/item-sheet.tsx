@@ -5,13 +5,15 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
+  SheetContainer,
+  SheetBody,
 } from "@/shared/ui/sheet";
-import { Skeleton } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/utils/classnames";
-import { SheetContainer, SheetBody } from "@/shared/ui/sheet";
 import { queryKeys } from "@/shared/lib/query-keys";
+import { atLeast } from "@/shared/utils/delays";
 import { useManageSheet, ManageSheetDataContext } from "../_base/ui";
 import { fetchEstimate } from "./api";
+import { EstimateSkeleton } from "./estimate-skeleton";
 import { CONFIG } from "./config";
 import { WriteForm } from "./write-form";
 import { DetailView } from "./detail-view";
@@ -36,7 +38,7 @@ export function ItemSheet() {
     refetch,
   } = useQuery({
     queryKey: id ? queryKeys.estimates.detail(id) : ["__disabled__"],
-    queryFn: () => fetchEstimate(id!),
+    queryFn: () => atLeast(() => fetchEstimate(id!)),
     enabled: !!id && isOpen && mode !== "create",
     staleTime: 0,
   } as UseQueryOptions<EstimateWithDetails>);
@@ -53,15 +55,7 @@ export function ItemSheet() {
       return <WriteForm id={undefined} prevValues={null} />;
     }
     if (isLoading) {
-      return (
-        <SheetBody>
-          <SheetContainer className="flex flex-col gap-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </SheetContainer>
-        </SheetBody>
-      );
+      return <EstimateSkeleton />;
     }
     if (error) {
       return (

@@ -10,7 +10,7 @@ import {
   SheetBody,
   SheetContainer,
 } from "@/shared/ui/sheet";
-import { Skeleton } from "@/shared/ui/skeleton";
+import { FormSkeleton } from "@/shared/ui/skeletons/form-skeleton";
 import { cn } from "@/shared/utils/classnames";
 import { useDialog } from "@/shared/ui/app-dialog";
 import type { ManageSheetMode } from "../types";
@@ -233,10 +233,8 @@ export function ManageSheet<T>({
     if (isLoading) {
       return (
         <SheetBody>
-          <SheetContainer className="flex flex-col gap-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
+          <SheetContainer className="flex flex-col">
+            <FormSkeleton />
           </SheetContainer>
         </SheetBody>
       );
