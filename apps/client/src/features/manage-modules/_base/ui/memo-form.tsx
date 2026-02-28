@@ -42,7 +42,7 @@ export function MemoForm({ onSubmit, memo, onSuccess, onCancel }: MemoFormProps)
         control={form.control}
         name="content"
         placeholder="메모를 입력하세요..."
-        className="min-h-[100px]"
+        className="min-h-[100px]!"
       />
       {isEditMode ? (
         <div className="flex justify-end gap-2">
