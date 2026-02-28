@@ -1,5 +1,5 @@
 import { APP_CONFIG } from "@/app.config";
-import { ChevronsUpDown, LogOut, Shield } from "lucide-react";
+import { ChevronsUpDown, LogOut, Pencil, Shield } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
 import {
   DropdownMenu,
@@ -18,6 +18,7 @@ import {
 import { Skeleton } from "@/shared/ui/skeleton";
 import { useAuth, type AuthState } from "@/features/auth/hooks/use-auth";
 import { authClient } from "@/features/auth/lib/auth-client";
+import { UpdateProfileDialog } from "@/features/auth/ui/update-profile-dialog";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
@@ -51,6 +52,12 @@ export function NavUser() {
               <UserInfo auth={auth} />
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <UpdateProfileDialog>
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                <Pencil />
+                내 정보수정
+              </DropdownMenuItem>
+            </UpdateProfileDialog>
             <DropdownMenuItem onClick={handleSignOut}>
               <LogOut />
               로그아웃
