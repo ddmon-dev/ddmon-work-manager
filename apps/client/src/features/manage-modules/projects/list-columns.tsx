@@ -35,6 +35,7 @@ export const listColumns: ColumnDef<ProjectDTO>[] = [
     header: "클라이언트",
     size: 150,
     meta: {
+      className: "text-left",
       truncate: true,
     },
     cell: ({ row }) => row.original.client?.companyName ?? "-",
