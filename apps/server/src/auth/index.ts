@@ -24,6 +24,20 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30일
   },
+  user: {
+    additionalFields: {
+      superAdmin: {
+        type: "boolean",
+        required: false,
+        defaultValue: false,
+        input: false,
+      },
+      phone: {
+        type: "string",
+        required: false,
+        input: false,
+      },
+    },
+  },
   trustedOrigins: [process.env.CLIENT_URL ?? "http://localhost:4000"],
-
 });
