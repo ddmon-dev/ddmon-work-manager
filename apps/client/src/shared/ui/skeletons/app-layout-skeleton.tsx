@@ -17,7 +17,7 @@ export function AppLayoutSkeleton() {
           <div className="h-8 flex items-center px-2">
             <Skeleton className="h-2.5 w-16" />
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-0.5">
             {["w-5/6", "w-2/3", "w-11/12", "w-3/5", "w-3/4"].map((w, i) => (
               <div key={i} className="h-10 flex items-center px-2">
                 <Skeleton className={`h-5 ${w}`} />
