@@ -217,6 +217,15 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                   placeholder="프로젝트 설명을 입력해주세요."
                   optional
                 />
+                <FormNumberInput
+                  control={form.control}
+                  name="contractAmount"
+                  label="공급가액"
+                  placeholder="공급가액 (원)"
+                  suffix="원"
+                  thousandSeparator
+                  optional
+                />
                 <FormRadioGroup
                   control={form.control}
                   name="workPhase"
@@ -254,15 +263,6 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
               </FieldGroup>
 
               <FieldGroup>
-                <FormNumberInput
-                  control={form.control}
-                  name="contractAmount"
-                  label="공급가액"
-                  placeholder="공급가액 (원)"
-                  suffix="원"
-                  thousandSeparator
-                  optional
-                />
                 <FormTextarea
                   control={form.control}
                   name="notes"
