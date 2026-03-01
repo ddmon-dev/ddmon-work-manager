@@ -1,0 +1,1 @@
+export const SERVER_PAGE_SIZE_DEFAULT = 20;

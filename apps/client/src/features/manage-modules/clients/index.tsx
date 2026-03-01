@@ -1,4 +1,5 @@
 import { useSearchParams } from "react-router";
+import { APP_CONFIG } from "@/app.config";
 import { ManageContainer } from "../_base/ui";
 import { useClientList } from "./api";
 import { CONFIG } from "./config";
@@ -9,7 +10,7 @@ export function ClientsModule() {
   const [searchParams] = useSearchParams();
 
   const page = Number(searchParams.get("page")) || 1;
-  const pageSize = Number(searchParams.get("pageSize")) || 15;
+  const pageSize = Number(searchParams.get("pageSize")) || APP_CONFIG.UI.PAGINATION.PAGE_SIZE_OPTIONS[0];
   const search = searchParams.get("search") || undefined;
 
   const { data, isLoading } = useClientList({ page, pageSize, search });

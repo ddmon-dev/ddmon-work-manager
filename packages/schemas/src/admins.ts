@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { PASSWORD_MIN_LENGTH } from "@work-manager/utils";
 
 export const adminCreateSchema = z
   .object({
     name: z.string().min(1, "이름을 입력해주세요."),
     email: z.string().email("올바른 이메일을 입력해주세요."),
     username: z.string().min(1, "사용자명을 입력해주세요."),
-    password: z.string().min(6, "비밀번호는 6자 이상이어야 합니다."),
+    password: z.string().min(PASSWORD_MIN_LENGTH, `비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상이어야 합니다.`),
     passwordConfirm: z.string().min(1, "비밀번호 확인을 입력해주세요."),
     phone: z.string().optional(),
   })
@@ -21,7 +22,7 @@ export const adminUpdateSchema = z
     name: z.string().min(1, "이름을 입력해주세요."),
     email: z.string().email("올바른 이메일을 입력해주세요."),
     phone: z.string().optional(),
-    password: z.string().min(6, "비밀번호는 6자 이상이어야 합니다.").optional().or(z.literal("")),
+    password: z.string().min(PASSWORD_MIN_LENGTH, "비밀번호는 6자 이상이어야 합니다.").optional().or(z.literal("")),
     passwordConfirm: z.string().optional().or(z.literal("")),
   })
   .refine(
