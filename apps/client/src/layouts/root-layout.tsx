@@ -8,7 +8,7 @@ export function RootLayout() {
   return (
     <ThemeContext.Provider value={themeValue}>
       <Outlet />
-      <Toaster richColors position="top-center" />
+      <Toaster richColors position="top-right" />
     </ThemeContext.Provider>
   );
 }
