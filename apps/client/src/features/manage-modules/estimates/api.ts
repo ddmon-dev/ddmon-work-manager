@@ -87,8 +87,11 @@ export function useUpdateEstimateStatus() {
       status: string;
       finalEstimateId?: string;
     }) => api.patch(`/estimates/series/${estimateNumber}/status`, { status, finalEstimateId }),
-    onMutate: async ({ estimateNumber, status }) => {
+    onMutate: async ({ estimateNumber, status, finalEstimateId }) => {
+      await queryClient.cancelQueries({ queryKey: ["estimates", "list"] });
+      await queryClient.cancelQueries({ queryKey: ["estimates", "detail"] });
       const previousLists = queryClient.getQueriesData<EstimateListResponse>({ queryKey: ["estimates", "list"] });
+      const previousDetails = queryClient.getQueriesData<EstimateWithDetails>({ queryKey: ["estimates", "detail"] });
       queryClient.setQueriesData<EstimateListResponse>({ queryKey: ["estimates", "list"] }, (old) =>
         old
           ? {
@@ -101,11 +104,27 @@ export function useUpdateEstimateStatus() {
             }
           : old
       );
-      return { previousLists };
+      queryClient.setQueriesData<EstimateWithDetails>({ queryKey: ["estimates", "detail"] }, (old) => {
+        if (!old || old.estimateNumber !== estimateNumber) return old;
+        return {
+          ...old,
+          series: old.series
+            ? {
+                ...old.series,
+                status: status as EstimateStatus,
+                ...(finalEstimateId !== undefined ? { finalEstimateId } : {}),
+              }
+            : old.series,
+        };
+      });
+      return { previousLists, previousDetails };
     },
     onError: (_err, _variables, context) => {
       if (context?.previousLists) {
         context.previousLists.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      }
+      if (context?.previousDetails) {
+        context.previousDetails.forEach(([key, data]) => queryClient.setQueryData(key, data));
       }
       toast.error(CRUD_ERRORS.UPDATE_FAILED("견적서 상태"));
     },
@@ -121,7 +140,10 @@ export function useUpdateFinalVersion() {
     mutationFn: ({ estimateNumber, finalEstimateId }: { estimateNumber: string; finalEstimateId: string | null }) =>
       api.patch(`/estimates/series/${estimateNumber}/final`, { finalEstimateId }),
     onMutate: async ({ estimateNumber, finalEstimateId }) => {
+      await queryClient.cancelQueries({ queryKey: ["estimates", "list"] });
+      await queryClient.cancelQueries({ queryKey: ["estimates", "detail"] });
       const previousLists = queryClient.getQueriesData<EstimateListResponse>({ queryKey: ["estimates", "list"] });
+      const previousDetails = queryClient.getQueriesData<EstimateWithDetails>({ queryKey: ["estimates", "detail"] });
       queryClient.setQueriesData<EstimateListResponse>({ queryKey: ["estimates", "list"] }, (old) =>
         old
           ? {
@@ -134,11 +156,21 @@ export function useUpdateFinalVersion() {
             }
           : old
       );
-      return { previousLists };
+      queryClient.setQueriesData<EstimateWithDetails>({ queryKey: ["estimates", "detail"] }, (old) => {
+        if (!old || old.estimateNumber !== estimateNumber) return old;
+        return {
+          ...old,
+          series: old.series ? { ...old.series, finalEstimateId } : old.series,
+        };
+      });
+      return { previousLists, previousDetails };
     },
     onError: (_err, _variables, context) => {
       if (context?.previousLists) {
         context.previousLists.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      }
+      if (context?.previousDetails) {
+        context.previousDetails.forEach(([key, data]) => queryClient.setQueryData(key, data));
       }
       toast.error(CRUD_ERRORS.UPDATE_FAILED("계약 버전"));
     },
