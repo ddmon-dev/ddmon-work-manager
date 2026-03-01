@@ -75,8 +75,15 @@ export function useUpdateEstimate() {
 export function useUpdateEstimateStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ estimateNumber, status }: { estimateNumber: string; status: string }) =>
-      api.patch(`/estimates/series/${estimateNumber}/status`, { status }),
+    mutationFn: ({
+      estimateNumber,
+      status,
+      finalEstimateId,
+    }: {
+      estimateNumber: string;
+      status: string;
+      finalEstimateId?: string;
+    }) => api.patch(`/estimates/series/${estimateNumber}/status`, { status, finalEstimateId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.estimates.all });
     },

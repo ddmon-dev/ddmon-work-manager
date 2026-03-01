@@ -12,9 +12,9 @@ const MONTH_LABELS = [
   "7월", "8월", "9월", "10월", "11월", "12월",
 ];
 
-function getVatAmount(amount: number, taxType: string | null): number {
-  if (taxType === "exclusive") return amount * 1.1;
-  return amount; // inclusive: 이미 포함
+function getNetReceivable(amount: number, taxType: string | null): number {
+  if (taxType === "withholding") return amount - Math.round(amount * 0.033);
+  return amount; // inclusive/exclusive: 계약금액 그대로
 }
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -71,22 +71,22 @@ app.get("/", async (c) => {
   // 전체 실수령액 (누적 미수금 계산용)
   let allNetReceivableTotal = 0;
 
-  // 프로젝트 → 계약액/실수령액 캐시
-  const projectVatMap = new Map<string, number>();
+  // 프로젝트 → 실수령액 캐시
+  const projectNetMap = new Map<string, number>();
 
   for (const p of allProjects) {
     const amount = Number(p.contractAmount ?? 0);
     if (amount === 0) continue;
 
-    const vatAmount = getVatAmount(amount, p.taxType);
-    projectVatMap.set(p.id, vatAmount);
-    allNetReceivableTotal += vatAmount;
+    const netReceivable = getNetReceivable(amount, p.taxType);
+    projectNetMap.set(p.id, netReceivable);
+    allNetReceivableTotal += netReceivable;
 
     const contractYear = new Date(p.contractDate).getFullYear();
     const bucket = yearBuckets.get(contractYear);
     if (bucket) {
-      bucket.contractTotal += vatAmount;
-      bucket.netReceivableTotal += vatAmount;
+      bucket.contractTotal += netReceivable;
+      bucket.netReceivableTotal += netReceivable;
     }
   }
 
@@ -100,12 +100,12 @@ app.get("/", async (c) => {
 
   // 프로젝트별 월별 계약액
   for (const p of allProjects) {
-    const vatAmount = projectVatMap.get(p.id);
-    if (!vatAmount) continue;
+    const netReceivable = projectNetMap.get(p.id);
+    if (!netReceivable) continue;
 
     const contractDate = new Date(p.contractDate);
     if (contractDate.getFullYear() === chartYear) {
-      monthlyContract[contractDate.getMonth()] += vatAmount;
+      monthlyContract[contractDate.getMonth()] += netReceivable;
     }
   }
 
@@ -156,18 +156,18 @@ app.get("/", async (c) => {
   // 미수금 프로젝트 목록
   const outstandingProjects = allProjects
     .map((p) => {
-      const vatAmount = projectVatMap.get(p.id);
-      if (!vatAmount) return null;
+      const netReceivable = projectNetMap.get(p.id);
+      if (!netReceivable) return null;
 
       const paidAmount = paidByProjectId.get(p.id) ?? 0;
-      const outstanding = vatAmount - paidAmount;
+      const outstanding = netReceivable - paidAmount;
       if (outstanding <= 0) return null;
 
       return {
         id: p.id,
         name: p.name,
         clientName: p.clientName ?? "",
-        netReceivableAmount: vatAmount,
+        netReceivableAmount: netReceivable,
         paidAmount,
         outstanding,
         status: p.status,

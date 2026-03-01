@@ -56,7 +56,7 @@ const formDefaultValues: FormValues = {
   issuedDate: new Date(),
   issuer: "",
   validUntil: addMonths(new Date(), 1),
-  taxType: "exclusive",
+  taxType: "withholding",
   discountType: "none",
   discountValue: 0,
   showTaxAmount: true,
@@ -81,7 +81,7 @@ function toFormValues(data: EstimateWithDetails): FormValues {
     issuedDate: data.issuedDate ? parseISO(data.issuedDate) : null,
     issuer: data.issuer ?? "",
     validUntil: data.validUntil ? parseISO(data.validUntil) : null,
-    taxType: (data.taxType as "inclusive" | "exclusive") ?? "exclusive",
+    taxType: (data.taxType as "withholding" | "inclusive" | "exclusive") ?? "withholding",
     discountType: (data.discountType as "none" | "amount" | "percentage") ?? "none",
     discountValue: Number(data.discountValue) || 0,
     showTaxAmount: data.showTaxAmount ?? true,
@@ -146,6 +146,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
   }, [prevValues]);
 
   const issuedDate = form.watch("issuedDate");
+  const taxType = form.watch("taxType");
 
   useEffect(() => {
     if (!issuedDate) return;
@@ -155,6 +156,13 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
     form.setValue("validUntil", addMonths(issuedDate, 1));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issuedDate]);
+
+  useEffect(() => {
+    if (taxType === "withholding") {
+      form.setValue("showTaxAmount", true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taxType]);
 
   async function onSubmit(values: FormValues) {
     try {
@@ -313,11 +321,13 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                           </div>
                         )}
                       </div>
-                      <FormCheckbox
-                        control={form.control}
-                        name="showTaxAmount"
-                        label="부가세 금액 표기"
-                      />
+                      {form.watch("taxType") !== "withholding" && (
+                        <FormCheckbox
+                          control={form.control}
+                          name="showTaxAmount"
+                          label="부가세 금액 표기"
+                        />
+                      )}
                     </div>
                     <EstimateTotalSummary />
                   </div>

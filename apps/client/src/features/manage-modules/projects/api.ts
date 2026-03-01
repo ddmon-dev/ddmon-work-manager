@@ -42,6 +42,19 @@ export function useProjectList(params: ListParams = {}) {
 export const fetchProject = (id: string) =>
   api.get<ProjectWithDetails>(`/projects/${id}`);
 
+// ── 견적서 → 프로젝트 자동 채움 ──────────────────────────────
+
+export interface EstimateProjectInfo {
+  clientId: string;
+  title: string;
+  description: string | null;
+  totalAmount: string;
+  taxType: string;
+}
+
+export const fetchEstimateProjectInfo = (estimateNumber: string) =>
+  api.get<EstimateProjectInfo>(`/estimates/series/${estimateNumber}/project-info`);
+
 // ── 생성 ────────────────────────────────────────────────────
 
 export function useCreateProject() {

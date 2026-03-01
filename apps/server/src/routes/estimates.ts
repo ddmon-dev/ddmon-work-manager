@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import { db } from "../db";
-import { estimateSeries, estimates, estimateItemGroups, estimateItems } from "../db/schema";
+import { estimateSeries, estimates, estimateItemGroups, estimateItems, projects } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { estimateWriteSchema, type EstimateGroupWriteInput } from "@work-manager/schemas";
 import { calculateTotal } from "@work-manager/utils";
@@ -139,12 +139,50 @@ app.patch("/series/:estimateNumber/status", async (c) => {
   const estimateNumber = c.req.param("estimateNumber");
   const parsed = z.object({
     status: z.enum(["pending", "contracted", "expired"]),
+    // contracted 상태로 변경 시 CHECK 제약 충족을 위해 함께 전달
+    finalEstimateId: z.string().uuid().optional(),
   }).safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
+  const { status, finalEstimateId } = parsed.data;
+
+  // contracted 상태로 변경 시 finalEstimateId 필수
+  if (status === "contracted" && !finalEstimateId) {
+    return errorResponse(c, ERRORS.VALIDATION, 400, "계약 상태로 변경 시 최종 버전을 선택해야 합니다.");
+  }
+
+  // contracted → 다른 상태로 변경 시, 연결된 프로젝트가 있으면 차단
+  if (status !== "contracted") {
+    const currentSeries = await db.query.estimateSeries.findFirst({
+      where: eq(estimateSeries.estimateNumber, estimateNumber),
+    });
+    if (currentSeries?.status === "contracted") {
+      const linkedProject = await db.query.projects.findFirst({
+        where: and(
+          eq(projects.estimateNumber, estimateNumber),
+          eq(projects.deleted, false)
+        ),
+        columns: { id: true },
+      });
+      if (linkedProject) {
+        return errorResponse(
+          c,
+          ERRORS.VALIDATION,
+          400,
+          "연결된 프로젝트가 있어 계약 상태를 변경할 수 없습니다."
+        );
+      }
+    }
+  }
+
+  // status와 finalEstimateId를 단일 UPDATE로 처리 (CHECK 제약: contracted ↔ finalEstimateId NOT NULL)
   const [updated] = await db
     .update(estimateSeries)
-    .set({ status: parsed.data.status, updatedAt: new Date() })
+    .set({
+      status,
+      finalEstimateId: status === "contracted" ? (finalEstimateId ?? null) : null,
+      updatedAt: new Date(),
+    })
     .where(eq(estimateSeries.estimateNumber, estimateNumber))
     .returning();
 
@@ -182,6 +220,42 @@ app.delete("/series/:estimateNumber", async (c) => {
   return successResponse(c, { estimateNumber });
 });
 
+// GET /estimates/series/:estimateNumber/project-info — 프로젝트 생성 자동 채움용
+app.get("/series/:estimateNumber/project-info", async (c) => {
+  const estimateNumber = c.req.param("estimateNumber");
+
+  const series = await db.query.estimateSeries.findFirst({
+    where: eq(estimateSeries.estimateNumber, estimateNumber),
+  });
+  if (!series) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  // 최종 버전 우선, 없으면 최신 버전
+  const targetId = series.finalEstimateId;
+  const estimate = targetId
+    ? await db.query.estimates.findFirst({
+        where: and(eq(estimates.id, targetId), eq(estimates.deleted, false)),
+        columns: { clientId: true, title: true, description: true, totalAmount: true, taxType: true },
+      })
+    : await db.query.estimates.findFirst({
+        where: and(
+          eq(estimates.estimateNumber, estimateNumber),
+          eq(estimates.deleted, false)
+        ),
+        orderBy: [desc(estimates.version)],
+        columns: { clientId: true, title: true, description: true, totalAmount: true, taxType: true },
+      });
+
+  if (!estimate) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  return successResponse(c, {
+    clientId: estimate.clientId,
+    title: estimate.title,
+    description: estimate.description ?? null,
+    totalAmount: estimate.totalAmount,
+    taxType: estimate.taxType,
+  });
+});
+
 // GET /estimates/:id — 상세 (groups/items/versions 포함)
 app.get("/:id", async (c) => {
   const id = c.req.param("id");
@@ -216,7 +290,16 @@ app.get("/:id", async (c) => {
     where: eq(estimateSeries.estimateNumber, estimate.estimateNumber),
   });
 
-  return successResponse(c, { ...estimate, versions, series });
+  // 연결된 프로젝트
+  const linkedProject = await db.query.projects.findFirst({
+    where: and(
+      eq(projects.estimateNumber, estimate.estimateNumber),
+      eq(projects.deleted, false)
+    ),
+    columns: { id: true, projectNumber: true, name: true },
+  });
+
+  return successResponse(c, { ...estimate, versions, series, linkedProject: linkedProject ?? null });
 });
 
 // POST /estimates — 생성 (트랜잭션)

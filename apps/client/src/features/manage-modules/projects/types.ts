@@ -2,7 +2,7 @@ import type { MemoItem } from "../_base/types";
 
 export type ProjectStatus = "pending" | "active" | "settling" | "completed" | "discarded";
 export type WorkPhase = "preparing" | "working" | "reviewing" | "delivered";
-export type TaxType = "inclusive" | "exclusive";
+export type TaxType = "withholding" | "inclusive" | "exclusive";
 
 export interface ProjectClientInfo {
   id: string;

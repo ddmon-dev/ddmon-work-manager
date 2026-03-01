@@ -5,6 +5,7 @@ import { useProjectList } from "./api";
 import { CONFIG } from "./config";
 import { List } from "./list";
 import { ItemSheet } from "./item-sheet";
+import { AutoCreateSheet } from "./auto-create-sheet";
 
 export function ProjectsModule() {
   const [searchParams] = useSearchParams();
@@ -23,6 +24,7 @@ export function ProjectsModule() {
     <ManageContainer moduleName={CONFIG.moduleName}>
       <List data={items} totalCount={totalCount} isLoading={isLoading} />
       <ItemSheet />
+      <AutoCreateSheet />
     </ManageContainer>
   );
 }

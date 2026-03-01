@@ -23,7 +23,7 @@ import {
   ClientSelect,
 } from "../_base/ui";
 import { useFormGuard } from "../_base/hooks";
-import { useCreateProject, useUpdateProject } from "./api";
+import { useCreateProject, useUpdateProject, fetchEstimateProjectInfo } from "./api";
 import { PROJECT_STATUS_OPTIONS, WORK_PHASE_OPTIONS, TAX_TYPE_OPTIONS } from "./config";
 import type { ProjectWithDetails } from "./types";
 
@@ -89,10 +89,19 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prevValues]);
 
-  // create_from 파라미터로 견적서 번호 자동 입력
+  // create_from 파라미터로 견적서 정보 자동 채움
   useEffect(() => {
     if (!createFrom || id || prevValues) return;
     form.setValue("estimateNumber", createFrom);
+    fetchEstimateProjectInfo(createFrom).then((info) => {
+      form.setValue("clientId", info.clientId);
+      form.setValue("name", info.title);
+      if (info.description) form.setValue("description", info.description);
+      if (info.totalAmount) form.setValue("contractAmount", Number(info.totalAmount));
+      if (info.taxType) form.setValue("taxType", info.taxType as "exclusive" | "inclusive" | "withholding");
+    }).catch(() => {
+      // 견적서 정보 조회 실패 시 견적서 번호만 세팅된 상태 유지
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [createFrom]);
 

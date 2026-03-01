@@ -48,18 +48,20 @@ export function StatusButtons({
   async function handleStatusChange(newStatus: EstimateStatus, newFinalEstimateId?: string) {
     setIsUpdating(true);
     try {
-      await updateStatus.mutateAsync({ estimateNumber, status: newStatus });
-      if (newFinalEstimateId) {
-        await updateFinal.mutateAsync({ estimateNumber, finalEstimateId: newFinalEstimateId });
-      }
+      // status + finalEstimateId를 단일 요청으로 처리 (DB CHECK 제약 충족)
+      await updateStatus.mutateAsync({
+        estimateNumber,
+        status: newStatus,
+        finalEstimateId: newFinalEstimateId,
+      });
       toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("상태"));
       if (newFinalEstimateId && newFinalEstimateId !== currentId) {
         sheet.open({ id: newFinalEstimateId, mode: "view" });
       } else {
         onSuccess();
       }
-    } catch {
-      toast.error(CRUD_ERRORS.UPDATE_FAILED("상태"));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : CRUD_ERRORS.UPDATE_FAILED("상태"));
     } finally {
       setIsUpdating(false);
     }

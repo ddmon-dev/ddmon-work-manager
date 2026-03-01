@@ -24,7 +24,7 @@ export const estimateWriteSchema = z.object({
   issuedDate: z.string().nullable().optional(), // ISO date string (YYYY-MM-DD)
   issuer: z.string().optional(),
   validUntil: z.string().nullable().optional(), // ISO date string (YYYY-MM-DD)
-  taxType: z.enum(["inclusive", "exclusive"]),
+  taxType: z.enum(["withholding", "inclusive", "exclusive"]),
   discountType: z.enum(["none", "amount", "percentage"]).default("none"),
   discountValue: z.number().min(0).default(0),
   showTaxAmount: z.boolean().default(true),

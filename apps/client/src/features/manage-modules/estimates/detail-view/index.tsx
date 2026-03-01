@@ -34,7 +34,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
   const finalEstimateId = data.series?.finalEstimateId;
   const versions = data.versions ?? [];
   const currentVersion = versions.find((v) => v.id === currentId);
-  const hasLinkedProject = false; // 추후 확장
+  const hasLinkedProject = !!data.linkedProject;
 
   return (
     <>

@@ -3,9 +3,17 @@ import { Badge } from "@/shared/ui/badge";
 import type { TaxType } from "./types";
 
 const TAX_TYPE_LABELS: Record<TaxType, string> = {
+  withholding: "3.3%",
   inclusive: "VAT",
   exclusive: "VAT",
 };
+
+function getCollectibleAmount(contractAmount: number, taxType: TaxType | null): number {
+  if (taxType === "withholding") {
+    return contractAmount - Math.round(contractAmount * 0.033);
+  }
+  return contractAmount;
+}
 
 interface AmountIndicatorProps {
   contractAmount: number;
@@ -16,8 +24,9 @@ interface AmountIndicatorProps {
 export function AmountIndicator({ contractAmount, taxType, paid }: AmountIndicatorProps) {
   if (contractAmount === 0) return "-";
 
-  const remaining = contractAmount - paid;
-  const ratio = contractAmount > 0 ? Math.round((paid / contractAmount) * 100) : 0;
+  const collectible = getCollectibleAmount(contractAmount, taxType);
+  const remaining = collectible - paid;
+  const ratio = collectible > 0 ? Math.round((paid / collectible) * 100) : 0;
 
   const isFull = remaining <= 0;
   const isPartial = paid > 0 && remaining > 0;

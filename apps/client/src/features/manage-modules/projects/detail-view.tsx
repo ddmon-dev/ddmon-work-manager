@@ -35,6 +35,7 @@ import {
   MemoSection,
   useManageSheetData,
 } from "../_base/ui";
+import { calculateTaxBreakdown } from "@work-manager/utils";
 import {
   useCreatePayment,
   useUpdatePayment,
@@ -83,17 +84,15 @@ interface PriceSummariesProps {
 
 function PriceSummaries({ payments, contractAmount, taxType }: PriceSummariesProps) {
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-  const remaining = contractAmount - totalPaid;
 
-  const isInclusive = taxType === "inclusive";
-  const isExclusive = taxType === "exclusive";
+  const isWithholding = taxType === "withholding";
+  const isVat = taxType === "inclusive" || taxType === "exclusive";
 
-  const supplyAmount = isInclusive ? Math.round(contractAmount / 1.1) : contractAmount;
-  const taxAmount = isInclusive
-    ? contractAmount - supplyAmount
-    : isExclusive
-    ? Math.round(contractAmount * 0.1)
-    : 0;
+  const { supplyAmount, taxAmount, taxLabel } = calculateTaxBreakdown(contractAmount, taxType ?? "");
+
+  // 잔금 기준: withholding은 실수령액 기준, VAT는 계약금액 기준
+  const baseForRemaining = isWithholding ? supplyAmount : contractAmount;
+  const remaining = baseForRemaining - totalPaid;
 
   return (
     <div className="space-y-2">
@@ -101,7 +100,15 @@ function PriceSummaries({ payments, contractAmount, taxType }: PriceSummariesPro
         label="계약금액"
         value={formatCurrency(contractAmount)}
       >
-        {(isInclusive || isExclusive) && (
+        {isWithholding && (
+          <AmountDetails
+            items={[
+              { label: taxLabel, value: formatCurrency(taxAmount), negative: true },
+              { label: "실수령액", value: formatCurrency(supplyAmount) },
+            ]}
+          />
+        )}
+        {isVat && (
           <AmountDetails
             items={[
               { label: "공급가액", value: formatCurrency(supplyAmount) },
@@ -167,12 +174,18 @@ function AmountRow({ label, value, children, isDetail, variant = "normal" }: Amo
   );
 }
 
-function AmountDetails({ items }: { items: { label: string; value: string }[] }) {
+function AmountDetails({ items }: { items: { label: string; value: string; negative?: boolean }[] }) {
   return (
     <>
       <div className="relative space-y-0.5">
         {items.map((item, i) => (
-          <AmountRow key={i} label={item.label} value={item.value} isDetail />
+          <AmountRow
+            key={i}
+            label={item.label}
+            value={item.value}
+            isDetail
+            variant={item.negative ? "negative" : "normal"}
+          />
         ))}
       </div>
       <Divider />

@@ -31,6 +31,12 @@ export interface EstimateSeries {
   finalEstimateId?: string | null;
 }
 
+export interface LinkedProject {
+  id: string;
+  projectNumber: string;
+  name: string;
+}
+
 export interface EstimateListItem {
   id: string;
   estimateNumber: string;
@@ -74,6 +80,7 @@ export interface EstimateWithDetails {
   groups: EstimateGroupDTO[];
   versions: EstimateVersion[];
   series: EstimateSeries;
+  linkedProject: LinkedProject | null;
   createdAt: string;
   updatedAt: string;
 }

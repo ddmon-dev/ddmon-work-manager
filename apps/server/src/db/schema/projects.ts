@@ -32,7 +32,7 @@ export const projects = pgTable("projects", {
   notes: text("notes"),
   // 프로젝트 자체 계약 금액 (견적서와 독립)
   contractAmount: numeric("contract_amount", { precision: 15, scale: 2 }),
-  // VAT 전용: inclusive(포함), exclusive(별도)
+  // withholding(원천징수), inclusive(VAT 포함), exclusive(VAT 별도)
   taxType: text("tax_type"),
   author: text("author"),
   updatedBy: text("updated_by"),

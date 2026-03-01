@@ -1,6 +1,7 @@
-// ── 세금 (VAT 전용: withholding 제거) ─────────────────────────
+// ── 세금 ──────────────────────────────────────────────────────
 
 export const TAX_TYPE = {
+  WITHHOLDING: "withholding",
   INCLUSIVE: "inclusive",
   EXCLUSIVE: "exclusive",
 } as const;
@@ -8,6 +9,7 @@ export const TAX_TYPE = {
 export type TaxType = (typeof TAX_TYPE)[keyof typeof TAX_TYPE];
 
 export const TAX_TYPE_LABELS: Record<TaxType, string> = {
+  withholding: "원천징수",
   exclusive: "VAT 별도",
   inclusive: "VAT 포함",
 } as const;

@@ -85,7 +85,7 @@ app.get("/revenue-summary", async (c) => {
 
   const validProjectIds = new Set(allProjects.map((p) => p.id));
 
-  // 계약액 계산 (VAT 반영)
+  // 계약액 계산 (실수령액 기준)
   let contractTotal = 0;
   let allNetReceivableTotal = 0;
 
@@ -93,15 +93,17 @@ app.get("/revenue-summary", async (c) => {
     const amount = Number(p.contractAmount ?? 0);
     if (amount === 0) continue;
 
-    // inclusive면 금액 그대로, exclusive면 * 1.1
-    const vatAmount =
-      p.taxType === "exclusive" ? amount * 1.1 : amount;
+    // withholding: 계약액 - 3.3%, 그 외: 계약액 그대로
+    const netReceivable =
+      p.taxType === "withholding"
+        ? amount - Math.round(amount * 0.033)
+        : amount;
 
-    allNetReceivableTotal += vatAmount;
+    allNetReceivableTotal += netReceivable;
 
     const contractYear = new Date(p.contractDate).getFullYear();
     if (contractYear === currentYear) {
-      contractTotal += vatAmount;
+      contractTotal += netReceivable;
     }
   }
 
