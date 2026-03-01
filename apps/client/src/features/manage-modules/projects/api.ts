@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { atLeast } from "@/shared/utils/delays";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
@@ -319,6 +320,7 @@ export function useDeletePayment() {
 
 export function useCreateProjectMemo() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: ({ projectId, content }: { projectId: string; content: string }) =>
@@ -326,6 +328,7 @@ export function useCreateProjectMemo() {
     onMutate: async ({ projectId, content }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
       const previous = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId));
+      const optimisticAuthor = user ? `${user.name}(${user.username ?? ""})` : null;
       queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId), (old) =>
         old
           ? {
@@ -334,7 +337,7 @@ export function useCreateProjectMemo() {
                 {
                   id: crypto.randomUUID(),
                   content,
-                  author: null,
+                  author: optimisticAuthor,
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
                 },

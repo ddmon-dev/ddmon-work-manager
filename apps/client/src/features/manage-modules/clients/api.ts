@@ -7,6 +7,7 @@ import {
 import { toast } from "sonner";
 import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { atLeast } from "@/shared/utils/delays";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
@@ -110,6 +111,7 @@ export function useDeleteClient() {
 
 export function useCreateClientMemo() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: ({ clientId, content }: { clientId: string; content: string }) =>
@@ -117,6 +119,7 @@ export function useCreateClientMemo() {
     onMutate: async ({ clientId, content }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.clients.detail(clientId) });
       const previous = queryClient.getQueryData<ClientWithMemos>(queryKeys.clients.detail(clientId));
+      const optimisticAuthor = user ? `${user.name}(${user.username ?? ""})` : null;
       queryClient.setQueryData<ClientWithMemos>(queryKeys.clients.detail(clientId), (old) =>
         old
           ? {
@@ -125,7 +128,7 @@ export function useCreateClientMemo() {
                 {
                   id: crypto.randomUUID(),
                   content,
-                  author: null,
+                  author: optimisticAuthor,
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
                 },
