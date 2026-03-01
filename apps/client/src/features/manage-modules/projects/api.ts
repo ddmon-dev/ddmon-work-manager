@@ -153,12 +153,43 @@ export function useUpdateProjectStatus() {
       workPhase?: WorkPhase;
     }) =>
       api.patch<ProjectDTO>(`/projects/${id}/status`, { status, workPhase }),
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(id) });
+    onMutate: async ({ id, status, workPhase }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(id) });
+      const previousDetail = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(id));
+      const previousLists = queryClient.getQueriesData<ProjectListResponse>({ queryKey: ["projects", "list"] });
+
+      queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(id), (old) =>
+        old
+          ? { ...old, status: status ?? old.status, workPhase: workPhase ?? old.workPhase }
+          : old
+      );
+      queryClient.setQueriesData<ProjectListResponse>({ queryKey: ["projects", "list"] }, (old) =>
+        old
+          ? {
+              ...old,
+              items: old.items.map((item) =>
+                item.id === id
+                  ? { ...item, status: status ?? item.status, workPhase: workPhase ?? item.workPhase }
+                  : item
+              ),
+            }
+          : old
+      );
+
+      return { previousDetail, previousLists };
     },
-    onError: (error: Error) => {
-      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("프로젝트"));
+    onError: (_err, { id }, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(queryKeys.projects.detail(id), context.previousDetail);
+      }
+      if (context?.previousLists) {
+        context.previousLists.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      }
+      toast.error(CRUD_ERRORS.UPDATE_FAILED("프로젝트"));
+    },
+    onSettled: (_data, _err, { id }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
     },
   });
 }
@@ -178,13 +209,38 @@ export function useCreatePayment() {
       amount: number;
       paidDate: string;
     }) => api.post<PaymentDTO>(`/projects/${projectId}/payments`, data),
-    onSuccess: (_, { projectId }) => {
+    onMutate: async ({ projectId, description, amount, paidDate }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      const previous = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId));
+      queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId), (old) =>
+        old
+          ? {
+              ...old,
+              payments: [
+                ...old.payments,
+                {
+                  id: crypto.randomUUID(),
+                  projectId,
+                  description,
+                  amount: String(amount),
+                  paidDate,
+                  deleted: false,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
+              ],
+            }
+          : old
+      );
+      return { previous };
+    },
+    onError: (_err, { projectId }, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKeys.projects.detail(projectId), context.previous);
+      toast.error(CRUD_ERRORS.CREATE_FAILED("입금 내역"));
+    },
+    onSettled: (_data, _err, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      toast.success(SUCCESS_MESSAGES.CREATE_SUCCESS("입금 내역"));
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("입금 내역"));
     },
   });
 }
@@ -204,13 +260,30 @@ export function useUpdatePayment() {
       amount: number;
       paidDate: string;
     }) => api.patch<PaymentDTO>(`/projects/payments/${paymentId}`, data),
-    onSuccess: (_, { projectId }) => {
+    onMutate: async ({ projectId, paymentId, description, amount, paidDate }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      const previous = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId));
+      queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId), (old) =>
+        old
+          ? {
+              ...old,
+              payments: old.payments.map((p) =>
+                p.id === paymentId
+                  ? { ...p, description, amount: String(amount), paidDate }
+                  : p
+              ),
+            }
+          : old
+      );
+      return { previous };
+    },
+    onError: (_err, { projectId }, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKeys.projects.detail(projectId), context.previous);
+      toast.error(CRUD_ERRORS.UPDATE_FAILED("입금 내역"));
+    },
+    onSettled: (_data, _err, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("입금 내역"));
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("입금 내역"));
     },
   });
 }
@@ -221,13 +294,23 @@ export function useDeletePayment() {
   return useMutation({
     mutationFn: ({ projectId, paymentId }: { projectId: string; paymentId: string }) =>
       api.delete<{ id: string }>(`/projects/payments/${paymentId}`),
-    onSuccess: (_, { projectId }) => {
+    onMutate: async ({ projectId, paymentId }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      const previous = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId));
+      queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId), (old) =>
+        old
+          ? { ...old, payments: old.payments.filter((p) => p.id !== paymentId) }
+          : old
+      );
+      return { previous };
+    },
+    onError: (_err, { projectId }, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKeys.projects.detail(projectId), context.previous);
+      toast.error(CRUD_ERRORS.DELETE_FAILED("입금 내역"));
+    },
+    onSettled: (_data, _err, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      toast.success(SUCCESS_MESSAGES.DELETE_SUCCESS("입금 내역"));
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("입금 내역"));
     },
   });
 }
@@ -240,11 +323,34 @@ export function useCreateProjectMemo() {
   return useMutation({
     mutationFn: ({ projectId, content }: { projectId: string; content: string }) =>
       api.post(`/projects/${projectId}/memos`, { content }),
-    onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+    onMutate: async ({ projectId, content }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      const previous = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId));
+      queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId), (old) =>
+        old
+          ? {
+              ...old,
+              memos: [
+                ...old.memos,
+                {
+                  id: crypto.randomUUID(),
+                  content,
+                  author: null,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
+              ],
+            }
+          : old
+      );
+      return { previous };
     },
-    onError: (error: Error) => {
-      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("메모"));
+    onError: (_err, { projectId }, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKeys.projects.detail(projectId), context.previous);
+      toast.error(CRUD_ERRORS.CREATE_FAILED("메모"));
+    },
+    onSettled: (_data, _err, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
     },
   });
 }
@@ -262,11 +368,27 @@ export function useUpdateProjectMemo() {
       memoId: string;
       content: string;
     }) => api.patch(`/projects/memos/${memoId}`, { content }),
-    onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+    onMutate: async ({ projectId, memoId, content }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      const previous = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId));
+      queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId), (old) =>
+        old
+          ? {
+              ...old,
+              memos: old.memos.map((m) =>
+                m.id === memoId ? { ...m, content } : m
+              ),
+            }
+          : old
+      );
+      return { previous };
     },
-    onError: (error: Error) => {
-      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("메모"));
+    onError: (_err, { projectId }, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKeys.projects.detail(projectId), context.previous);
+      toast.error(CRUD_ERRORS.UPDATE_FAILED("메모"));
+    },
+    onSettled: (_data, _err, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
     },
   });
 }
@@ -277,11 +399,22 @@ export function useDeleteProjectMemo() {
   return useMutation({
     mutationFn: ({ projectId, memoId }: { projectId: string; memoId: string }) =>
       api.delete(`/projects/memos/${memoId}`),
-    onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+    onMutate: async ({ projectId, memoId }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      const previous = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId));
+      queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId), (old) =>
+        old
+          ? { ...old, memos: old.memos.filter((m) => m.id !== memoId) }
+          : old
+      );
+      return { previous };
     },
-    onError: (error: Error) => {
-      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("메모"));
+    onError: (_err, { projectId }, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKeys.projects.detail(projectId), context.previous);
+      toast.error(CRUD_ERRORS.DELETE_FAILED("메모"));
+    },
+    onSettled: (_data, _err, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
     },
   });
 }

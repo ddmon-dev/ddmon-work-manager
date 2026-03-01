@@ -2,7 +2,6 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
-import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import { cn } from "@/shared/utils/classnames";
 import { Badge, badgeVariants } from "@/shared/ui/badge";
 import type { VariantProps } from "class-variance-authority";
@@ -54,7 +53,6 @@ export function StatusButtons({
         status: newStatus,
         finalEstimateId: newFinalEstimateId,
       });
-      toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("상태"));
       if (newFinalEstimateId && newFinalEstimateId !== currentId) {
         sheet.open({ id: newFinalEstimateId, mode: "view" });
       } else {
@@ -71,7 +69,6 @@ export function StatusButtons({
     setIsUpdating(true);
     try {
       await updateFinal.mutateAsync({ estimateNumber, finalEstimateId: estimateId });
-      toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("계약 버전"));
       if (estimateId !== currentId) {
         sheet.open({ id: estimateId, mode: "view" });
       } else {

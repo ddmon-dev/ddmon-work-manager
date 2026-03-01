@@ -242,7 +242,6 @@ function EstimateVersions({ estimateNumber }: EstimateVersionsProps) {
     setIsUpdating(true);
     try {
       await updateFinalVersion.mutateAsync({ estimateNumber, finalEstimateId: estimateId });
-      toast.success("계약 버전이 변경되었습니다.");
       refetch();
     } catch {
       toast.error("계약 버전 변경에 실패했습니다.");

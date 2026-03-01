@@ -114,13 +114,34 @@ export function useCreateClientMemo() {
   return useMutation({
     mutationFn: ({ clientId, content }: { clientId: string; content: string }) =>
       api.post(`/clients/${clientId}/memos`, { content }),
-    onSuccess: (_, { clientId }) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.clients.detail(clientId),
-      });
+    onMutate: async ({ clientId, content }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.clients.detail(clientId) });
+      const previous = queryClient.getQueryData<ClientWithMemos>(queryKeys.clients.detail(clientId));
+      queryClient.setQueryData<ClientWithMemos>(queryKeys.clients.detail(clientId), (old) =>
+        old
+          ? {
+              ...old,
+              memos: [
+                ...old.memos,
+                {
+                  id: crypto.randomUUID(),
+                  content,
+                  author: null,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
+              ],
+            }
+          : old
+      );
+      return { previous };
     },
-    onError: (error: Error) => {
-      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("메모"));
+    onError: (_err, { clientId }, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKeys.clients.detail(clientId), context.previous);
+      toast.error(CRUD_ERRORS.CREATE_FAILED("메모"));
+    },
+    onSettled: (_data, _err, { clientId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.clients.detail(clientId) });
     },
   });
 }
@@ -138,13 +159,27 @@ export function useUpdateClientMemo() {
       memoId: string;
       content: string;
     }) => api.patch(`/clients/memos/${memoId}`, { content }),
-    onSuccess: (_, { clientId }) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.clients.detail(clientId),
-      });
+    onMutate: async ({ clientId, memoId, content }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.clients.detail(clientId) });
+      const previous = queryClient.getQueryData<ClientWithMemos>(queryKeys.clients.detail(clientId));
+      queryClient.setQueryData<ClientWithMemos>(queryKeys.clients.detail(clientId), (old) =>
+        old
+          ? {
+              ...old,
+              memos: old.memos.map((m) =>
+                m.id === memoId ? { ...m, content } : m
+              ),
+            }
+          : old
+      );
+      return { previous };
     },
-    onError: (error: Error) => {
-      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("메모"));
+    onError: (_err, { clientId }, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKeys.clients.detail(clientId), context.previous);
+      toast.error(CRUD_ERRORS.UPDATE_FAILED("메모"));
+    },
+    onSettled: (_data, _err, { clientId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.clients.detail(clientId) });
     },
   });
 }
@@ -160,13 +195,22 @@ export function useDeleteClientMemo() {
       clientId: string;
       memoId: string;
     }) => api.delete(`/clients/memos/${memoId}`),
-    onSuccess: (_, { clientId }) => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.clients.detail(clientId),
-      });
+    onMutate: async ({ clientId, memoId }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.clients.detail(clientId) });
+      const previous = queryClient.getQueryData<ClientWithMemos>(queryKeys.clients.detail(clientId));
+      queryClient.setQueryData<ClientWithMemos>(queryKeys.clients.detail(clientId), (old) =>
+        old
+          ? { ...old, memos: old.memos.filter((m) => m.id !== memoId) }
+          : old
+      );
+      return { previous };
     },
-    onError: (error: Error) => {
-      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("메모"));
+    onError: (_err, { clientId }, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKeys.clients.detail(clientId), context.previous);
+      toast.error(CRUD_ERRORS.DELETE_FAILED("메모"));
+    },
+    onSettled: (_data, _err, { clientId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.clients.detail(clientId) });
     },
   });
 }
