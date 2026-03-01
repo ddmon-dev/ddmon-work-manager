@@ -1,8 +1,6 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
-import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import { Button } from "@/shared/ui/button";
 import { LoadingButton } from "@/shared/ui/loading-button";
 import { FormTextarea } from "@/shared/ui/form";
@@ -33,7 +31,7 @@ export function MemoForm({ onSubmit, memo, onSuccess, onCancel }: MemoFormProps)
       onSuccess?.();
       if (!isEditMode) form.reset();
     } catch {
-      toast.error(isEditMode ? CRUD_ERRORS.UPDATE_FAILED("메모") : CRUD_ERRORS.CREATE_FAILED("메모"));
+      // 에러 toast는 mutation onError에서 처리
     }
   };
 
