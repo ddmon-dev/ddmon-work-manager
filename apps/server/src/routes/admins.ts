@@ -4,7 +4,7 @@ import { and, count, desc, asc, eq, or, ilike } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { db } from "../db";
 import { user, account } from "../db/schema";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireSuperAdmin } from "../middleware/auth";
 import { hashPassword } from "better-auth/crypto";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
@@ -12,6 +12,7 @@ import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
 app.use("*", requireAuth);
+app.use("*", requireSuperAdmin);
 
 // GET /admins - 목록 (페이지네이션, 검색, 정렬)
 app.get("/", async (c) => {

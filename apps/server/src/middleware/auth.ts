@@ -13,3 +13,10 @@ export const requireAuth = createMiddleware<{ Variables: AppVariables }>(async (
   c.set("session", session.session);
   await next();
 });
+
+export const requireSuperAdmin = createMiddleware<{ Variables: AppVariables }>(async (c, next) => {
+  if (!c.get("user").superAdmin) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+  await next();
+});
