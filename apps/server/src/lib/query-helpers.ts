@@ -6,6 +6,11 @@ export function softDeleteFilter(column: AnyColumn): SQL {
   return eq(column, false);
 }
 
+/** 소프트 삭제 payload */
+export function softDeletePayload() {
+  return { deleted: true, updatedAt: new Date() } as const;
+}
+
 /** 다중 컬럼 ILIKE 검색 필터 */
 export function searchFilter(fields: AnyColumn[], term: string): SQL | undefined {
   if (!fields.length) return undefined;

@@ -7,7 +7,7 @@ import { requireAuth } from "../middleware/auth";
 import { projectWriteSchema } from "@work-manager/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { searchFilter, softDeleteFilter } from "../lib/query-helpers";
+import { searchFilter, softDeleteFilter, softDeletePayload } from "../lib/query-helpers";
 import { generateProjectNumber } from "../lib/number-generator";
 import type { AppVariables } from "../lib/types";
 
@@ -83,7 +83,7 @@ app.delete("/payments/:id", async (c) => {
   const id = c.req.param("id");
   const [deleted] = await db
     .update(projectPayments)
-    .set({ deleted: true, updatedAt: new Date() })
+    .set(softDeletePayload())
     .where(and(eq(projectPayments.id, id), softDeleteFilter(projectPayments.deleted)))
     .returning();
 
@@ -112,7 +112,7 @@ app.delete("/memos/:id", async (c) => {
   const id = c.req.param("id");
   const [deleted] = await db
     .update(projectMemos)
-    .set({ deleted: true, updatedAt: new Date() })
+    .set(softDeletePayload())
     .where(and(eq(projectMemos.id, id), softDeleteFilter(projectMemos.deleted)))
     .returning();
 
@@ -197,7 +197,7 @@ app.delete("/:id", async (c) => {
   const id = c.req.param("id");
   const [deleted] = await db
     .update(projects)
-    .set({ deleted: true, updatedAt: new Date() })
+    .set(softDeletePayload())
     .where(and(eq(projects.id, id), softDeleteFilter(projects.deleted)))
     .returning();
 

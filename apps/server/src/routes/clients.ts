@@ -7,7 +7,7 @@ import { requireAuth } from "../middleware/auth";
 import { clientWriteSchema } from "@work-manager/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { searchFilter, softDeleteFilter } from "../lib/query-helpers";
+import { searchFilter, softDeleteFilter, softDeletePayload } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -56,7 +56,7 @@ app.delete("/memos/:id", async (c) => {
   const id = c.req.param("id");
   const [deleted] = await db
     .update(clientMemos)
-    .set({ deleted: true, updatedAt: new Date() })
+    .set(softDeletePayload())
     .where(and(eq(clientMemos.id, id), softDeleteFilter(clientMemos.deleted)))
     .returning();
 
@@ -117,7 +117,7 @@ app.delete("/:id", async (c) => {
   const id = c.req.param("id");
   const [deleted] = await db
     .update(clients)
-    .set({ deleted: true, updatedAt: new Date() })
+    .set(softDeletePayload())
     .where(and(eq(clients.id, id), softDeleteFilter(clients.deleted)))
     .returning();
 

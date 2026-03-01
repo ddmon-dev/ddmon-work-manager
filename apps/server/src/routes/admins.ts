@@ -8,7 +8,7 @@ import { requireAuth, requireSuperAdmin } from "../middleware/auth";
 import { hashPassword } from "better-auth/crypto";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { softDeleteFilter } from "../lib/query-helpers";
+import { softDeleteFilter, softDeletePayload } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -261,7 +261,7 @@ app.delete("/:id", async (c) => {
 
   const [deleted] = await db
     .update(user)
-    .set({ deleted: true, updatedAt: new Date() })
+    .set(softDeletePayload())
     .where(and(eq(user.id, id), softDeleteFilter(user.deleted)))
     .returning();
 

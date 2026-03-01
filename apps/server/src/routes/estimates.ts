@@ -9,7 +9,7 @@ import { calculateTotal } from "@work-manager/utils";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { generateEstimateNumber } from "../lib/number-generator";
-import { softDeleteFilter } from "../lib/query-helpers";
+import { softDeleteFilter, softDeletePayload } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -220,7 +220,7 @@ app.delete("/series/:estimateNumber", async (c) => {
 
   await db
     .update(estimates)
-    .set({ deleted: true, updatedAt: new Date() })
+    .set(softDeletePayload())
     .where(eq(estimates.estimateNumber, estimateNumber));
 
   return successResponse(c, { estimateNumber });
