@@ -8,7 +8,7 @@ export function AppLayoutSkeleton() {
         {/* 헤더 — 69px */}
         <div className="h-[69px] px-4 flex items-center gap-2.5 border-b border-sidebar-border">
           <Skeleton className="size-8 rounded-lg shrink-0" />
-          <Skeleton className="h-5 w-28" />
+          <Skeleton className="h-8 w-28" />
         </div>
 
         {/* 네비 메뉴 */}
@@ -23,9 +23,9 @@ export function AppLayoutSkeleton() {
 
         {/* 푸터 */}
         <div className="p-4 border-t border-sidebar-border flex flex-col gap-2">
-          <div className="h-12 flex items-center gap-2.5 px-2">
+          <div className="h-11 flex items-center gap-2.5 px-2">
             <Skeleton className="size-8 rounded-full shrink-0" />
-            <Skeleton className="h-4 flex-1" />
+            <Skeleton className="h-8 flex-1 rounded-full" />
           </div>
           <Skeleton className="h-9 w-full rounded-full" />
           <Skeleton className="h-9 w-full rounded-full" />
@@ -37,7 +37,7 @@ export function AppLayoutSkeleton() {
         {/* 헤더 — 69px */}
         <div className="h-[69px] border-b px-4 flex items-center gap-3">
           <Skeleton className="size-7 rounded-md shrink-0" />
-          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-7 w-32" />
           <Skeleton className="h-9 w-24 rounded-md ml-auto" />
         </div>
 
