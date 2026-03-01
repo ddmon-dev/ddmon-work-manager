@@ -22,10 +22,10 @@ export function AppLayoutSkeleton() {
           <div className="h-8 flex items-center px-2">
             <Skeleton className="h-2.5 w-16" />
           </div>
-          <div className="flex flex-col gap-0.5">
-            {["w-4/5", "w-2/3", "w-3/4", "w-3/5", "w-4/5"].map((w, i) => (
-              <div key={i} className="h-8 flex items-center px-2">
-                <Skeleton className={`h-3.5 ${w}`} />
+          <div className="flex flex-col gap-1">
+            {["w-5/6", "w-2/3", "w-11/12", "w-3/5", "w-3/4"].map((w, i) => (
+              <div key={i} className="h-10 flex items-center px-2">
+                <Skeleton className={`h-4 ${w}`} />
               </div>
             ))}
           </div>
@@ -71,11 +71,11 @@ export function AppLayoutSkeleton() {
           </div>
 
           {/* 테이블 헤더 */}
-          <Skeleton className="h-10 w-full rounded-md opacity-50" />
+          <Skeleton className="h-10 w-full rounded-md" />
 
-          {/* 데이터 행 — 높고 너비 바리에이션 */}
+          {/* 데이터 행 — 넓은 것부터 불규칙하게 좁아짐 */}
           <div className="flex flex-col gap-2">
-            {["w-full", "w-[97%]", "w-full", "w-[94%]", "w-[98%]", "w-[96%]"].map((w, i) => (
+            {["w-full", "w-[92%]", "w-[96%]", "w-[85%]", "w-[89%]", "w-[74%]"].map((w, i) => (
               <Skeleton key={i} className={`h-14 ${w} rounded-md`} />
             ))}
           </div>
