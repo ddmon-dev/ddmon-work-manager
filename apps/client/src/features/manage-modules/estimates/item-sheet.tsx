@@ -8,6 +8,7 @@ import {
   SheetContainer,
   SheetBody,
 } from "@/shared/ui/sheet";
+import { Separator } from "@/shared/ui/separator";
 import { cn } from "@/shared/utils/classnames";
 import { queryKeys } from "@/shared/lib/query-keys";
 import { atLeast } from "@/shared/utils/delays";
@@ -17,6 +18,7 @@ import { EstimateSkeleton } from "./estimate-skeleton";
 import { CONFIG } from "./config";
 import { WriteForm } from "./write-form";
 import { DetailView } from "./detail-view";
+import { VersionSelector } from "./version-selector";
 import type { EstimateWithDetails } from "./types";
 
 type DataContextValue = {
@@ -89,7 +91,7 @@ export function ItemSheet() {
       >
         <ManageSheetDataContext.Provider value={dataContextValue}>
           {!error && mode && (
-            <SheetHeader className={mode !== "create" ? "sr-only" : undefined}>
+            <SheetHeader className={mode === "create" ? undefined : "sr-only"}>
               <SheetTitle className="text-lg">
                 {CONFIG.moduleName}{" "}
                 {mode === "create"
@@ -111,6 +113,34 @@ export function ItemSheet() {
               </SheetDescription>
             </SheetHeader>
           )}
+          {(mode === "modify" || mode === "clone") && prevValues && (() => {
+            const versions = prevValues.versions ?? [];
+            const currentVersion = versions.find((v) => v.id === id);
+            return (
+              <div className="border-b px-4 md:px-8 py-4">
+                <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                  <span className="text-muted-foreground text-base shrink-0">
+                    {mode === "modify" ? "수정" : "새 버전 작성"}하기
+                  </span>
+                  <Separator orientation="vertical" className="h-[20px]! hidden md:block" />
+                  <span className="font-semibold text-base shrink-0">{prevValues.estimateNumber}</span>
+                  {currentVersion && (
+                    <>
+                      <Separator orientation="vertical" className="h-[20px]! hidden md:block" />
+                      <VersionSelector
+                        currentId={id ?? ""}
+                        version={currentVersion.version}
+                        versionLabel={currentVersion.versionLabel}
+                        finalEstimateId={prevValues.series?.finalEstimateId}
+                        versions={versions}
+                        mode={mode}
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
           {renderContent()}
         </ManageSheetDataContext.Provider>
       </SheetContent>
