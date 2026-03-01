@@ -13,14 +13,14 @@ export function ClientsModule() {
   const pageSize = Number(searchParams.get("pageSize")) || APP_CONFIG.UI.PAGINATION.PAGE_SIZE_OPTIONS[0];
   const search = searchParams.get("search") || undefined;
 
-  const { data, isLoading } = useClientList({ page, pageSize, search });
+  const { data, isLoading, isPlaceholderData } = useClientList({ page, pageSize, search });
 
   const items = data?.items ?? [];
   const totalCount = data?.total ?? 0;
 
   return (
     <ManageContainer moduleName={CONFIG.moduleName}>
-      <List data={items} totalCount={totalCount} isLoading={isLoading} />
+      <List data={items} totalCount={totalCount} isLoading={isLoading} isPlaceholderData={isPlaceholderData} />
       <ItemSheet />
     </ManageContainer>
   );

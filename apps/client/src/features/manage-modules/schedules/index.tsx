@@ -56,10 +56,10 @@ function ListContent() {
   );
   const search = searchParams.get("search") ?? undefined;
 
-  const { data, isLoading } = useScheduleList({ page, pageSize, search });
+  const { data, isLoading, isPlaceholderData } = useScheduleList({ page, pageSize, search });
 
   const items = data?.items ?? [];
   const totalCount = data?.total ?? 0;
 
-  return <List data={items} totalCount={totalCount} isLoading={isLoading} />;
+  return <List data={items} totalCount={totalCount} isLoading={isLoading} isPlaceholderData={isPlaceholderData} />;
 }

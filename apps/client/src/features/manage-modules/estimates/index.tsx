@@ -14,11 +14,11 @@ export function EstimatesModule() {
   );
   const search = searchParams.get("search") ?? undefined;
 
-  const { data, isLoading } = useEstimateList({ page, pageSize, search });
+  const { data, isLoading, isPlaceholderData } = useEstimateList({ page, pageSize, search });
 
   return (
     <ManageContainer moduleName={CONFIG.moduleName}>
-      <List data={data?.items ?? []} totalCount={data?.total ?? 0} isLoading={isLoading} />
+      <List data={data?.items ?? []} totalCount={data?.total ?? 0} isLoading={isLoading} isPlaceholderData={isPlaceholderData} />
       <ItemSheet />
     </ManageContainer>
   );
