@@ -7,7 +7,6 @@ import { List } from "./list";
 import { ItemSheet } from "./item-sheet";
 import { CalendarView } from "./calendar-view";
 import { CalendarNav } from "./calendar-nav";
-import { CalendarSkeleton } from "./calendar-skeleton";
 import { ViewToggle, type ScheduleViewMode } from "./view-toggle";
 
 export function SchedulesModule() {
@@ -39,9 +38,7 @@ function CalendarContent() {
 
   const { data: schedules, isLoading } = useMonthlySchedules(year, month);
 
-  if (isLoading) {
-    return <CalendarSkeleton />;
-  }
+  if (isLoading) return null;
 
   return (
     <div className="flex flex-col gap-4 flex-1 pb-12">

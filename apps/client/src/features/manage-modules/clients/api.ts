@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { atLeast } from "@/shared/utils/delays";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import type { ClientDTO, ClientWithMemos, ClientListResponse } from "./types";
@@ -26,13 +25,11 @@ export function useClientList(params: ListParams = {}) {
   return useQuery({
     queryKey: queryKeys.clients.list(params),
     queryFn: () =>
-      atLeast(() =>
-        api.get<ClientListResponse>("/clients", {
-          page: params.page,
-          pageSize: params.pageSize,
-          search: params.search,
-        })
-      ),
+      api.get<ClientListResponse>("/clients", {
+        page: params.page,
+        pageSize: params.pageSize,
+        search: params.search,
+      }),
   });
 }
 

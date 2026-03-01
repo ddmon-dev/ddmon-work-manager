@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { APP_CONFIG } from '@/app.config';
 
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -27,4 +28,34 @@ export async function atLeast<T>(
     throw result.reason;
   }
   return result.value;
+}
+
+/**
+ * isLoading 상태가 최소 minMs 동안 유지되도록 보장합니다.
+ * 빠른 로딩 시 스켈레톤 깜빡임(flash)을 방지합니다.
+ */
+export function useAtLeastLoading(
+  isLoading: boolean,
+  minMs: number = APP_CONFIG.UX.MIN_LOADING_TIME
+): boolean {
+  const [visible, setVisible] = useState(isLoading);
+  const startTimeRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (isLoading) {
+      startTimeRef.current = Date.now();
+      setVisible(true);
+    } else if (startTimeRef.current !== null) {
+      const elapsed = Date.now() - startTimeRef.current;
+      const remaining = Math.max(0, minMs - elapsed);
+      if (remaining > 0) {
+        const timer = setTimeout(() => setVisible(false), remaining);
+        return () => clearTimeout(timer);
+      } else {
+        setVisible(false);
+      }
+    }
+  }, [isLoading, minMs]);
+
+  return visible;
 }

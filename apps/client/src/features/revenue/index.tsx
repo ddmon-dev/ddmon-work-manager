@@ -1,7 +1,6 @@
 import { useSearchParams } from "react-router";
 import { AppHeader } from "@/shared/ui/app-header";
 import { Container } from "@/shared/ui/container";
-import { Skeleton } from "@/shared/ui/skeleton";
 import { useRevenueData } from "./api";
 import { RevenueSummary } from "./revenue-summary";
 import { MonthlyChart } from "./monthly-chart";
@@ -18,14 +17,7 @@ export function RevenueModule() {
     <>
       <AppHeader title="매출/수금 통계" />
       <Container className="flex flex-col gap-6 py-6">
-        {isLoading ? (
-          <>
-            <Skeleton className="h-[200px] rounded-lg" />
-            <Skeleton className="h-[160px] rounded-lg" />
-            <Skeleton className="h-[420px] rounded-lg" />
-            <Skeleton className="h-[200px] rounded-lg" />
-          </>
-        ) : data ? (
+        {!isLoading && data ? (
           <>
             <RevenueSummary
               prevYear={data.prevYearSummary}

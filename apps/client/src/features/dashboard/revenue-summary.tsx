@@ -1,6 +1,5 @@
 import { Link } from "react-router";
 import { TrendingUp, ArrowRight } from "lucide-react";
-import { Skeleton } from "@/shared/ui/skeleton";
 import { formatCurrency } from "@/shared/utils/format";
 import { useRevenueSummary } from "./api";
 
@@ -16,15 +15,7 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
 export function RevenueSummary() {
   const { data, isLoading } = useRevenueSummary();
 
-  if (isLoading) {
-    return (
-      <div className="p-5">
-        <Skeleton className="h-[160px] rounded-lg" />
-      </div>
-    );
-  }
-
-  if (!data) return null;
+  if (isLoading || !data) return null;
 
   return (
     <div className="p-5">

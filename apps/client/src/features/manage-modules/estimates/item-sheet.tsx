@@ -11,10 +11,8 @@ import {
 import { Separator } from "@/shared/ui/separator";
 import { cn } from "@/shared/utils/classnames";
 import { queryKeys } from "@/shared/lib/query-keys";
-import { atLeast } from "@/shared/utils/delays";
 import { useManageSheet, ManageSheetDataContext } from "../_base/ui";
 import { fetchEstimate } from "./api";
-import { EstimateSkeleton } from "./estimate-skeleton";
 import { CONFIG } from "./config";
 import { WriteForm } from "./write-form";
 import { DetailView } from "./detail-view";
@@ -40,7 +38,7 @@ export function ItemSheet() {
     refetch,
   } = useQuery({
     queryKey: id ? queryKeys.estimates.detail(id) : ["__disabled__"],
-    queryFn: () => atLeast(() => fetchEstimate(id!)),
+    queryFn: () => fetchEstimate(id!),
     enabled: !!id && isOpen && mode !== "create",
     staleTime: 0,
   } as UseQueryOptions<EstimateWithDetails>);
@@ -56,9 +54,7 @@ export function ItemSheet() {
     if (mode === "create") {
       return <WriteForm id={undefined} prevValues={null} />;
     }
-    if (isLoading) {
-      return <EstimateSkeleton />;
-    }
+    if (isLoading) return null;
     if (error) {
       return (
         <SheetBody>

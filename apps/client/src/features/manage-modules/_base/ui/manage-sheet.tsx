@@ -1,6 +1,5 @@
 import { use, createContext, useRef, useState } from "react";
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
-import { atLeast } from "@/shared/utils/delays";
 import {
   Sheet,
   SheetContent,
@@ -10,7 +9,6 @@ import {
   SheetBody,
   SheetContainer,
 } from "@/shared/ui/sheet";
-import { FormSkeleton } from "@/shared/ui/skeletons/form-skeleton";
 import { cn } from "@/shared/utils/classnames";
 import { useDialog } from "@/shared/ui/app-dialog";
 import type { ManageSheetMode } from "../types";
@@ -208,7 +206,7 @@ export function ManageSheet<T>({
     refetch,
   } = useQuery({
     queryKey: id ? queryKeyFn(id) : ["__disabled__"],
-    queryFn: () => atLeast(() => fetchFn(id!)),
+    queryFn: () => fetchFn(id!),
     enabled: !!id && isOpen && mode !== "create",
     staleTime: 0,
   } as UseQueryOptions<T>);
@@ -230,15 +228,7 @@ export function ManageSheet<T>({
       ) : null;
     }
 
-    if (isLoading) {
-      return (
-        <SheetBody>
-          <SheetContainer className="flex flex-col">
-            <FormSkeleton />
-          </SheetContainer>
-        </SheetBody>
-      );
-    }
+    if (isLoading) return null;
 
     if (error) {
       return (

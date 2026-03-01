@@ -3,7 +3,6 @@ import { toast } from "sonner";
 import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { atLeast } from "@/shared/utils/delays";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import type {
@@ -28,13 +27,11 @@ export function useProjectList(params: ListParams = {}) {
   return useQuery({
     queryKey: queryKeys.projects.list(params),
     queryFn: () =>
-      atLeast(() =>
-        api.get<ProjectListResponse>("/projects", {
-          page: params.page,
-          pageSize: params.pageSize,
-          search: params.search,
-        })
-      ),
+      api.get<ProjectListResponse>("/projects", {
+        page: params.page,
+        pageSize: params.pageSize,
+        search: params.search,
+      }),
   });
 }
 

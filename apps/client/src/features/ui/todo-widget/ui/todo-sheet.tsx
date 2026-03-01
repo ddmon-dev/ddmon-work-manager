@@ -14,7 +14,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/shared/ui/sheet";
-import { Skeleton } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/utils/classnames";
 import { useTodo } from "../context";
 import { TODO_COLOR_STYLES } from "../types";
@@ -140,13 +139,7 @@ export function TodoSheet() {
           <DateNav />
         </SheetHeader>
 
-        {isLoading ? (
-          <div className="flex-1 p-4 space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-8 w-full" />
-            ))}
-          </div>
-        ) : (
+        {!isLoading && (
           <DndContext
             sensors={sensors}
             onDragStart={handleDragStart}

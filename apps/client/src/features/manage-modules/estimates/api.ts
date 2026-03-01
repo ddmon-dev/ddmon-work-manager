@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
-import { atLeast } from "@/shared/utils/delays";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import type {
   EstimateListItem,
@@ -22,13 +21,11 @@ export function useEstimateList(params: ListParams = {}) {
   return useQuery({
     queryKey: queryKeys.estimates.list(params as Record<string, unknown>),
     queryFn: () =>
-      atLeast(() =>
-        api.get<EstimateListResponse>("/estimates", {
-          page: params.page,
-          pageSize: params.pageSize,
-          search: params.search,
-        })
-      ),
+      api.get<EstimateListResponse>("/estimates", {
+        page: params.page,
+        pageSize: params.pageSize,
+        search: params.search,
+      }),
   });
 }
 

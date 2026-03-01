@@ -1,6 +1,5 @@
 import { Link } from "react-router";
 import { CalendarDays, ArrowRight } from "lucide-react";
-import { Skeleton } from "@/shared/ui/skeleton";
 import { useUpcomingSchedules, type ScheduleItem } from "./api";
 
 const COLOR_MAP: Record<string, string> = {
@@ -99,13 +98,7 @@ function ScheduleSection({
 export function UpcomingSchedules() {
   const { data, isLoading } = useUpcomingSchedules();
 
-  if (isLoading) {
-    return (
-      <div className="rounded-lg border border-border bg-card p-5">
-        <Skeleton className="h-[200px] rounded-lg" />
-      </div>
-    );
-  }
+  if (isLoading) return null;
 
   const today = data?.today ?? [];
   const thisWeek = data?.thisWeek ?? [];

@@ -1,21 +1,10 @@
 import { FileSpreadsheet, Clock, FolderKanban, HandCoins } from "lucide-react";
-import { Skeleton } from "@/shared/ui/skeleton";
 import { useDashboardStats } from "./api";
 
 export function StatsCards() {
   const { data, isLoading } = useDashboardStats();
 
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-[88px] rounded-lg" />
-        ))}
-      </div>
-    );
-  }
-
-  if (!data) return null;
+  if (isLoading || !data) return null;
 
   const cards = [
     {
