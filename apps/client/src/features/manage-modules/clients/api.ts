@@ -2,6 +2,7 @@ import {
   useQuery,
   useMutation,
   useQueryClient,
+  keepPreviousData,
   type UseQueryOptions,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -30,6 +31,7 @@ export function useClientList(params: ListParams = {}) {
         pageSize: params.pageSize,
         search: params.search,
       }),
+    placeholderData: keepPreviousData,
   });
 }
 
