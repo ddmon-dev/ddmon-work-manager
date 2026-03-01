@@ -32,10 +32,10 @@ export const APP_CONFIG = {
     },
   },
   UX: {
-    MIN_LOADING_TIME: 350,
+    MIN_LOADING_TIME: 1000,
   },
   API: {
-    BASE: "/api",
+    BASE: '/api',
     TIMEOUT: 15_000,
   },
 } as const;
