@@ -38,10 +38,10 @@
 | 11 | 에러 바운더리 전반 동작 확인 | 중간 | 완료 |
 | 12 | unauthorized 바운더리 미동작 수정 | 중간 | 완료 (403 → `/unauthorized` 리다이렉트 추가) |
 | 13 | 에러/404/비인가 페이지를 사이드바 레이아웃 내부에서 렌더링 | 중간 | 완료 (ProtectedLayout children으로 이동) |
-| 15 | 인라인 편집·메모·입금내역 등 optimistic update 패턴 적용 | 높음 | 미완 |
-| 16 | 인라인 편집 성공 시 불필요한 토스트 제거 | 낮음 | 미완 |
-| 19 | 목록 API 응답 구조 통일 — 배열 직접 반환 엔드포인트(`/schedules/month`, `GET /todos`, `GET /revenue`)를 나머지 목록과 일관된 형태로 맞추기 | 낮음 | 미완 |
-| 20 | 마이그레이션 스쿼시 (v1 클린 슬레이트) — 기존 7개 파일 삭제 후 `drizzle-kit generate`로 단일 `0000_initial.sql` 재생성. 7번(seed 개인정보 처리) 선행 필요. 로컬 운영환경은 백업 후 DB 초기화 + 재적용. **함께 처리할 스키마 변경**: schedules 테이블 `deleted` 컬럼 제거 + 하드 삭제로 전환 (라우트 코드도 함께 수정) | 중간 | 미완 |
+| 15 | 인라인 편집·메모·입금내역 등 optimistic update 패턴 적용 | 높음 | 완료 (projects/clients/estimates 1+2순위) |
+| 16 | 인라인 편집 성공 시 불필요한 토스트 제거 | 낮음 | 완료 |
+| 19 | 목록 API 응답 구조 통일 — 배열 직접 반환 엔드포인트(`/schedules/month`, `GET /todos`, `GET /revenue`)를 나머지 목록과 일관된 형태로 맞추기 | 낮음 | 완료 (`{ items }` 래핑) |
+| 20 | 마이그레이션 스쿼시 (v1 클린 슬레이트) — 기존 7개 파일 삭제 후 `drizzle-kit generate`로 단일 `0000_initial.sql` 재생성. 7번(seed 개인정보 처리) 선행 필요. 로컬 운영환경은 백업 후 DB 초기화 + 재적용. **함께 처리할 스키마 변경**: schedules 테이블 `deleted` 컬럼 제거 + 하드 삭제로 전환 (라우트 코드도 함께 수정) | 중간 | 완료 |
 | 21 | 상수 중앙화 — `packages/utils/src/constants.ts`에 공유 상수(`PASSWORD_MIN_LENGTH`, `DEFAULT_PAGE_SIZE`) 추출. 서버 전용 상수는 `apps/server/src/lib/constants.ts`로 분리. 클라이언트 내 `\|\| 15` 하드코딩(`clients`, `admins` 모듈)도 `APP_CONFIG` 참조로 통일 | 낮음 | 미완 |
 | 22 | 스켈레톤 정리 — 모듈별 스켈레톤(`list-skeleton`, `form-skeleton`, `estimate-skeleton`, `calendar-skeleton`, 대시보드 인라인 등) 및 `atLeast` 강제 딜레이 제거. `app-layout-skeleton`과 사이드바 `nav-user` 스켈레톤은 유지하되 `atLeast` 딜레이 적용 | 중간 | 미완 |
 | 23 | SearchBar 키입력 기반으로 변경 — `onChange`에 debounce(300ms) 적용해 Enter 없이 실시간 검색. `shared/ui/data-list/search-bar.tsx` 단일 변경으로 전체 적용 | 낮음 | 미완 |
