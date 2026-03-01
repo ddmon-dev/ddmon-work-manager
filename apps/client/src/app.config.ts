@@ -26,7 +26,7 @@ export const APP_CONFIG = {
       KEYBOARD_SHORTCUT: 'b',
     },
     PAGINATION: {
-      PAGE_SIZE_OPTIONS: [1, 15, 30, 50, 100],
+      PAGE_SIZE_OPTIONS: [15, 30, 50, 100],
       MAX_VISIBLE_PAGES: 7,
       MOBILE_MAX_VISIBLE_PAGES: 5,
     },
