@@ -2,11 +2,13 @@ import { api } from "@/shared/lib/api-client";
 import type { Todo, TodoWithTimeBlocks, TimeBlock } from "./types";
 
 export async function fetchTodos(date: string): Promise<TodoWithTimeBlocks[]> {
-  return api.get<TodoWithTimeBlocks[]>("/todos", { date });
+  const { items } = await api.get<{ items: TodoWithTimeBlocks[] }>("/todos", { date });
+  return items;
 }
 
 export async function fetchIncompleteTodos(before: string): Promise<Todo[]> {
-  return api.get<Todo[]>("/todos/incomplete", { before });
+  const { items } = await api.get<{ items: Todo[] }>("/todos/incomplete", { before });
+  return items;
 }
 
 export async function createTodo(data: {

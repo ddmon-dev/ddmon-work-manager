@@ -56,7 +56,7 @@ export function useMonthlySchedules(year: number, month: number) {
   return useQuery({
     queryKey: queryKeys.schedules.monthly(year, month),
     queryFn: () =>
-      api.get<CalendarSchedule[]>("/schedules/month", { year, month }),
+      api.get<{ items: CalendarSchedule[] }>("/schedules/month", { year, month }).then((r) => r.items),
   });
 }
 

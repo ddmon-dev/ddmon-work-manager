@@ -184,7 +184,7 @@ app.get("/month", async (c) => {
     generateOccurrences(s as ScheduleRow, monthStart, monthEnd)
   );
 
-  return successResponse(c, [...singles, ...recurrences]);
+  return successResponse(c, { items: [...singles, ...recurrences] });
 });
 
 // GET /schedules — 목록

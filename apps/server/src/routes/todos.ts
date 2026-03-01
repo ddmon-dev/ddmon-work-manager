@@ -29,7 +29,7 @@ app.get("/", async (c) => {
     orderBy: [asc(todos.sortOrder), asc(todos.createdAt)],
   });
 
-  return successResponse(c, items);
+  return successResponse(c, { items });
 });
 
 // GET /todos/incomplete — 미완료 투두 (?before=YYYY-MM-DD)
@@ -48,7 +48,7 @@ app.get("/incomplete", async (c) => {
     orderBy: [asc(todos.todoDate), asc(todos.sortOrder)],
   });
 
-  return successResponse(c, items);
+  return successResponse(c, { items });
 });
 
 // POST /todos/carry-over — 미완료 투두 이월
