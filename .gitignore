@@ -8,6 +8,9 @@ dist-local/
 # local env
 backups/
 
+# seed (개인정보 포함)
+apps/server/src/db/seed.ts
+
 # env
 .env
 .env.local
