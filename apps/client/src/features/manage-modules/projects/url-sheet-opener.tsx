@@ -7,7 +7,7 @@ import { useManageSheet } from "../_base/ui";
  * - id: 해당 프로젝트 상세 시트 열기 (예: /projects?id=uuid)
  * - create_from: 프로젝트 생성 시트 열기 (예: /projects?create_from=EST-2025-001)
  */
-export function AutoCreateSheet() {
+export function UrlSheetOpener() {
   const [searchParams] = useSearchParams();
   const idParam = searchParams.get("id");
   const createFrom = searchParams.get("create_from");
