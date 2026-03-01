@@ -15,25 +15,25 @@ interface DialogProviderProps {
 
 export function DialogProvider({ children }: DialogProviderProps) {
   const [dialogState, setDialogState] = useState<DialogState>(null);
-  const resolveRef = useRef<((value: unknown) => void) | null>(null);
+  const resolveRef = useRef<(() => void) | null>(null);
 
   const confirm = useCallback((data: ConfirmDialogData): Promise<void> => {
     return new Promise((resolve) => {
-      resolveRef.current = resolve;
+      resolveRef.current = () => resolve();
       setDialogState({ type: 'confirm', data });
     });
   }, []);
 
   const alert = useCallback((data: AlertDialogData): Promise<void> => {
     return new Promise((resolve) => {
-      resolveRef.current = resolve;
+      resolveRef.current = () => resolve();
       setDialogState({ type: 'alert', data });
     });
   }, []);
 
   const close = useCallback(() => {
     if (resolveRef.current) {
-      resolveRef.current(undefined);
+      resolveRef.current();
       resolveRef.current = null;
     }
     setDialogState(null);
@@ -49,7 +49,7 @@ export function DialogProvider({ children }: DialogProviderProps) {
       }
     }
     if (resolveRef.current) {
-      resolveRef.current(undefined);
+      resolveRef.current();
       resolveRef.current = null;
     }
     setDialogState(null);
@@ -63,7 +63,7 @@ export function DialogProvider({ children }: DialogProviderProps) {
     }
     if (shouldClose) {
       if (resolveRef.current) {
-        resolveRef.current(undefined);
+        resolveRef.current();
         resolveRef.current = null;
       }
       setDialogState(null);
@@ -78,7 +78,7 @@ export function DialogProvider({ children }: DialogProviderProps) {
     }
     if (shouldClose) {
       if (resolveRef.current) {
-        resolveRef.current(undefined);
+        resolveRef.current();
         resolveRef.current = null;
       }
       setDialogState(null);
