@@ -7,12 +7,9 @@ export function AppLayoutSkeleton() {
       <div className="hidden md:flex flex-col w-80 shrink-0 border-r border-sidebar-border">
 
         {/* 헤더 — 69px */}
-        <div className="h-[69px] px-4 flex items-center border-b border-sidebar-border">
-          <Skeleton className="size-8 rounded-lg shrink-0 mr-2.5" />
-          <div className="flex flex-col gap-1.5 flex-1">
-            <Skeleton className="h-3.5 w-24" />
-            <Skeleton className="h-2.5 w-36" />
-          </div>
+        <div className="h-[69px] px-4 flex items-center gap-2.5 border-b border-sidebar-border">
+          <Skeleton className="size-8 rounded-lg shrink-0" />
+          <Skeleton className="h-5 w-28" />
         </div>
 
         {/* 네비 메뉴 */}
@@ -23,7 +20,7 @@ export function AppLayoutSkeleton() {
           <div className="flex flex-col gap-1">
             {["w-5/6", "w-2/3", "w-11/12", "w-3/5", "w-3/4"].map((w, i) => (
               <div key={i} className="h-10 flex items-center px-2">
-                <Skeleton className={`h-4 ${w}`} />
+                <Skeleton className={`h-5 ${w}`} />
               </div>
             ))}
           </div>
@@ -53,7 +50,7 @@ export function AppLayoutSkeleton() {
         <div className="p-6 flex flex-col gap-4">
           <Skeleton className="h-9 w-56 rounded-md" />
           <div className="flex flex-col gap-2">
-            {["w-full", "w-[92%]", "w-[96%]", "w-[85%]", "w-[89%]", "w-[74%]"].map((w, i) => (
+            {["w-[48%]", "w-[38%]", "w-[45%]", "w-[33%]", "w-[42%]", "w-[36%]"].map((w, i) => (
               <Skeleton key={i} className={`h-11 ${w} rounded-md`} />
             ))}
           </div>
