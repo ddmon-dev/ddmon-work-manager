@@ -24,6 +24,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       throw new Error("Unauthorized");
     }
 
+    if (res.status === 403) {
+      window.location.href = APP_CONFIG.AUTH.PATHS.FORBIDDEN;
+      throw new Error("Forbidden");
+    }
+
     const json = (await res.json()) as ApiResponse<T>;
 
     if (!json.success) {

@@ -34,10 +34,10 @@ export const router = createBrowserRouter([
           { path: "/schedules", element: <SchedulesPage /> },
           { path: "/revenue", element: <RevenuePage /> },
           { path: "/admins", element: <AdminsPage /> },
+          { path: "/unauthorized", element: <UnauthorizedPage /> },
+          { path: "*", element: <NotFoundPage /> },
         ],
       },
-      { path: "/unauthorized", element: <UnauthorizedPage /> },
-      { path: "*", element: <NotFoundPage /> },
     ],
   },
 ]);
