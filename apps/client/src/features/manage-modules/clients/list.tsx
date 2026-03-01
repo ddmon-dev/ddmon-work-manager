@@ -6,16 +6,14 @@ interface ListProps {
   data: ClientDTO[];
   totalCount: number;
   isLoading?: boolean;
-  isPlaceholderData?: boolean;
 }
 
-export function List({ data, totalCount, isLoading, isPlaceholderData }: ListProps) {
+export function List({ data, totalCount, isLoading }: ListProps) {
   return (
     <ManageList
       data={data}
       totalCount={totalCount}
       isLoading={isLoading}
-      isPlaceholderData={isPlaceholderData}
       listColumns={listColumns}
       rowClickMode="view"
     />

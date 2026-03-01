@@ -15,14 +15,14 @@ export function ProjectsModule() {
   );
   const search = searchParams.get("search") ?? undefined;
 
-  const { data, isLoading, isPlaceholderData } = useProjectList({ page, pageSize, search });
+  const { data, isLoading } = useProjectList({ page, pageSize, search });
 
   const items = data?.items ?? [];
   const totalCount = data?.total ?? 0;
 
   return (
     <ManageContainer moduleName={CONFIG.moduleName}>
-      <List data={items} totalCount={totalCount} isLoading={isLoading} isPlaceholderData={isPlaceholderData} />
+      <List data={items} totalCount={totalCount} isLoading={isLoading} />
       <ItemSheet />
       <UrlSheetOpener />
     </ManageContainer>

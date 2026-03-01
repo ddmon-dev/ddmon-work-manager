@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { APP_CONFIG } from "@/app.config";
-import { cn } from "@/shared/utils/classnames";
 import { type ColumnDef } from "@tanstack/react-table";
 import { DataList, useDataList, createSelectionColumn } from "@/shared/ui/data-list";
 import type { ManageSheetMode } from "../types";
@@ -10,7 +9,6 @@ interface ManageListProps<TData extends { id?: string }> {
   data: TData[];
   totalCount: number;
   isLoading?: boolean;
-  isPlaceholderData?: boolean;
   listColumns: ColumnDef<TData>[];
   enableBulkAction?: boolean;
   onRowClick?: (row: TData) => void;
@@ -21,7 +19,6 @@ export function ManageList<TData extends { id?: string }>({
   data,
   totalCount,
   isLoading,
-  isPlaceholderData,
   listColumns,
   enableBulkAction = false,
   onRowClick,
@@ -73,7 +70,6 @@ export function ManageList<TData extends { id?: string }>({
   if (isLoading) return null;
 
   return (
-    <div className={cn("transition-opacity duration-150", isPlaceholderData && "opacity-50")}>
     <DataList
       key={enableBulkAction ? selectionKey : undefined}
       data={data}
@@ -88,6 +84,5 @@ export function ManageList<TData extends { id?: string }>({
       onRowClick={handleRowClick}
       onSelectionChange={enableBulkAction ? handleSelectionChange : undefined}
     />
-    </div>
   );
 }
