@@ -407,7 +407,7 @@ app.post("/", async (c) => {
     ceo: bizInfo?.ceo ?? undefined,
     bizNumber: bizInfo?.bizNumber ?? undefined,
     address: bizInfo?.address ?? undefined,
-    issuer: estimateData.issuer ?? undefined,
+    issuer: user.name ?? undefined,
     phone: user.phone ?? undefined,
     email: user.email ?? undefined,
   };
@@ -507,7 +507,7 @@ app.patch("/:id", async (c) => {
     ceo: bizInfo?.ceo ?? undefined,
     bizNumber: bizInfo?.bizNumber ?? undefined,
     address: bizInfo?.address ?? undefined,
-    issuer: estimateData.issuer ?? undefined,
+    issuer: user.name ?? undefined,
     phone: user.phone ?? undefined,
     email: user.email ?? undefined,
   };

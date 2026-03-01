@@ -55,7 +55,6 @@ const formDefaultValues: FormValues = {
   description: "",
   versionLabel: "",
   issuedDate: new Date(),
-  issuer: "",
   validUntil: addMonths(new Date(), 1),
   taxType: "vat",
   discountType: "none",
@@ -80,7 +79,6 @@ function toFormValues(data: EstimateWithDetails): FormValues {
     description: data.description ?? "",
     versionLabel: data.versionLabel ?? "",
     issuedDate: data.issuedDate ? parseISO(data.issuedDate) : null,
-    issuer: data.publisherInfo?.issuer ?? "",
     validUntil: data.validUntil ? parseISO(data.validUntil) : null,
     taxType: (data.taxType as "withholding" | "vat") ?? "vat",
     discountType: (data.discountType as "none" | "amount" | "percentage") ?? "none",
@@ -110,7 +108,6 @@ interface WriteFormProps {
 export function WriteForm({ id, prevValues }: WriteFormProps) {
   const sheet = useManageSheet();
   const { refetch } = useManageSheetData();
-  const { user } = useAuth();
   const isClone = sheet.data?.mode === "clone";
 
   const createEstimate = useCreateEstimate();
@@ -118,10 +115,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
-    defaultValues: prevValues ? toFormValues(prevValues) : {
-      ...formDefaultValues,
-      issuer: user?.name ?? "",
-    },
+    defaultValues: prevValues ? toFormValues(prevValues) : formDefaultValues,
   });
   useFormGuard(form);
 
@@ -138,7 +132,6 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
       const now = new Date();
       form.reset({
         ...formDefaultValues,
-        issuer: user?.name ?? "",
         issuedDate: now,
         validUntil: addMonths(now, 1),
       });
@@ -227,12 +220,6 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                     label="버전명"
                     placeholder="예: 다이어그램 이미지삽입 및 어드민"
                     optional
-                  />
-                  <FormTextInput
-                    control={form.control}
-                    name="issuer"
-                    label="발행자"
-                    placeholder="발행자를 입력해주세요."
                   />
                   <FormDatePicker
                     control={form.control}
@@ -419,7 +406,7 @@ function EstimateFormPdfPreview({
     validUntil: values.validUntil
       ? format(values.validUntil, "yyyy-MM-dd")
       : undefined,
-    issuer: values.issuer || undefined,
+    issuer: user?.name || undefined,
     issuerPhone: user?.phone ?? undefined,
     issuerEmail: user?.email || undefined,
     bizName: bizInfo?.name ?? undefined,
