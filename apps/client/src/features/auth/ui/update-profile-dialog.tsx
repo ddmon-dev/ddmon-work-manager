@@ -24,6 +24,7 @@ import {
   FormPhoneInput,
   FormRootError,
 } from "@/shared/ui/form";
+import { PASSWORD_MIN_LENGTH } from "@work-manager/utils";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { authClient } from "@/features/auth/lib/auth-client";
 import { useDialog } from "@/shared/ui/app-dialog";
@@ -36,7 +37,7 @@ const formSchema = z
     email: z.string().email("올바른 이메일을 입력해주세요."),
     phone: z.string().optional(),
     currentPassword: z.string().optional(),
-    newPassword: z.string().optional(),
+    newPassword: z.string().min(PASSWORD_MIN_LENGTH, `비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상이어야 합니다.`).optional().or(z.literal("")),
     confirmPassword: z.string().optional(),
   })
   .refine(
@@ -191,7 +192,7 @@ export function UpdateProfileDialog({ children }: UpdateProfileDialogProps) {
                 control={form.control}
                 name="newPassword"
                 label="새 비밀번호"
-                placeholder="새 비밀번호 (최소 6자)"
+                placeholder={`새 비밀번호 (최소 ${PASSWORD_MIN_LENGTH}자)`}
                 autoComplete="new-password"
                 optional
               />
