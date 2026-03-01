@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { clients, clientMemos } from "../db/schema";
+import { clients, clientMemos, user } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { clientWriteSchema } from "@work-manager/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
@@ -78,7 +78,17 @@ app.get("/:id", async (c) => {
   });
 
   if (!client) return errorResponse(c, ERRORS.NOT_FOUND, 404);
-  return successResponse(c, client);
+
+  const authorIds = [...new Set(client.memos.map((m) => m.author).filter(Boolean))] as string[];
+  const authors = authorIds.length > 0
+    ? await db.select({ id: user.id, name: user.name, username: user.username }).from(user).where(inArray(user.id, authorIds))
+    : [];
+  const authorMap = Object.fromEntries(authors.map((a) => [a.id, `${a.name}(${a.username})`]));
+
+  return successResponse(c, {
+    ...client,
+    memos: client.memos.map((m) => ({ ...m, author: m.author ? (authorMap[m.author] ?? m.author) : null })),
+  });
 });
 
 // POST /clients — 생성

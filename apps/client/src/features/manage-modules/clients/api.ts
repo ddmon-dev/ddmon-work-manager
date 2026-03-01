@@ -122,7 +122,6 @@ export function useCreateClientMemo() {
           ? {
               ...old,
               memos: [
-                ...old.memos,
                 {
                   id: crypto.randomUUID(),
                   content,
@@ -130,6 +129,7 @@ export function useCreateClientMemo() {
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
                 },
+                ...old.memos,
               ],
             }
           : old

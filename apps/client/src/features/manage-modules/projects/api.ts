@@ -331,7 +331,6 @@ export function useCreateProjectMemo() {
           ? {
               ...old,
               memos: [
-                ...old.memos,
                 {
                   id: crypto.randomUUID(),
                   content,
@@ -339,6 +338,7 @@ export function useCreateProjectMemo() {
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
                 },
+                ...old.memos,
               ],
             }
           : old

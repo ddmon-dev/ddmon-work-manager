@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { projects, projectPayments, projectMemos } from "../db/schema";
+import { projects, projectPayments, projectMemos, user } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { projectWriteSchema } from "@work-manager/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
@@ -139,7 +139,17 @@ app.get("/:id", async (c) => {
   });
 
   if (!project) return errorResponse(c, ERRORS.NOT_FOUND, 404);
-  return successResponse(c, project);
+
+  const authorIds = [...new Set(project.memos.map((m) => m.author).filter(Boolean))] as string[];
+  const authors = authorIds.length > 0
+    ? await db.select({ id: user.id, name: user.name, username: user.username }).from(user).where(inArray(user.id, authorIds))
+    : [];
+  const authorMap = Object.fromEntries(authors.map((a) => [a.id, `${a.name}(${a.username})`]));
+
+  return successResponse(c, {
+    ...project,
+    memos: project.memos.map((m) => ({ ...m, author: m.author ? (authorMap[m.author] ?? m.author) : null })),
+  });
 });
 
 // POST /projects — 생성 (projectNumber 자동 생성)
