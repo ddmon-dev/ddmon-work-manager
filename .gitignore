@@ -3,6 +3,10 @@ node_modules/
 
 # build
 dist/
+dist-local/
+
+# local env
+backups/
 
 # env
 .env

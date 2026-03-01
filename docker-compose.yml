@@ -1,3 +1,5 @@
+name: wm-dev
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -7,7 +9,7 @@ services:
       POSTGRES_PASSWORD: REDACTED
       POSTGRES_DB: work_manager
     ports:
-      - "4002:5432"
+      - "8002:5432"
     volumes:
       - wm_pgdata:/var/lib/postgresql/data
 
