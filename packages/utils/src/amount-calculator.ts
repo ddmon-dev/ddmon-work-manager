@@ -1,4 +1,4 @@
-import { TAX_TYPE, DISCOUNT_TYPE } from "@work-manager/types";
+import { TAX_TYPE, DISCOUNT_TYPE } from '@work-manager/types';
 
 interface CalcItem {
   amount: number;
@@ -13,7 +13,7 @@ export function calculateGroupSubtotal(items: CalcItem[]): number {
   return items.reduce((sum, item) => sum + item.amount, 0);
 }
 
-/** 전체 소계 */
+/** 전체 합계 */
 export function calculateSubtotal(groups: CalcGroup[]): number {
   return groups.reduce(
     (sum, group) => sum + calculateGroupSubtotal(group.items),
@@ -27,7 +27,7 @@ export function calculateDiscountAmount(
   discountType: string | null | undefined,
   discountValue: number
 ): number {
-  if (!discountType || discountType === "none" || discountValue <= 0) return 0;
+  if (!discountType || discountType === 'none' || discountValue <= 0) return 0;
   if (discountType === DISCOUNT_TYPE.AMOUNT) return discountValue;
   if (discountType === DISCOUNT_TYPE.PERCENTAGE)
     return subtotal * (discountValue / 100);
@@ -74,7 +74,14 @@ export function calculateTotal(
   }
   // withholding 및 기타: 세금 없음
 
-  return { subtotal, discountAmount, afterDiscount, taxAmount, supplyAmount, total };
+  return {
+    subtotal,
+    discountAmount,
+    afterDiscount,
+    taxAmount,
+    supplyAmount,
+    total,
+  };
 }
 
 export interface PriceSummaryDisplay {
@@ -99,14 +106,14 @@ export function buildPriceSummaryDisplay(
 
   if (isTaxed) {
     if (showTaxAmount) {
-      totalLabel = "견적가(VAT 포함)";
+      totalLabel = '견적가(VAT 포함)';
       totalValue = totals.total;
     } else {
-      totalLabel = "견적가(VAT 별도)";
+      totalLabel = '견적가(VAT 별도)';
       totalValue = totals.supplyAmount;
     }
   } else {
-    totalLabel = "견적가";
+    totalLabel = '견적가';
     totalValue = totals.total;
   }
 
@@ -140,7 +147,7 @@ export function calculateTaxBreakdown(
     return {
       supplyAmount: contractAmount - taxAmount,
       taxAmount,
-      taxLabel: "원천징수(3.3%)",
+      taxLabel: '원천징수(3.3%)',
     };
   }
   // vat: contractAmount는 공급가액
@@ -148,6 +155,6 @@ export function calculateTaxBreakdown(
   return {
     supplyAmount: contractAmount,
     taxAmount,
-    taxLabel: "부가세(10%)",
+    taxLabel: '부가세(10%)',
   };
 }
