@@ -1,6 +1,5 @@
 import { FileText, Search } from "lucide-react";
 import { useQueryParams } from "@/shared/hooks/use-query-params";
-import { SearchBar } from "./search-bar";
 
 interface EmptyMessage {
   icon?: React.ReactNode;
@@ -20,7 +19,6 @@ const emptyMessages: Record<string, EmptyMessage> = {
     icon: <Search />,
     title: "No Results Found",
     description: "검색 결과가 없습니다. 다른 검색어를 시도해주세요.",
-    action: <SearchBar autoFocus />,
   },
 };
 
