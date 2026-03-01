@@ -4,7 +4,7 @@ import { AppSidebar } from "@/features/ui/app-sidebar";
 import { TodoProvider, TodoSheet } from "@/features/ui/todo-widget";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useAtLeastLoading } from "@/shared/utils/delays";
-import { AppLayoutSkeleton } from "./app-layout-skeleton";
+import { AppLayoutSkeleton } from "@/shared/ui/skeletons/app-layout-skeleton";
 import { APP_CONFIG } from "@/app.config";
 
 export function ProtectedLayout() {
