@@ -9,8 +9,7 @@ import {
 } from "@/shared/ui/input-group";
 import { useQueryParams } from "@/shared/hooks/use-query-params";
 import { useIsMobile } from "@/shared/hooks/use-mobile";
-
-const DEBOUNCE_MS = 300;
+import { useDebounce } from "@/shared/hooks/use-debounce";
 
 interface SearchBarProps {
   paramKey?: string;
@@ -32,6 +31,7 @@ export function SearchBar({
 
   const searchValue = get(paramKey) || "";
   const [value, setValue] = React.useState(searchValue);
+  const debouncedValue = useDebounce(value);
 
   // 사용자가 타이핑 중이 아닐 때만 URL → 로컬 동기화 (타이핑 중 덮어쓰기 방지)
   React.useEffect(() => {
@@ -47,12 +47,9 @@ export function SearchBar({
 
   React.useEffect(() => {
     if (!isUserInput.current) return;
-    const timer = setTimeout(() => {
-      isUserInput.current = false; // 커밋 후 타이핑 상태 해제 → URL 동기화 허용
-      commitRef.current(value);
-    }, DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [value]);
+    isUserInput.current = false; // 커밋 후 타이핑 상태 해제 → URL 동기화 허용
+    commitRef.current(debouncedValue);
+  }, [debouncedValue]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     isUserInput.current = true;
