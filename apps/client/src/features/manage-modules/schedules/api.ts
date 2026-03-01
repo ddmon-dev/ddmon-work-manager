@@ -110,7 +110,6 @@ export function useUpdateSchedule() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.detail(id) });
-      toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("일정"));
     },
     onError: (error: Error) => {
       toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("일정"));
