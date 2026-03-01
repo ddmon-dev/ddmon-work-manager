@@ -1,33 +1,44 @@
 import { APP_CONFIG } from "@/app.config";
 
-const API_BASE = "/api";
-
 type ApiResponse<T> =
   | { success: true; data: T }
   | { success: false; error: string; message: string };
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
-    ...options,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), APP_CONFIG.API.TIMEOUT);
 
-  if (res.status === 401) {
-    window.location.href = APP_CONFIG.AUTH.PATHS.SIGN_IN;
-    throw new Error("Unauthorized");
+  try {
+    const res = await fetch(`${APP_CONFIG.API.BASE}${path}`, {
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+      },
+      ...options,
+      signal: controller.signal,
+    });
+
+    if (res.status === 401) {
+      window.location.href = APP_CONFIG.AUTH.PATHS.SIGN_IN;
+      throw new Error("Unauthorized");
+    }
+
+    const json = (await res.json()) as ApiResponse<T>;
+
+    if (!json.success) {
+      throw new Error((json as { success: false; message: string }).message || json.error);
+    }
+
+    return (json as { success: true; data: T }).data;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("요청 시간이 초과되었습니다.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const json = (await res.json()) as ApiResponse<T>;
-
-  if (!json.success) {
-    throw new Error((json as { success: false; message: string }).message || json.error);
-  }
-
-  return (json as { success: true; data: T }).data;
 }
 
 type Params = Record<string, string | number | boolean | undefined | null>;

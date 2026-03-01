@@ -34,4 +34,8 @@ export const APP_CONFIG = {
   UX: {
     MIN_LOADING_TIME: 350,
   },
+  API: {
+    BASE: "/api",
+    TIMEOUT: 15_000,
+  },
 } as const;
