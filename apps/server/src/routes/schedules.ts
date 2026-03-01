@@ -1,12 +1,12 @@
 import { Hono } from "hono";
-import { and, count, desc, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import { db } from "../db";
 import { schedules } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { scheduleWriteSchema } from "@work-manager/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { searchFilter, softDeleteFilter, softDeletePayload } from "../lib/query-helpers";
+import { searchFilter } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -154,10 +154,7 @@ app.get("/month", async (c) => {
 
   // 단발 일정: start_date <= monthEnd AND (end_date >= monthStart OR start_date >= monthStart)
   const singleSchedules = await db.query.schedules.findMany({
-    where: and(
-      softDeleteFilter(schedules.deleted),
-      eq(schedules.recurrenceType, "none")
-    ),
+    where: eq(schedules.recurrenceType, "none"),
     with: { client: true, project: true },
     orderBy: [desc(schedules.startDate)],
   });
@@ -171,7 +168,6 @@ app.get("/month", async (c) => {
 
   // 반복 일정: start_date <= monthEnd
   const recurringSchedules = await db.query.schedules.findMany({
-    where: and(softDeleteFilter(schedules.deleted)),
     with: { client: true, project: true },
   });
 
@@ -192,10 +188,7 @@ app.get("/", async (c) => {
   const { page, pageSize, search } = parsePagination(c.req.query());
   const offset = calcOffset(page, pageSize);
 
-  const where = and(
-    softDeleteFilter(schedules.deleted),
-    search ? searchFilter([schedules.title], search) : undefined
-  );
+  const where = search ? searchFilter([schedules.title], search) : undefined;
 
   const [items, [{ total }]] = await Promise.all([
     db.select().from(schedules).where(where).orderBy(desc(schedules.startDate)).limit(pageSize).offset(offset),
@@ -209,7 +202,7 @@ app.get("/", async (c) => {
 app.get("/:id", async (c) => {
   const id = c.req.param("id");
   const schedule = await db.query.schedules.findFirst({
-    where: and(eq(schedules.id, id), softDeleteFilter(schedules.deleted)),
+    where: eq(schedules.id, id),
     with: { client: true, project: true },
   });
 
@@ -241,20 +234,19 @@ app.patch("/:id", async (c) => {
   const [updated] = await db
     .update(schedules)
     .set({ ...parsed.data, updatedBy: user.id, updatedAt: new Date() })
-    .where(and(eq(schedules.id, id), softDeleteFilter(schedules.deleted)))
+    .where(eq(schedules.id, id))
     .returning();
 
   if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
   return successResponse(c, updated);
 });
 
-// DELETE /schedules/:id — 소프트 삭제
+// DELETE /schedules/:id — 하드 삭제
 app.delete("/:id", async (c) => {
   const id = c.req.param("id");
   const [deleted] = await db
-    .update(schedules)
-    .set(softDeletePayload())
-    .where(and(eq(schedules.id, id), softDeleteFilter(schedules.deleted)))
+    .delete(schedules)
+    .where(eq(schedules.id, id))
     .returning();
 
   if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);

@@ -174,17 +174,14 @@ app.get("/schedules", async (c) => {
     .leftJoin(clients, eq(schedules.clientId, clients.id))
     .leftJoin(projects, eq(schedules.projectId, projects.id))
     .where(
-      and(
-        softDeleteFilter(schedules.deleted),
-        or(
-          and(
-            gte(schedules.startDate, todayStr),
-            lte(schedules.startDate, monthLaterStr)
-          ),
-          and(
-            sql`${schedules.startDate} < ${todayStr}`,
-            gte(schedules.endDate, todayStr)
-          )
+      or(
+        and(
+          gte(schedules.startDate, todayStr),
+          lte(schedules.startDate, monthLaterStr)
+        ),
+        and(
+          sql`${schedules.startDate} < ${todayStr}`,
+          gte(schedules.endDate, todayStr)
         )
       )
     )

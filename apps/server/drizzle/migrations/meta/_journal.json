@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1772189769087,
-      "tag": "0000_parched_colonel_america",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1772191755399,
-      "tag": "0001_illegal_wolverine",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1772197828523,
-      "tag": "0002_perpetual_lester",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1772308481633,
-      "tag": "0003_loose_iron_fist",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1772400000000,
-      "tag": "0004_tax_type_unification",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1772364400526,
-      "tag": "0005_violet_brother_voodoo",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1772366937686,
-      "tag": "0006_productive_ravenous",
+      "when": 1772384286731,
+      "tag": "0000_stiff_darwin",
       "breakpoints": true
     }
   ]

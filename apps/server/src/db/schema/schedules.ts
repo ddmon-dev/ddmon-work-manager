@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, boolean, timestamp, date } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, date } from "drizzle-orm/pg-core";
 import { clients } from "./clients";
 import { projects } from "./projects";
 
@@ -20,5 +20,4 @@ export const schedules = pgTable("schedules", {
   updatedBy: text("updated_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  deleted: boolean("deleted").notNull().default(false),
 });
