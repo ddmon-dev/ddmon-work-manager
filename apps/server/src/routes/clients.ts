@@ -15,7 +15,7 @@ app.use("*", requireAuth);
 
 // GET /clients — 목록 (페이지네이션, 검색)
 app.get("/", async (c) => {
-  const { page, pageSize, search } = parsePagination(c.req.query() as Record<string, string>);
+  const { page, pageSize, search } = parsePagination(c.req.query());
   const offset = calcOffset(page, pageSize);
 
   const where = and(

@@ -16,7 +16,7 @@ app.use("*", requireAuth);
 
 // GET /projects — 목록 (payments 합계 포함)
 app.get("/", async (c) => {
-  const { page, pageSize, search } = parsePagination(c.req.query() as Record<string, string>);
+  const { page, pageSize, search } = parsePagination(c.req.query());
   const offset = calcOffset(page, pageSize);
 
   const where = and(

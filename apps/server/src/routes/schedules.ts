@@ -189,7 +189,7 @@ app.get("/month", async (c) => {
 
 // GET /schedules — 목록
 app.get("/", async (c) => {
-  const { page, pageSize, search } = parsePagination(c.req.query() as Record<string, string>);
+  const { page, pageSize, search } = parsePagination(c.req.query());
   const offset = calcOffset(page, pageSize);
 
   const where = and(

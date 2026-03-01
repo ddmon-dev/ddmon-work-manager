@@ -16,7 +16,7 @@ app.use("*", requireSuperAdmin);
 
 // GET /admins - 목록 (페이지네이션, 검색, 정렬)
 app.get("/", async (c) => {
-  const query = c.req.query() as Record<string, string>;
+  const query = c.req.query();
   const { page, pageSize, search } = parsePagination(query);
   const sort = query.sort || "createdAt";
   const order = query.order || "desc";

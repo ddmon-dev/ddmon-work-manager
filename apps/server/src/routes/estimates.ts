@@ -41,7 +41,7 @@ async function insertGroupsAndItems(tx: any, estimateId: string, groups: Estimat
 
 // GET /estimates — 목록 (계열별 대표 버전, DISTINCT ON)
 app.get("/", async (c) => {
-  const { page, pageSize, search } = parsePagination(c.req.query() as Record<string, string>);
+  const { page, pageSize, search } = parsePagination(c.req.query());
   const offset = calcOffset(page, pageSize);
 
   const searchFilter = search
