@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import { DetailInfoRow } from "../../_base/ui";
 import { TAX_OPTIONS } from "../constants";
 import type { EstimateWithDetails } from "../types";
@@ -14,6 +15,18 @@ export function EstimateInfo({ data }: { data: EstimateWithDetails }) {
       {data.versionLabel && (
         <DetailInfoRow label="버전명" value={data.versionLabel} />
       )}
+      <DetailInfoRow
+        label="연결 프로젝트"
+        value={
+          data.linkedProject ? (
+            <Link to={`/projects?id=${data.linkedProject.id}`} className="text-primary hover:underline">
+              {data.linkedProject.projectNumber} - {data.linkedProject.name}
+            </Link>
+          ) : (
+            <span className="text-muted-foreground">연결된 프로젝트 없음</span>
+          )
+        }
+      />
     </>
   );
 }

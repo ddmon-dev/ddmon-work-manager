@@ -40,18 +40,19 @@ export function DialogProvider({ children }: DialogProviderProps) {
   }, []);
 
   const handleConfirm = useCallback(async () => {
-    let shouldClose = true;
     if (dialogState?.type === 'confirm' && dialogState.data.onConfirm) {
-      const result = await dialogState.data.onConfirm();
-      shouldClose = result !== false;
-    }
-    if (shouldClose) {
-      if (resolveRef.current) {
-        resolveRef.current(undefined);
-        resolveRef.current = null;
+      try {
+        const result = await dialogState.data.onConfirm();
+        if (result === false) return;
+      } catch {
+        // 에러는 onConfirm 내부(onError 등)에서 처리
       }
-      setDialogState(null);
     }
+    if (resolveRef.current) {
+      resolveRef.current(undefined);
+      resolveRef.current = null;
+    }
+    setDialogState(null);
   }, [dialogState]);
 
   const handleCancel = useCallback(async () => {

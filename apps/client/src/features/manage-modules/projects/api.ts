@@ -42,6 +42,31 @@ export function useProjectList(params: ListParams = {}) {
 export const fetchProject = (id: string) =>
   api.get<ProjectWithDetails>(`/projects/${id}`);
 
+// ── 프로젝트 연결 가능 견적서 목록 ───────────────────────────
+
+export interface AvailableEstimate {
+  estimateNumber: string;
+  title: string;
+  description: string | null;
+  totalAmount: string;
+  taxType: string;
+}
+
+export function useAvailableEstimates(
+  clientId: string | undefined,
+  currentEstimateNumber?: string | null
+) {
+  return useQuery({
+    queryKey: queryKeys.estimates.list({ type: "available", clientId, currentEstimateNumber }),
+    queryFn: () =>
+      api.get<AvailableEstimate[]>("/estimates/available", {
+        clientId: clientId!,
+        ...(currentEstimateNumber && { currentEstimateNumber }),
+      }),
+    enabled: !!clientId,
+  });
+}
+
 // ── 견적서 → 프로젝트 자동 채움 ──────────────────────────────
 
 export interface EstimateProjectInfo {

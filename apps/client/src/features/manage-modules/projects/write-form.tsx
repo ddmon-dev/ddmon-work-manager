@@ -1,11 +1,12 @@
 import { useEffect } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { useForm, FormProvider, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format, parseISO } from "date-fns";
 import { z } from "zod";
 import { projectWriteSchema, type ProjectWriteInput } from "@work-manager/schemas";
-import { FieldGroup } from "@/shared/ui/field";
+import { Field, FieldGroup, FieldTitle } from "@/shared/ui/field";
+import { Button } from "@/shared/ui/button";
 import {
   FormTextInput,
   FormTextarea,
@@ -13,6 +14,7 @@ import {
   FormSelect,
   FormDatePicker,
   FormNumberInput,
+  FormNativeSelect,
 } from "@/shared/ui/form";
 import { SheetFooter, SheetBody, SheetContainer } from "@/shared/ui/sheet";
 import {
@@ -23,7 +25,7 @@ import {
   ClientSelect,
 } from "../_base/ui";
 import { useFormGuard } from "../_base/hooks";
-import { useCreateProject, useUpdateProject, fetchEstimateProjectInfo } from "./api";
+import { useCreateProject, useUpdateProject, fetchEstimateProjectInfo, useAvailableEstimates } from "./api";
 import { PROJECT_STATUS_OPTIONS, WORK_PHASE_OPTIONS, TAX_TYPE_OPTIONS } from "./config";
 import type { ProjectWithDetails } from "./types";
 
@@ -105,6 +107,33 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [createFrom]);
 
+  // 견적서 옵션 조회
+  const watchedClientId = form.watch("clientId");
+  const { data: availableEstimates, isLoading: isEstimatesLoading } = useAvailableEstimates(
+    watchedClientId || undefined,
+    prevValues?.estimateNumber
+  );
+
+  // 클라이언트 변경 시 견적서 초기화 (생성 모드, create_from이 아닌 경우만)
+  useEffect(() => {
+    if (id || createFrom) return;
+    form.setValue("estimateNumber", undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedClientId]);
+
+  // 견적서 선택 시 자동 채움 (생성 모드 전용)
+  const watchedEstimateNumber = form.watch("estimateNumber");
+  useEffect(() => {
+    if (id || !watchedEstimateNumber || !availableEstimates) return;
+    const matched = availableEstimates.find(e => e.estimateNumber === watchedEstimateNumber);
+    if (!matched) return;
+    form.setValue("name", matched.title);
+    if (matched.description) form.setValue("description", matched.description);
+    if (matched.totalAmount) form.setValue("contractAmount", Number(matched.totalAmount));
+    if (matched.taxType) form.setValue("taxType", matched.taxType as FormValues["taxType"]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, watchedEstimateNumber, availableEstimates]);
+
   // workPhase → delivered 시 납품일 자동 입력
   const watchedWorkPhase = form.watch("workPhase");
   useEffect(() => {
@@ -152,15 +181,31 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                   disabled={!!id}
                   description={id ? "프로젝트 생성 후 변경할 수 없습니다." : undefined}
                 />
-                <FormTextInput
-                  control={form.control}
-                  name="estimateNumber"
-                  label="견적서 번호"
-                  placeholder="견적서 번호 (선택)"
-                  optional
-                  disabled={!!id}
-                  description={id ? "프로젝트 생성 후 변경할 수 없습니다." : undefined}
-                />
+                {!id && watchedClientId && availableEstimates?.length === 0 ? (
+                  <Field>
+                    <FieldTitle>견적서</FieldTitle>
+                    <p className="text-sm text-muted-foreground">연결 가능한 견적서가 없습니다.</p>
+                    <Link to="/estimates">
+                      <Button type="button" variant="outline" size="sm">견적서 관리로 이동</Button>
+                    </Link>
+                  </Field>
+                ) : watchedClientId || id ? (
+                  <FormNativeSelect
+                    control={form.control}
+                    name="estimateNumber"
+                    label="견적서"
+                    description={id ? "프로젝트 생성 후 변경할 수 없습니다." : undefined}
+                    options={[
+                      { value: "", label: isEstimatesLoading ? "불러오는 중..." : "견적서를 선택해주세요." },
+                      ...(availableEstimates ?? []).map(e => ({
+                        value: e.estimateNumber,
+                        label: `${e.estimateNumber} - ${e.title}`,
+                      })),
+                    ]}
+                    disabled={!!id || isEstimatesLoading}
+                    optional
+                  />
+                ) : null}
                 <FormTextInput
                   control={form.control}
                   name="name"

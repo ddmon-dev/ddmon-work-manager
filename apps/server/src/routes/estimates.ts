@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { and, asc, count, desc, eq, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "../db";
 import { estimateSeries, estimates, estimateItemGroups, estimateItems, projects } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
@@ -213,6 +213,17 @@ app.patch("/series/:estimateNumber/final", async (c) => {
 app.delete("/series/:estimateNumber", async (c) => {
   const estimateNumber = c.req.param("estimateNumber");
 
+  const linkedProject = await db.query.projects.findFirst({
+    where: and(
+      eq(projects.estimateNumber, estimateNumber),
+      eq(projects.deleted, false)
+    ),
+    columns: { id: true },
+  });
+  if (linkedProject) {
+    return errorResponse(c, ERRORS.VALIDATION, 400, "연결된 프로젝트가 있어 삭제할 수 없습니다.");
+  }
+
   await db
     .update(estimates)
     .set({ deleted: true, updatedAt: new Date() })
@@ -255,6 +266,52 @@ app.get("/series/:estimateNumber/project-info", async (c) => {
     totalAmount: estimate.totalAmount,
     taxType: estimate.taxType,
   });
+});
+
+// GET /estimates/available?clientId=&currentEstimateNumber= — 프로젝트 연결 가능 견적서 목록
+app.get("/available", async (c) => {
+  const { clientId, currentEstimateNumber } = c.req.query();
+  if (!clientId) return errorResponse(c, ERRORS.VALIDATION, 400, "clientId가 필요합니다.");
+
+  // contracted + finalEstimateId IS NOT NULL 계열 조회
+  const contractedSeries = await db.query.estimateSeries.findMany({
+    where: and(
+      eq(estimateSeries.status, "contracted"),
+      isNotNull(estimateSeries.finalEstimateId)
+    ),
+    columns: { estimateNumber: true, finalEstimateId: true },
+  });
+
+  if (contractedSeries.length === 0) return successResponse(c, []);
+
+  const finalEstimateIds = contractedSeries.map(s => s.finalEstimateId as string);
+
+  // clientId 매칭 + deleted=false 견적서 조회
+  const matchingEstimates = await db.query.estimates.findMany({
+    where: and(
+      inArray(estimates.id, finalEstimateIds),
+      eq(estimates.clientId, clientId),
+      eq(estimates.deleted, false)
+    ),
+    columns: { estimateNumber: true, title: true, description: true, totalAmount: true, taxType: true },
+  });
+
+  if (matchingEstimates.length === 0) return successResponse(c, []);
+
+  // 이미 프로젝트에 연결된 견적서 번호 조회 (currentEstimateNumber는 제외 대상에서 제외)
+  const linkedProjects = await db.query.projects.findMany({
+    where: and(eq(projects.deleted, false), isNotNull(projects.estimateNumber)),
+    columns: { estimateNumber: true },
+  });
+
+  const linkedNumbers = new Set(
+    linkedProjects
+      .map(p => p.estimateNumber)
+      .filter(en => en !== null && en !== currentEstimateNumber)
+  );
+
+  const result = matchingEstimates.filter(e => !linkedNumbers.has(e.estimateNumber));
+  return successResponse(c, result);
 });
 
 // GET /estimates/:id — 상세 (groups/items/versions 포함)

@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
 import { atLeast } from "@/shared/utils/delays";
+import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import type {
   EstimateListItem,
   EstimateListResponse,
@@ -108,6 +110,9 @@ export function useDeleteEstimateSeries() {
       api.delete(`/estimates/series/${estimateNumber}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.estimates.all });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("견적서"));
     },
   });
 }
