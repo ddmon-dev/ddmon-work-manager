@@ -52,7 +52,7 @@ app.get("/", async (c) => {
   const rows = await db.execute(sql`
     WITH series_reps AS (
       SELECT DISTINCT ON (e.estimate_number)
-        e.id, e.estimate_number, e.title, e.issued_date,
+        e.id, e.estimate_number, e.title, e.description, e.issued_date,
         e.tax_type, e.total_amount, e.discount_amount, e.show_tax_amount,
         e.version, e.version_label, e.created_at, e.updated_at,
         e.client_id,
@@ -68,7 +68,7 @@ app.get("/", async (c) => {
         e.version DESC
     )
     SELECT * FROM series_reps
-    ORDER BY created_at DESC
+    ORDER BY estimate_number DESC
     LIMIT ${pageSize} OFFSET ${offset}
   `);
 
@@ -86,6 +86,7 @@ app.get("/", async (c) => {
     id: row.id,
     estimateNumber: row.estimate_number,
     title: row.title,
+    description: row.description ?? null,
     issuedDate: row.issued_date,
     taxType: row.tax_type,
     totalAmount: row.total_amount,
