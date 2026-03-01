@@ -1,6 +1,6 @@
 export interface MonthlyData {
   month: string;
-  contract: number;
+  supply: number;
   payment: number;
 }
 
@@ -8,7 +8,8 @@ export interface OutstandingProject {
   id: string;
   name: string;
   clientName: string;
-  netReceivableAmount: number;
+  taxType: string | null;
+  billedAmount: number;
   paidAmount: number;
   outstanding: number;
   status: string;
@@ -16,17 +17,21 @@ export interface OutstandingProject {
 
 export interface YearlySummary {
   year: number;
-  contractTotal: number;
-  netReceivableTotal: number;
+  supplyTotal: number;
+  billedTotal: number;
   paymentTotal: number;
   outstanding: number;
   collectionRate: number;
+  vatTotal: number;
+  vatCollected: number;
+  vatOutstanding: number;
 }
 
 export interface RevenueData {
   prevYearSummary: YearlySummary;
   currentYearSummary: YearlySummary;
   cumulativeOutstanding: number;
+  cumulativeVatOutstanding: number;
   monthlyData: MonthlyData[];
   outstandingProjects: OutstandingProject[];
 }

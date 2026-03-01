@@ -21,6 +21,7 @@ export function RevenueModule() {
         {isLoading ? (
           <>
             <Skeleton className="h-[200px] rounded-lg" />
+            <Skeleton className="h-[160px] rounded-lg" />
             <Skeleton className="h-[420px] rounded-lg" />
             <Skeleton className="h-[200px] rounded-lg" />
           </>
@@ -30,6 +31,7 @@ export function RevenueModule() {
               prevYear={data.prevYearSummary}
               currentYear={data.currentYearSummary}
               cumulativeOutstanding={data.cumulativeOutstanding}
+              cumulativeVatOutstanding={data.cumulativeVatOutstanding}
             />
             <MonthlyChart data={data.monthlyData} year={year} />
             <OutstandingTable projects={data.outstandingProjects} />

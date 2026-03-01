@@ -11,8 +11,8 @@ import { YearFilter } from "./year-filter";
 import type { MonthlyData } from "./types";
 
 const chartConfig = {
-  contract: {
-    label: "계약액",
+  supply: {
+    label: "매출액",
     color: "var(--color-chart-1)",
   },
   payment: {
@@ -61,8 +61,8 @@ export function MonthlyChart({ data, year }: MonthlyChartProps) {
             <ChartTooltip content={<ChartTooltipContent />} />
             <ChartLegend content={<ChartLegendContent />} />
             <Bar
-              dataKey="contract"
-              fill="var(--color-contract)"
+              dataKey="supply"
+              fill="var(--color-supply)"
               radius={[4, 4, 0, 0]}
             />
             <Bar

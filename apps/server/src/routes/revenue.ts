@@ -12,7 +12,7 @@ const MONTH_LABELS = [
   "7월", "8월", "9월", "10월", "11월", "12월",
 ];
 
-function getNetReceivable(amount: number, taxType: string | null): number {
+function getBilledAmount(amount: number, taxType: string | null): number {
   if (taxType === "withholding") return amount - Math.round(amount * 0.033);
   if (taxType === "vat") return amount + Math.round(amount * 0.1);
   return amount;
@@ -64,30 +64,48 @@ app.get("/", async (c) => {
   const validProjectIds = new Set(allProjects.map((p) => p.id));
 
   // 연도별 버킷
-  type YearBucket = { contractTotal: number; netReceivableTotal: number; paymentTotal: number };
+  type YearBucket = {
+    supplyTotal: number;
+    billedTotal: number;
+    paymentTotal: number;
+    vatTotal: number;
+    vatCollected: number;
+  };
+  const emptyBucket = (): YearBucket => ({
+    supplyTotal: 0,
+    billedTotal: 0,
+    paymentTotal: 0,
+    vatTotal: 0,
+    vatCollected: 0,
+  });
   const yearBuckets = new Map<number, YearBucket>();
-  yearBuckets.set(prevYear, { contractTotal: 0, netReceivableTotal: 0, paymentTotal: 0 });
-  yearBuckets.set(currentYear, { contractTotal: 0, netReceivableTotal: 0, paymentTotal: 0 });
+  yearBuckets.set(prevYear, emptyBucket());
+  yearBuckets.set(currentYear, emptyBucket());
 
-  // 전체 실수령액 (누적 미수금 계산용)
-  let allNetReceivableTotal = 0;
+  // 전체 billed 금액 + VAT (누적 미수금/미정산 계산용)
+  let allBilledTotal = 0;
+  let allVatTotal = 0;
 
-  // 프로젝트 → 실수령액 캐시
-  const projectNetMap = new Map<string, number>();
+  // 프로젝트 → billed 캐시
+  const projectBilledMap = new Map<string, number>();
 
   for (const p of allProjects) {
     const amount = Number(p.contractAmount ?? 0);
     if (amount === 0) continue;
 
-    const netReceivable = getNetReceivable(amount, p.taxType);
-    projectNetMap.set(p.id, netReceivable);
-    allNetReceivableTotal += netReceivable;
+    const billed = getBilledAmount(amount, p.taxType);
+    projectBilledMap.set(p.id, billed);
+    allBilledTotal += billed;
+
+    const vatAmount = p.taxType === "vat" ? Math.round(amount * 0.1) : 0;
+    allVatTotal += vatAmount;
 
     const contractYear = new Date(p.contractDate).getFullYear();
     const bucket = yearBuckets.get(contractYear);
     if (bucket) {
-      bucket.contractTotal += amount;
-      bucket.netReceivableTotal += netReceivable;
+      bucket.supplyTotal += amount;
+      bucket.billedTotal += billed;
+      bucket.vatTotal += vatAmount;
     }
   }
 
@@ -96,18 +114,16 @@ app.get("/", async (c) => {
   const paidByProjectId = new Map<string, number>();
 
   // 월별 데이터 (chartYear 기준)
-  const monthlyContract = new Array(12).fill(0);
+  const monthlySupply = new Array(12).fill(0);
   const monthlyPayment = new Array(12).fill(0);
 
-  // 프로젝트별 월별 계약액
+  // 프로젝트별 월별 매출액(공급가액)
   for (const p of allProjects) {
-    const netReceivable = projectNetMap.get(p.id);
-    if (!netReceivable) continue;
+    if (!projectBilledMap.has(p.id)) continue;
 
     const contractDate = new Date(p.contractDate);
     if (contractDate.getFullYear() === chartYear) {
-      const projectAmount = Number(p.contractAmount ?? 0);
-      monthlyContract[contractDate.getMonth()] += projectAmount;
+      monthlySupply[contractDate.getMonth()] += Number(p.contractAmount ?? 0);
     }
   }
 
@@ -116,60 +132,89 @@ app.get("/", async (c) => {
     const amount = Number(pay.amount);
     allPaymentTotal += amount;
 
-    // 프로젝트별 수금 합계
     const current = paidByProjectId.get(pay.projectId) ?? 0;
     paidByProjectId.set(pay.projectId, current + amount);
 
-    // 연도별 수금
     const paidYear = new Date(pay.paidDate).getFullYear();
     const bucket = yearBuckets.get(paidYear);
     if (bucket) {
       bucket.paymentTotal += amount;
     }
 
-    // 월별 수금
     const paidDate = new Date(pay.paidDate);
     if (paidDate.getFullYear() === chartYear) {
       monthlyPayment[paidDate.getMonth()] += amount;
     }
   }
 
+  // 부가세 정산 계산 (순차충당 방식: 공급가액 초과분이 VAT 정산)
+  let allVatCollected = 0;
+
+  for (const p of allProjects) {
+    if (p.taxType !== "vat") continue;
+    const contractAmount = Number(p.contractAmount ?? 0);
+    if (contractAmount === 0) continue;
+
+    const totalPaid = paidByProjectId.get(p.id) ?? 0;
+    const vatCollected = Math.max(0, totalPaid - contractAmount);
+    allVatCollected += vatCollected;
+
+    const contractYear = new Date(p.contractDate).getFullYear();
+    const bucket = yearBuckets.get(contractYear);
+    if (bucket) {
+      bucket.vatCollected += vatCollected;
+    }
+  }
+
   // 연도별 요약
   function toYearlySummary(year: number) {
     const bucket = yearBuckets.get(year)!;
-    const outstanding = bucket.netReceivableTotal - bucket.paymentTotal;
+    const outstanding = bucket.billedTotal - bucket.paymentTotal;
     const collectionRate =
-      bucket.netReceivableTotal > 0
-        ? Math.round((bucket.paymentTotal / bucket.netReceivableTotal) * 1000) / 10
+      bucket.billedTotal > 0
+        ? Math.round((bucket.paymentTotal / bucket.billedTotal) * 1000) / 10
         : 0;
-    return { year, ...bucket, outstanding, collectionRate };
+    const vatOutstanding = bucket.vatTotal - bucket.vatCollected;
+    return {
+      year,
+      supplyTotal: bucket.supplyTotal,
+      billedTotal: bucket.billedTotal,
+      paymentTotal: bucket.paymentTotal,
+      outstanding,
+      collectionRate,
+      vatTotal: bucket.vatTotal,
+      vatCollected: bucket.vatCollected,
+      vatOutstanding,
+    };
   }
 
   // 월별 데이터
   const monthlyData = MONTH_LABELS.map((label, i) => ({
     month: label,
-    contract: monthlyContract[i],
+    supply: monthlySupply[i],
     payment: monthlyPayment[i],
   }));
 
-  // 누적 미수금
-  const cumulativeOutstanding = allNetReceivableTotal - allPaymentTotal;
+  // 누적 미수금 / 누적 미정산 부가세
+  const cumulativeOutstanding = allBilledTotal - allPaymentTotal;
+  const cumulativeVatOutstanding = allVatTotal - allVatCollected;
 
   // 미수금 프로젝트 목록
   const outstandingProjects = allProjects
     .map((p) => {
-      const netReceivable = projectNetMap.get(p.id);
-      if (!netReceivable) return null;
+      const billed = projectBilledMap.get(p.id);
+      if (!billed) return null;
 
       const paidAmount = paidByProjectId.get(p.id) ?? 0;
-      const outstanding = netReceivable - paidAmount;
+      const outstanding = billed - paidAmount;
       if (outstanding <= 0) return null;
 
       return {
         id: p.id,
         name: p.name,
         clientName: p.clientName ?? "",
-        netReceivableAmount: netReceivable,
+        taxType: p.taxType,
+        billedAmount: billed,
         paidAmount,
         outstanding,
         status: p.status,
@@ -182,6 +227,7 @@ app.get("/", async (c) => {
     prevYearSummary: toYearlySummary(prevYear),
     currentYearSummary: toYearlySummary(currentYear),
     cumulativeOutstanding,
+    cumulativeVatOutstanding,
     monthlyData,
     outstandingProjects,
   });

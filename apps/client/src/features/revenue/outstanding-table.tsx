@@ -49,8 +49,9 @@ export function OutstandingTable({ projects }: OutstandingTableProps) {
             <TableRow>
               <TableHead>프로젝트명</TableHead>
               <TableHead>클라이언트</TableHead>
-              <TableHead className="text-right">실수령액</TableHead>
-              <TableHead className="text-right">수금액</TableHead>
+              <TableHead className="text-center">세금유형</TableHead>
+              <TableHead className="text-right">청구액</TableHead>
+              <TableHead className="text-right">입금액</TableHead>
               <TableHead className="text-right">잔액</TableHead>
               <TableHead className="text-center">상태</TableHead>
             </TableRow>
@@ -60,8 +61,13 @@ export function OutstandingTable({ projects }: OutstandingTableProps) {
               <TableRow key={project.id}>
                 <TableCell className="font-medium">{project.name}</TableCell>
                 <TableCell>{project.clientName}</TableCell>
+                <TableCell className="text-center">
+                  <Badge variant={project.taxType === "vat" ? "default" : "outline"}>
+                    {project.taxType === "vat" ? "부가세" : "원천"}
+                  </Badge>
+                </TableCell>
                 <TableCell className="text-right">
-                  {formatCurrency(project.netReceivableAmount)}원
+                  {formatCurrency(project.billedAmount)}원
                 </TableCell>
                 <TableCell className="text-right">
                   {formatCurrency(project.paidAmount)}원
