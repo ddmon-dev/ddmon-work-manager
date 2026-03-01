@@ -57,13 +57,22 @@ export interface EstimateListItem {
   finalEstimateId?: string | null;
 }
 
+export interface PublisherInfo {
+  bizName?: string;
+  ceo?: string;
+  bizNumber?: string;
+  address?: string;
+  issuer?: string;
+  phone?: string;
+  email?: string;
+}
+
 export interface EstimateWithDetails {
   id: string;
   estimateNumber: string;
   title: string;
   description?: string | null;
   issuedDate?: string | null;
-  issuer?: string | null;
   validUntil?: string | null;
   taxType: string;
   discountType: string;
@@ -75,6 +84,7 @@ export interface EstimateWithDetails {
   versionLabel?: string | null;
   notes?: string | null;
   memo?: string | null;
+  publisherInfo?: PublisherInfo | null;
   clientId: string;
   client: { id: string; companyName: string };
   groups: EstimateGroupDTO[];

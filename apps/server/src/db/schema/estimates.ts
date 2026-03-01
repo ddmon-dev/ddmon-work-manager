@@ -11,6 +11,7 @@ import {
   unique,
   index,
   check,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { user } from "./auth";
@@ -50,7 +51,6 @@ export const estimates = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     issuedDate: date("issued_date"),
-    issuer: text("issuer"),
     validUntil: date("valid_until"),
     // withholding(원천징수), vat(부가세 10%)
     taxType: text("tax_type").notNull().default("vat"),
@@ -68,6 +68,7 @@ export const estimates = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     deleted: boolean("deleted").notNull().default(false),
+    publisherInfo: jsonb("publisher_info"),
   },
   (t) => [
     unique().on(t.estimateNumber, t.version),

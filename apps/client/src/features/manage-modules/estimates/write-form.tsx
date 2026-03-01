@@ -21,6 +21,7 @@ import { SheetFooter, SheetBody } from "@/shared/ui/sheet";
 import { PdfPreview } from "@/shared/ui/pdf-preview";
 import { formatCurrency } from "@/shared/utils/format";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useBusinessInfo } from "@/features/settings/api";
 import {
   useManageSheet,
   useManageSheetData,
@@ -79,7 +80,7 @@ function toFormValues(data: EstimateWithDetails): FormValues {
     description: data.description ?? "",
     versionLabel: data.versionLabel ?? "",
     issuedDate: data.issuedDate ? parseISO(data.issuedDate) : null,
-    issuer: data.issuer ?? "",
+    issuer: data.publisherInfo?.issuer ?? "",
     validUntil: data.validUntil ? parseISO(data.validUntil) : null,
     taxType: (data.taxType as "withholding" | "vat") ?? "vat",
     discountType: (data.discountType as "none" | "amount" | "percentage") ?? "none",
@@ -402,6 +403,7 @@ function EstimateFormPdfPreview({
 }) {
   const { watch } = useFormContext<FormValues>();
   const { user } = useAuth();
+  const { data: bizInfo } = useBusinessInfo();
   const values = watch();
 
   const documentData: EstimateDocumentData = {
@@ -420,6 +422,10 @@ function EstimateFormPdfPreview({
     issuer: values.issuer || undefined,
     issuerPhone: user?.phone ?? undefined,
     issuerEmail: user?.email || undefined,
+    bizName: bizInfo?.name ?? undefined,
+    ceo: bizInfo?.ceo ?? undefined,
+    bizNumber: bizInfo?.bizNumber ?? undefined,
+    bizAddress: bizInfo?.address ?? undefined,
     taxType: values.taxType,
     showTaxAmount: values.showTaxAmount ?? true,
     discountType: values.discountType,

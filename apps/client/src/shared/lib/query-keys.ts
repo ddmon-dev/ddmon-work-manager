@@ -43,4 +43,7 @@ export const queryKeys = {
     all: ["revenue"] as const,
     byYear: (year: number) => ["revenue", year] as const,
   },
+  businessInfo: {
+    single: ["business-info"] as const,
+  },
 };

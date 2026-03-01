@@ -8,7 +8,7 @@ export function EstimateInfo({ data }: { data: EstimateWithDetails }) {
 
   return (
     <>
-      <DetailInfoRow label="발행자" value={data.issuer ?? undefined} />
+      <DetailInfoRow label="발행자" value={data.publisherInfo?.issuer ?? undefined} />
       <DetailInfoRow label="발행일" value={data.issuedDate ?? undefined} />
       <DetailInfoRow label="유효기간" value={data.validUntil ?? undefined} />
       <DetailInfoRow label="세금 타입" value={taxLabel} />

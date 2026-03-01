@@ -5,7 +5,6 @@ import {
   CalendarDays,
   FileSpreadsheet,
   FolderKanban,
-  Users,
 } from "lucide-react";
 import { APP_CONFIG } from "@/app.config";
 
@@ -23,13 +22,6 @@ export const navigationConfig: MenuConfig = {
         { title: "프로젝트 관리", url: "/projects", icon: FolderKanban },
         { title: "일정 관리", url: "/schedules", icon: CalendarDays },
         { title: "매출/수금 통계", url: "/revenue", icon: BarChart3 },
-      ],
-    },
-    {
-      title: "관리자",
-      requireSuper: true,
-      items: [
-        { title: "관리자 계정 관리", url: "/admins", icon: Users },
       ],
     },
   ],

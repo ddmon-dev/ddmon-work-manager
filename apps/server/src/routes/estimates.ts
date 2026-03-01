@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { and, asc, count, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "../db";
-import { estimateSeries, estimates, estimateItemGroups, estimateItems, projects } from "../db/schema";
+import { estimateSeries, estimates, estimateItemGroups, estimateItems, projects, businessInfo } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { estimateWriteSchema, type EstimateGroupWriteInput } from "@work-manager/schemas";
 import { calculateTotal } from "@work-manager/utils";
@@ -400,6 +400,18 @@ app.post("/", async (c) => {
     discountValue
   );
 
+  // 발행 시점 스냅샷: 사업자 정보 + 발행자 개인 정보
+  const [bizInfo] = await db.select().from(businessInfo).limit(1);
+  const publisherInfo = {
+    bizName: bizInfo?.name ?? undefined,
+    ceo: bizInfo?.ceo ?? undefined,
+    bizNumber: bizInfo?.bizNumber ?? undefined,
+    address: bizInfo?.address ?? undefined,
+    issuer: estimateData.issuer ?? undefined,
+    phone: user.phone ?? undefined,
+    email: user.email ?? undefined,
+  };
+
   const created = await db.transaction(async (tx) => {
     let estimateNumber: string;
     let version: number;
@@ -430,7 +442,6 @@ app.post("/", async (c) => {
         title: estimateData.title,
         description: estimateData.description,
         issuedDate: estimateData.issuedDate ?? null,
-        issuer: estimateData.issuer,
         validUntil: estimateData.validUntil ?? null,
         taxType: estimateData.taxType,
         discountType: estimateData.discountType,
@@ -443,6 +454,7 @@ app.post("/", async (c) => {
         totalAmount: String(totals.total),
         discountAmount: String(totals.discountAmount),
         author: user.id,
+        publisherInfo,
       })
       .returning();
 
@@ -488,6 +500,18 @@ app.patch("/:id", async (c) => {
     discountAmount = String(totals.discountAmount);
   }
 
+  // 수정 시점 스냅샷 갱신
+  const [bizInfo] = await db.select().from(businessInfo).limit(1);
+  const publisherInfo = {
+    bizName: bizInfo?.name ?? undefined,
+    ceo: bizInfo?.ceo ?? undefined,
+    bizNumber: bizInfo?.bizNumber ?? undefined,
+    address: bizInfo?.address ?? undefined,
+    issuer: estimateData.issuer ?? undefined,
+    phone: user.phone ?? undefined,
+    email: user.email ?? undefined,
+  };
+
   const updated = await db.transaction(async (tx) => {
     const [estimate] = await tx
       .update(estimates)
@@ -496,6 +520,7 @@ app.patch("/:id", async (c) => {
         ...(discountValue !== undefined && { discountValue: String(discountValue) }),
         totalAmount,
         discountAmount,
+        publisherInfo,
         updatedBy: user.id,
         updatedAt: new Date(),
       })
