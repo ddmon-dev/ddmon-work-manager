@@ -27,8 +27,3 @@ export const WORK_PHASE_OPTIONS = Object.entries(WORK_PHASE_LABELS).map(
   ([value, label]) => ({ value, label })
 );
 
-export const TAX_TYPE_OPTIONS = [
-  { value: "exclusive", label: "VAT 별도" },
-  { value: "inclusive", label: "VAT 포함" },
-  { value: "withholding", label: "원천징수(3.3%)" },
-];

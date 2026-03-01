@@ -51,7 +51,6 @@ import {
 } from "../estimates/api";
 import { EstimatePdfPreview } from "../estimates/pdf/estimate-pdf-preview";
 import type { EstimateWithDetails } from "../estimates/types";
-import { TAX_TYPE_OPTIONS } from "./config";
 import { StatusBadge } from "./status-badge";
 import { WorkPhaseIndicator } from "./work-phase-indicator";
 import type { ProjectWithDetails, PaymentDTO } from "./types";
@@ -86,18 +85,18 @@ function PriceSummaries({ payments, contractAmount, taxType }: PriceSummariesPro
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
 
   const isWithholding = taxType === "withholding";
-  const isVat = taxType === "inclusive" || taxType === "exclusive";
+  const isVat = taxType === "vat";
 
   const { supplyAmount, taxAmount, taxLabel } = calculateTaxBreakdown(contractAmount, taxType ?? "");
 
-  // 잔금 기준: withholding은 실수령액 기준, VAT는 계약금액 기준
-  const baseForRemaining = isWithholding ? supplyAmount : contractAmount;
-  const remaining = baseForRemaining - totalPaid;
+  // 잔금 기준: withholding은 실수령액 기준, vat는 총수금액(공급가액 + 부가세) 기준
+  const totalReceivable = isVat ? contractAmount + taxAmount : supplyAmount;
+  const remaining = totalReceivable - totalPaid;
 
   return (
     <div className="space-y-2">
       <AmountRow
-        label="계약금액"
+        label={isVat ? "공급가액" : "계약금액"}
         value={formatCurrency(contractAmount)}
       >
         {isWithholding && (
@@ -111,8 +110,8 @@ function PriceSummaries({ payments, contractAmount, taxType }: PriceSummariesPro
         {isVat && (
           <AmountDetails
             items={[
-              { label: "공급가액", value: formatCurrency(supplyAmount) },
               { label: "부가세", value: formatCurrency(taxAmount) },
+              { label: "총수금액", value: formatCurrency(contractAmount + taxAmount) },
             ]}
           />
         )}

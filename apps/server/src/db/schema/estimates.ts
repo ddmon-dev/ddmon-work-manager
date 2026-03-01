@@ -52,8 +52,8 @@ export const estimates = pgTable(
     issuedDate: date("issued_date"),
     issuer: text("issuer"),
     validUntil: date("valid_until"),
-    // withholding(원천징수), inclusive(VAT 포함), exclusive(VAT 별도)
-    taxType: text("tax_type").notNull().default("withholding"),
+    // withholding(원천징수), vat(부가세 10%)
+    taxType: text("tax_type").notNull().default("vat"),
     discountType: text("discount_type").notNull().default("none"), // none, amount, percentage
     discountValue: numeric("discount_value", { precision: 12, scale: 2 }).default("0"),
     notes: text("notes"),

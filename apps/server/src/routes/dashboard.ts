@@ -93,11 +93,13 @@ app.get("/revenue-summary", async (c) => {
     const amount = Number(p.contractAmount ?? 0);
     if (amount === 0) continue;
 
-    // withholding: 계약액 - 3.3%, 그 외: 계약액 그대로
+    // withholding: 계약액 - 3.3%, vat: 계약액 + 10%, 그 외: 계약액 그대로
     const netReceivable =
       p.taxType === "withholding"
         ? amount - Math.round(amount * 0.033)
-        : amount;
+        : p.taxType === "vat"
+          ? amount + Math.round(amount * 0.1)
+          : amount;
 
     allNetReceivableTotal += netReceivable;
 

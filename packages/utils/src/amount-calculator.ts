@@ -47,8 +47,7 @@ export interface TotalCalculation {
  * 견적서 최종 금액 계산
  *
  * - withholding: 원천징수 (세금 없음, 총액 = 소계 - 할인)
- * - inclusive: 부가세 포함 (공급가액 역산, 총액 = 소계 - 할인)
- * - exclusive: 부가세 별도 (총액 = (소계 - 할인) + 부가세 10%)
+ * - vat: 부가세 10% (공급가액 = 소계 - 할인, 총액 = 공급가액 + 부가세)
  */
 export function calculateTotal(
   groups: CalcGroup[],
@@ -68,22 +67,12 @@ export function calculateTotal(
   let supplyAmount = afterDiscount;
   let total = afterDiscount;
 
-  switch (taxType) {
-    case TAX_TYPE.INCLUSIVE:
-      supplyAmount = Math.round(afterDiscount / 1.1);
-      taxAmount = afterDiscount - supplyAmount;
-      total = afterDiscount;
-      break;
-    case TAX_TYPE.EXCLUSIVE:
-      supplyAmount = afterDiscount;
-      taxAmount = Math.round(afterDiscount * 0.1);
-      total = afterDiscount + taxAmount;
-      break;
-    default: // withholding: 세금 없음
-      taxAmount = 0;
-      total = afterDiscount;
-      break;
+  if (taxType === TAX_TYPE.VAT) {
+    supplyAmount = afterDiscount;
+    taxAmount = Math.round(afterDiscount * 0.1);
+    total = afterDiscount + taxAmount;
   }
+  // withholding 및 기타: 세금 없음
 
   return { subtotal, discountAmount, afterDiscount, taxAmount, supplyAmount, total };
 }
@@ -102,22 +91,24 @@ export function buildPriceSummaryDisplay(
   showTaxAmount: boolean
 ): PriceSummaryDisplay {
   const hasDiscount = totals.discountAmount > 0;
-  const isTaxed = taxType !== TAX_TYPE.WITHHOLDING;
+  const isTaxed = taxType === TAX_TYPE.VAT;
   const showTaxRows = isTaxed && showTaxAmount;
 
-  const taxLabel =
-    taxType === TAX_TYPE.INCLUSIVE
-      ? "VAT 포함"
-      : taxType === TAX_TYPE.EXCLUSIVE
-        ? showTaxAmount
-          ? "VAT 포함"
-          : "VAT 별도"
-        : "";
-  const totalLabel = taxLabel ? `견적가(${taxLabel})` : "견적가";
-  const totalValue =
-    taxType === TAX_TYPE.EXCLUSIVE && !showTaxAmount
-      ? totals.supplyAmount
-      : totals.total;
+  let totalLabel: string;
+  let totalValue: number;
+
+  if (isTaxed) {
+    if (showTaxAmount) {
+      totalLabel = "견적가(VAT 포함)";
+      totalValue = totals.total;
+    } else {
+      totalLabel = "견적가(VAT 별도)";
+      totalValue = totals.supplyAmount;
+    }
+  } else {
+    totalLabel = "견적가";
+    totalValue = totals.total;
+  }
 
   return {
     hasDiscount,
@@ -135,11 +126,10 @@ export interface TaxBreakdown {
 }
 
 /**
- * 계약 금액 + 세금 유형으로 세금 역산
+ * 계약 금액(공급가액) + 세금 유형으로 세금 순산
  *
- * - withholding: 원천징수 3.3% (contract_amount = 실수령 전 금액)
- * - inclusive: 부가세 포함 (contract_amount = 부가세 포함 총액)
- * - exclusive: 부가세 별도 (contract_amount = 부가세 포함 총액)
+ * - withholding: 원천징수 3.3% (contractAmount = 원천징수 차감 전 금액)
+ * - vat: 부가세 10% (contractAmount = 공급가액, taxAmount = contractAmount × 0.1)
  */
 export function calculateTaxBreakdown(
   contractAmount: number,
@@ -153,10 +143,11 @@ export function calculateTaxBreakdown(
       taxLabel: "원천징수(3.3%)",
     };
   }
-  const supplyAmount = Math.round(contractAmount / 1.1);
+  // vat: contractAmount는 공급가액
+  const taxAmount = Math.round(contractAmount * 0.1);
   return {
-    supplyAmount,
-    taxAmount: contractAmount - supplyAmount,
-    taxLabel: "부가세",
+    supplyAmount: contractAmount,
+    taxAmount,
+    taxLabel: "부가세(10%)",
   };
 }

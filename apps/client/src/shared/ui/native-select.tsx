@@ -10,14 +10,14 @@ function NativeSelect({
 }: Omit<React.ComponentProps<'select'>, 'size'> & { size?: 'sm' | 'default' }) {
   return (
     <div
-      className="group/native-select relative w-fit has-[select:disabled]:opacity-50"
+      className="group/native-select relative h-11 md:h-9 w-fit has-[select:disabled]:opacity-50"
       data-slot="native-select-wrapper"
     >
       <select
         data-slot="native-select"
         data-size={size}
         className={cn(
-          'border-input placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 h-11 md:h-9 w-full min-w-0 appearance-none rounded-md border bg-transparent px-3 py-1 pr-9 text-base md:text-sm transition-[color,box-shadow] outline-none disabled:pointer-events-none disabled:cursor-not-allowed data-[size=sm]:h-8',
+          'border-input placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 h-full w-full min-w-0 appearance-none rounded-md border bg-transparent px-3 py-1 pr-9 text-base md:text-sm transition-[color,box-shadow] outline-none disabled:pointer-events-none disabled:cursor-not-allowed',
           'focus-visible:border-ring focus-visible:ring-ring focus-visible:ring-[3px]',
           'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive',
           className

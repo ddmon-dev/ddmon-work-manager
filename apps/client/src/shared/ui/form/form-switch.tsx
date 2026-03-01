@@ -38,7 +38,7 @@ export const FormSwitch = <
               aria-invalid={fieldState.invalid}
               disabled={disabled}
             />
-            <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+            <FieldLabel htmlFor={field.name} className="cursor-pointer">{label}</FieldLabel>
           </Field>
           {fieldState.error && <FieldError errors={[fieldState.error]} />}
         </Field>

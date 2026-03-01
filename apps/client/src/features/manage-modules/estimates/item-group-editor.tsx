@@ -1,5 +1,5 @@
-import { useFieldArray, useFormContext } from "react-hook-form";
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { useFieldArray, useFormContext } from 'react-hook-form';
+import { Plus, Trash2, GripVertical } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -7,28 +7,29 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-} from "@dnd-kit/core";
+} from '@dnd-kit/core';
 import {
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   restrictToVerticalAxis,
   restrictToParentElement,
-} from "@dnd-kit/modifiers";
-import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
-import { Textarea } from "@/shared/ui/textarea";
-import { NativeSelect, NativeSelectOption } from "@/shared/ui/native-select";
-import { FormNumberInput } from "@/shared/ui/form";
-import { formatCurrency } from "@/shared/utils/format";
-import { calculateGroupSubtotal } from "@work-manager/utils";
-import { cn } from "@/shared/utils/classnames";
-import { UNIT_OPTIONS, DEFAULT_UNIT } from "./constants";
+} from '@dnd-kit/modifiers';
+import { Button } from '@/shared/ui/button';
+import { Input } from '@/shared/ui/input';
+import { Textarea } from '@/shared/ui/textarea';
+import { NativeSelect, NativeSelectOption } from '@/shared/ui/native-select';
+import { FormNumberInput } from '@/shared/ui/form';
+import { formatCurrency } from '@/shared/utils/format';
+import { calculateGroupSubtotal } from '@work-manager/utils';
+import { cn } from '@/shared/utils/classnames';
+import { UNIT_OPTIONS, DEFAULT_UNIT } from './constants';
 
-const ITEM_GRID = "grid grid-cols-[16px_1fr_72px_84px_150px] gap-x-2 items-start";
+const ITEM_GRID =
+  'grid grid-cols-[16px_1fr_72px_84px_150px] gap-x-2 items-start';
 
 export function ItemGroupEditor() {
   const { control } = useFormContext();
@@ -38,7 +39,7 @@ export function ItemGroupEditor() {
     append: appendGroup,
     remove: removeGroup,
     move: moveGroup,
-  } = useFieldArray({ control, name: "groups" });
+  } = useFieldArray({ control, name: 'groups' });
 
   const sensors = useSensors(useSensor(PointerSensor));
   const modifiers = [restrictToVerticalAxis, restrictToParentElement];
@@ -46,8 +47,8 @@ export function ItemGroupEditor() {
   function handleGroupDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = groupFields.findIndex((f) => f.id === active.id);
-    const newIndex = groupFields.findIndex((f) => f.id === over.id);
+    const oldIndex = groupFields.findIndex(f => f.id === active.id);
+    const newIndex = groupFields.findIndex(f => f.id === over.id);
     moveGroup(oldIndex, newIndex);
   }
 
@@ -66,7 +67,7 @@ export function ItemGroupEditor() {
         onDragEnd={handleGroupDragEnd}
       >
         <SortableContext
-          items={groupFields.map((f) => f.id)}
+          items={groupFields.map(f => f.id)}
           strategy={verticalListSortingStrategy}
         >
           {groupFields.map((groupField, groupIndex) => (
@@ -86,14 +87,21 @@ export function ItemGroupEditor() {
         className="flex items-center justify-center w-full py-4 border-t border-dashed text-sm text-primary hover:bg-primary/5 transition-colors cursor-pointer"
         onClick={() =>
           appendGroup({
-            name: "",
+            name: '',
             sortOrder: groupFields.length,
-            items: [{ name: "", quantity: 1, unit: DEFAULT_UNIT, amount: 0, sortOrder: 0 }],
+            items: [
+              {
+                name: '',
+                quantity: 1,
+                unit: DEFAULT_UNIT,
+                amount: 0,
+                sortOrder: 0,
+              },
+            ],
           })
         }
       >
-        <Plus className="size-4 mr-1.5" />
-        새 그룹 추가
+        <Plus className="size-4 mr-1.5" />새 그룹 추가
       </button>
     </div>
   );
@@ -132,8 +140,8 @@ function GroupRow({ id, groupIndex, onRemove, canRemove }: GroupRowProps) {
   function handleItemDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = itemFields.findIndex((f) => f.id === active.id);
-    const newIndex = itemFields.findIndex((f) => f.id === over.id);
+    const oldIndex = itemFields.findIndex(f => f.id === active.id);
+    const newIndex = itemFields.findIndex(f => f.id === over.id);
     moveItem(oldIndex, newIndex);
   }
 
@@ -149,7 +157,10 @@ function GroupRow({ id, groupIndex, onRemove, canRemove }: GroupRowProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className={cn("group/card border-t pt-1", isDragging && "relative z-50 bg-background")}
+      className={cn(
+        'group/card border-t pt-1',
+        isDragging && 'relative z-50 bg-background'
+      )}
     >
       <div
         ref={setActivatorNodeRef}
@@ -187,7 +198,7 @@ function GroupRow({ id, groupIndex, onRemove, canRemove }: GroupRowProps) {
           onDragEnd={handleItemDragEnd}
         >
           <SortableContext
-            items={itemFields.map((f) => f.id)}
+            items={itemFields.map(f => f.id)}
             strategy={verticalListSortingStrategy}
           >
             {itemFields.map((itemField, itemIndex) => (
@@ -210,7 +221,7 @@ function GroupRow({ id, groupIndex, onRemove, canRemove }: GroupRowProps) {
           className="flex items-center text-sm text-primary hover:text-primary transition-colors cursor-pointer pl-2 pr-5 py-1.5 -ml-2 rounded-md hover:bg-primary/5"
           onClick={() =>
             appendItem({
-              name: "",
+              name: '',
               quantity: 1,
               unit: DEFAULT_UNIT,
               amount: 0,
@@ -242,7 +253,13 @@ interface ItemRowProps {
   canRemove: boolean;
 }
 
-function ItemRow({ id, groupIndex, itemIndex, onRemove, canRemove }: ItemRowProps) {
+function ItemRow({
+  id,
+  groupIndex,
+  itemIndex,
+  onRemove,
+  canRemove,
+}: ItemRowProps) {
   const { control, register } = useFormContext();
   const prefix = `groups.${groupIndex}.items.${itemIndex}`;
 
@@ -266,10 +283,10 @@ function ItemRow({ id, groupIndex, itemIndex, onRemove, canRemove }: ItemRowProp
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group/item",
+        'group/item',
         ITEM_GRID,
-        "py-2",
-        isDragging && "relative z-50 bg-background shadow-md"
+        'py-2',
+        isDragging && 'relative z-50 bg-background shadow-md'
       )}
     >
       <div
@@ -294,8 +311,8 @@ function ItemRow({ id, groupIndex, itemIndex, onRemove, canRemove }: ItemRowProp
         allowDecimal
         placeholder="0"
       />
-      <NativeSelect {...register(`${prefix}.unit`)} className="h-8" size="sm">
-        {UNIT_OPTIONS.map((u) => (
+      <NativeSelect {...register(`${prefix}.unit`)}>
+        {UNIT_OPTIONS.map(u => (
           <NativeSelectOption key={u} value={u}>
             {u}
           </NativeSelectOption>

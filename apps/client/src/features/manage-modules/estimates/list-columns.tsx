@@ -4,18 +4,10 @@ import { StatusBadge } from "./status-badge";
 import { EstimateRowActions } from "./row-actions";
 import type { EstimateListItem } from "./types";
 
-function getSupplyAmount(totalAmount: string, discountAmount: string, taxType: string): number {
+function getSupplyAmount(totalAmount: string, taxType: string): number {
   const total = Number(totalAmount) || 0;
-  const discount = Number(discountAmount) || 0;
-  const afterDiscount = total - discount;
-
-  if (taxType === "exclusive") {
-    return Math.round(afterDiscount / 1.1);
-  }
-  if (taxType === "inclusive") {
-    return Math.round(afterDiscount / 1.1);
-  }
-  return afterDiscount;
+  if (taxType === "vat") return Math.round(total / 1.1);
+  return total; // withholding: totalAmount이 곧 공급가액
 }
 
 export const listColumns: ColumnDef<EstimateListItem>[] = [
@@ -58,11 +50,7 @@ export const listColumns: ColumnDef<EstimateListItem>[] = [
     size: 160,
     meta: { className: "text-right" },
     cell: ({ row }) => {
-      const supply = getSupplyAmount(
-        row.original.totalAmount,
-        row.original.discountAmount,
-        row.original.taxType
-      );
+      const supply = getSupplyAmount(row.original.totalAmount, row.original.taxType);
       return (
         <div className="text-right">
           <span>{formatCurrency(supply)}원</span>

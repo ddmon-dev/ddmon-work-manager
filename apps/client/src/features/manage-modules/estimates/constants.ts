@@ -20,8 +20,7 @@ export const STATUS_VARIANTS: Record<EstimateStatus, string> = {
 
 export const TAX_OPTIONS = [
   { value: "withholding", label: "원천징수(3.3%)" },
-  { value: "exclusive", label: "공급가액에 부가세 별도" },
-  { value: "inclusive", label: "공급가액에 부가세 포함" },
+  { value: "vat", label: "부가세(10%)" },
 ] as const;
 
 export const DISCOUNT_OPTIONS = [

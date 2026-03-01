@@ -14,7 +14,8 @@ const MONTH_LABELS = [
 
 function getNetReceivable(amount: number, taxType: string | null): number {
   if (taxType === "withholding") return amount - Math.round(amount * 0.033);
-  return amount; // inclusive/exclusive: 계약금액 그대로
+  if (taxType === "vat") return amount + Math.round(amount * 0.1);
+  return amount;
 }
 
 const app = new Hono<{ Variables: AppVariables }>();

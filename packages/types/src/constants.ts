@@ -2,16 +2,14 @@
 
 export const TAX_TYPE = {
   WITHHOLDING: "withholding",
-  INCLUSIVE: "inclusive",
-  EXCLUSIVE: "exclusive",
+  VAT: "vat",
 } as const;
 
 export type TaxType = (typeof TAX_TYPE)[keyof typeof TAX_TYPE];
 
 export const TAX_TYPE_LABELS: Record<TaxType, string> = {
-  withholding: "원천징수",
-  exclusive: "VAT 별도",
-  inclusive: "VAT 포함",
+  withholding: "원천징수(3.3%)",
+  vat: "부가세(10%)",
 } as const;
 
 // ── 할인 ──────────────────────────────────────────────────────

@@ -11,7 +11,6 @@ import {
   FormTextInput,
   FormTextarea,
   FormRadioGroup,
-  FormSelect,
   FormDatePicker,
   FormNumberInput,
   FormNativeSelect,
@@ -26,7 +25,7 @@ import {
 } from "../_base/ui";
 import { useFormGuard } from "../_base/hooks";
 import { useCreateProject, useUpdateProject, fetchEstimateProjectInfo, useAvailableEstimates } from "./api";
-import { PROJECT_STATUS_OPTIONS, WORK_PHASE_OPTIONS, TAX_TYPE_OPTIONS } from "./config";
+import { PROJECT_STATUS_OPTIONS, WORK_PHASE_OPTIONS } from "./config";
 import type { ProjectWithDetails } from "./types";
 
 // 로컬 폼 스키마: 날짜를 Date 객체로 override
@@ -48,6 +47,7 @@ const formDefaultValues: FormValues = {
   completedDate: null,
   deliveredDate: null,
   notes: "",
+  taxType: "vat",
 };
 
 function toFormValues(data: ProjectWithDetails): FormValues {
@@ -63,7 +63,7 @@ function toFormValues(data: ProjectWithDetails): FormValues {
     deliveredDate: data.deliveredDate ? parseISO(data.deliveredDate) : null,
     notes: data.notes ?? "",
     contractAmount: data.contractAmount ? Number(data.contractAmount) : undefined,
-    taxType: data.taxType ?? undefined,
+    taxType: (data.taxType as "withholding" | "vat" | undefined) ?? undefined,
   };
 }
 
@@ -99,8 +99,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
       form.setValue("clientId", info.clientId);
       form.setValue("name", info.title);
       if (info.description) form.setValue("description", info.description);
-      if (info.totalAmount) form.setValue("contractAmount", Number(info.totalAmount));
-      if (info.taxType) form.setValue("taxType", info.taxType as "exclusive" | "inclusive" | "withholding");
+      if (info.supplyAmount) form.setValue("contractAmount", info.supplyAmount);
     }).catch(() => {
       // 견적서 정보 조회 실패 시 견적서 번호만 세팅된 상태 유지
     });
@@ -129,8 +128,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
     if (!matched) return;
     form.setValue("name", matched.title);
     if (matched.description) form.setValue("description", matched.description);
-    if (matched.totalAmount) form.setValue("contractAmount", Number(matched.totalAmount));
-    if (matched.taxType) form.setValue("taxType", matched.taxType as FormValues["taxType"]);
+    if (matched.supplyAmount) form.setValue("contractAmount", matched.supplyAmount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, watchedEstimateNumber, availableEstimates]);
 
@@ -259,17 +257,10 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                 <FormNumberInput
                   control={form.control}
                   name="contractAmount"
-                  label="계약금액"
-                  placeholder="계약금액 (원)"
+                  label="공급가액"
+                  placeholder="공급가액 (원)"
                   suffix="원"
                   thousandSeparator
-                  optional
-                />
-                <FormSelect
-                  control={form.control}
-                  name="taxType"
-                  label="세금 유형"
-                  options={TAX_TYPE_OPTIONS}
                   optional
                 />
                 <FormTextarea

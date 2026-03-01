@@ -50,6 +50,7 @@ export interface AvailableEstimate {
   description: string | null;
   totalAmount: string;
   taxType: string;
+  supplyAmount: number;
 }
 
 export function useAvailableEstimates(
@@ -75,6 +76,7 @@ export interface EstimateProjectInfo {
   description: string | null;
   totalAmount: string;
   taxType: string;
+  supplyAmount: number;
 }
 
 export const fetchEstimateProjectInfo = (estimateNumber: string) =>

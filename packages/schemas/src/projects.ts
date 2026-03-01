@@ -16,7 +16,7 @@ export const projectWriteSchema = z.object({
   deliveredDate: z.string().nullable().optional(),
   notes: z.string().optional(),
   contractAmount: z.number().positive().nullable().optional(),
-  taxType: z.enum(["withholding", "inclusive", "exclusive"]).nullable().optional(),
+  taxType: z.enum(["withholding", "vat"]).nullable().optional(),
 });
 
 export type ProjectWriteInput = z.infer<typeof projectWriteSchema>;

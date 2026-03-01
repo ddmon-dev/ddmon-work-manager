@@ -15,7 +15,7 @@ import {
   FormNativeSelect,
   FormDatePicker,
   FormNumberInput,
-  FormCheckbox,
+  FormSwitch,
 } from "@/shared/ui/form";
 import { SheetFooter, SheetBody } from "@/shared/ui/sheet";
 import { PdfPreview } from "@/shared/ui/pdf-preview";
@@ -31,7 +31,7 @@ import {
 } from "../_base/ui";
 import { useFormGuard } from "../_base/hooks";
 import { useCreateEstimate, useUpdateEstimate } from "./api";
-import { TAX_OPTIONS, DISCOUNT_OPTIONS, DEFAULT_UNIT } from "./constants";
+import { DISCOUNT_OPTIONS, DEFAULT_UNIT } from "./constants";
 import type { EstimateWithDetails } from "./types";
 import { ItemGroupEditor } from "./item-group-editor";
 import {
@@ -56,7 +56,7 @@ const formDefaultValues: FormValues = {
   issuedDate: new Date(),
   issuer: "",
   validUntil: addMonths(new Date(), 1),
-  taxType: "withholding",
+  taxType: "vat",
   discountType: "none",
   discountValue: 0,
   showTaxAmount: true,
@@ -81,7 +81,7 @@ function toFormValues(data: EstimateWithDetails): FormValues {
     issuedDate: data.issuedDate ? parseISO(data.issuedDate) : null,
     issuer: data.issuer ?? "",
     validUntil: data.validUntil ? parseISO(data.validUntil) : null,
-    taxType: (data.taxType as "withholding" | "inclusive" | "exclusive") ?? "withholding",
+    taxType: (data.taxType as "withholding" | "vat") ?? "vat",
     discountType: (data.discountType as "none" | "amount" | "percentage") ?? "none",
     discountValue: Number(data.discountValue) || 0,
     showTaxAmount: data.showTaxAmount ?? true,
@@ -146,7 +146,6 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
   }, [prevValues]);
 
   const issuedDate = form.watch("issuedDate");
-  const taxType = form.watch("taxType");
 
   useEffect(() => {
     if (!issuedDate) return;
@@ -156,13 +155,6 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
     form.setValue("validUntil", addMonths(issuedDate, 1));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issuedDate]);
-
-  useEffect(() => {
-    if (taxType === "withholding") {
-      form.setValue("showTaxAmount", true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [taxType]);
 
   async function onSubmit(values: FormValues) {
     try {
@@ -285,49 +277,40 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                         <div className="flex-1">
                           <FormNativeSelect
                             control={form.control}
-                            name="taxType"
-                            label="세금 타입"
-                            options={[...TAX_OPTIONS]}
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <FormNativeSelect
-                            control={form.control}
                             name="discountType"
                             label="할인 타입"
                             options={[...DISCOUNT_OPTIONS]}
                           />
                         </div>
-                        {form.watch("discountType") !== "none" && (
-                          <div className="flex-1">
-                            <FormNumberInput
-                              control={form.control}
-                              name="discountValue"
-                              label={
-                                form.watch("discountType") === "percentage"
-                                  ? "할인율 (%)"
-                                  : "할인 금액 (원)"
-                              }
-                              suffix={
-                                form.watch("discountType") === "percentage"
-                                  ? "%"
-                                  : "원"
-                              }
-                              thousandSeparator={
-                                form.watch("discountType") !== "percentage"
-                              }
-                              placeholder="0"
-                            />
-                          </div>
-                        )}
+                        <div className="flex-1">
+                          <FormNumberInput
+                            control={form.control}
+                            name="discountValue"
+                            label={
+                              form.watch("discountType") === "percentage"
+                                ? "할인율 (%)"
+                                : "할인 금액 (원)"
+                            }
+                            suffix={
+                              form.watch("discountType") === "percentage"
+                                ? "%"
+                                : "원"
+                            }
+                            thousandSeparator={
+                              form.watch("discountType") !== "percentage"
+                            }
+                            placeholder="0"
+                            disabled={form.watch("discountType") === "none"}
+                          />
+                        </div>
+                        <div className="pb-2 ml-auto">
+                          <FormSwitch
+                            control={form.control}
+                            name="showTaxAmount"
+                            label="부가세 금액 표기"
+                          />
+                        </div>
                       </div>
-                      {form.watch("taxType") !== "withholding" && (
-                        <FormCheckbox
-                          control={form.control}
-                          name="showTaxAmount"
-                          label="부가세 금액 표기"
-                        />
-                      )}
                     </div>
                     <EstimateTotalSummary />
                   </div>
@@ -356,7 +339,7 @@ function EstimateTotalSummary() {
   const { watch } = useFormContext<FormValues>();
 
   const groups = watch("groups") ?? [];
-  const taxType = watch("taxType") ?? "exclusive";
+  const taxType = watch("taxType") ?? "vat";
   const discountType = watch("discountType");
   const discountValue = watch("discountValue") ?? 0;
   const showTaxAmount = watch("showTaxAmount") ?? true;

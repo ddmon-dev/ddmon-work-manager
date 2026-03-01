@@ -259,12 +259,20 @@ app.get("/series/:estimateNumber/project-info", async (c) => {
 
   if (!estimate) return errorResponse(c, ERRORS.NOT_FOUND, 404);
 
+  const totalAmount = Number(estimate.totalAmount ?? 0);
+  const taxType = estimate.taxType;
+  // supplyAmount: 견적서 totalAmount(공급가액 + VAT)에서 공급가액 역산
+  const supplyAmount = taxType === "vat"
+    ? Math.round(totalAmount / 1.1)
+    : totalAmount;
+
   return successResponse(c, {
     clientId: estimate.clientId,
     title: estimate.title,
     description: estimate.description ?? null,
     totalAmount: estimate.totalAmount,
-    taxType: estimate.taxType,
+    taxType,
+    supplyAmount,
   });
 });
 
@@ -310,7 +318,15 @@ app.get("/available", async (c) => {
       .filter(en => en !== null && en !== currentEstimateNumber)
   );
 
-  const result = matchingEstimates.filter(e => !linkedNumbers.has(e.estimateNumber));
+  const result = matchingEstimates
+    .filter(e => !linkedNumbers.has(e.estimateNumber))
+    .map(e => {
+      const totalAmount = Number(e.totalAmount ?? 0);
+      const supplyAmount = e.taxType === "vat"
+        ? Math.round(totalAmount / 1.1)
+        : totalAmount;
+      return { ...e, supplyAmount };
+    });
   return successResponse(c, result);
 });
 

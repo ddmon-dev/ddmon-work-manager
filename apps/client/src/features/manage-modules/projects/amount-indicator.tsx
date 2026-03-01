@@ -4,13 +4,15 @@ import type { TaxType } from "./types";
 
 const TAX_TYPE_LABELS: Record<TaxType, string> = {
   withholding: "3.3%",
-  inclusive: "VAT",
-  exclusive: "VAT",
+  vat: "VAT",
 };
 
 function getCollectibleAmount(contractAmount: number, taxType: TaxType | null): number {
   if (taxType === "withholding") {
     return contractAmount - Math.round(contractAmount * 0.033);
+  }
+  if (taxType === "vat") {
+    return contractAmount + Math.round(contractAmount * 0.1);
   }
   return contractAmount;
 }
