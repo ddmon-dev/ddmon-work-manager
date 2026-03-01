@@ -70,9 +70,6 @@ export function AppLayoutSkeleton() {
             <Skeleton className="h-9 w-24 rounded-md ml-auto" />
           </div>
 
-          {/* 테이블 헤더 */}
-          <Skeleton className="h-10 w-full rounded-md" />
-
           {/* 데이터 행 — 넓은 것부터 불규칙하게 좁아짐 */}
           <div className="flex flex-col gap-2">
             {["w-full", "w-[92%]", "w-[96%]", "w-[85%]", "w-[89%]", "w-[74%]"].map((w, i) => (
