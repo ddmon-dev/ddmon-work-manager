@@ -9,6 +9,7 @@ import { calculateTotal } from "@work-manager/utils";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { generateEstimateNumber } from "../lib/number-generator";
+import { softDeleteFilter } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -52,7 +53,7 @@ app.get("/", async (c) => {
       )
     : undefined;
 
-  const whereCondition = and(eq(estimates.deleted, false), searchFilter);
+  const whereCondition = and(softDeleteFilter(estimates.deleted), searchFilter);
 
   // DISTINCT ON 서브쿼리: finalEstimateId 우선, 없으면 최신 version
   const sq = db
@@ -111,7 +112,7 @@ app.get("/series/:estimateNumber/versions", async (c) => {
     db.query.estimates.findMany({
       where: and(
         eq(estimates.estimateNumber, estimateNumber),
-        eq(estimates.deleted, false)
+        softDeleteFilter(estimates.deleted)
       ),
       orderBy: [asc(estimates.version)],
     }),
@@ -154,7 +155,7 @@ app.patch("/series/:estimateNumber/status", async (c) => {
       const linkedProject = await db.query.projects.findFirst({
         where: and(
           eq(projects.estimateNumber, estimateNumber),
-          eq(projects.deleted, false)
+          softDeleteFilter(projects.deleted)
         ),
         columns: { id: true },
       });
@@ -209,7 +210,7 @@ app.delete("/series/:estimateNumber", async (c) => {
   const linkedProject = await db.query.projects.findFirst({
     where: and(
       eq(projects.estimateNumber, estimateNumber),
-      eq(projects.deleted, false)
+      softDeleteFilter(projects.deleted)
     ),
     columns: { id: true },
   });
@@ -238,13 +239,13 @@ app.get("/series/:estimateNumber/project-info", async (c) => {
   const targetId = series.finalEstimateId;
   const estimate = targetId
     ? await db.query.estimates.findFirst({
-        where: and(eq(estimates.id, targetId), eq(estimates.deleted, false)),
+        where: and(eq(estimates.id, targetId), softDeleteFilter(estimates.deleted)),
         columns: { clientId: true, title: true, description: true, totalAmount: true, taxType: true },
       })
     : await db.query.estimates.findFirst({
         where: and(
           eq(estimates.estimateNumber, estimateNumber),
-          eq(estimates.deleted, false)
+          softDeleteFilter(estimates.deleted)
         ),
         orderBy: [desc(estimates.version)],
         columns: { clientId: true, title: true, description: true, totalAmount: true, taxType: true },
@@ -292,7 +293,7 @@ app.get("/available", async (c) => {
     where: and(
       inArray(estimates.id, finalEstimateIds),
       eq(estimates.clientId, clientId),
-      eq(estimates.deleted, false)
+      softDeleteFilter(estimates.deleted)
     ),
     columns: { estimateNumber: true, title: true, description: true, totalAmount: true, taxType: true },
   });
@@ -301,7 +302,7 @@ app.get("/available", async (c) => {
 
   // 이미 프로젝트에 연결된 견적서 번호 조회 (currentEstimateNumber는 제외 대상에서 제외)
   const linkedProjects = await db.query.projects.findMany({
-    where: and(eq(projects.deleted, false), isNotNull(projects.estimateNumber)),
+    where: and(softDeleteFilter(projects.deleted), isNotNull(projects.estimateNumber)),
     columns: { estimateNumber: true },
   });
 
@@ -328,7 +329,7 @@ app.get("/:id", async (c) => {
   const id = c.req.param("id");
 
   const estimate = await db.query.estimates.findFirst({
-    where: and(eq(estimates.id, id), eq(estimates.deleted, false)),
+    where: and(eq(estimates.id, id), softDeleteFilter(estimates.deleted)),
     with: {
       client: true,
       groups: {
@@ -346,7 +347,7 @@ app.get("/:id", async (c) => {
   const versions = await db.query.estimates.findMany({
     where: and(
       eq(estimates.estimateNumber, estimate.estimateNumber),
-      eq(estimates.deleted, false)
+      softDeleteFilter(estimates.deleted)
     ),
     columns: { id: true, version: true, versionLabel: true, createdAt: true },
     orderBy: [asc(estimates.version)],
@@ -361,7 +362,7 @@ app.get("/:id", async (c) => {
   const linkedProject = await db.query.projects.findFirst({
     where: and(
       eq(projects.estimateNumber, estimate.estimateNumber),
-      eq(projects.deleted, false)
+      softDeleteFilter(projects.deleted)
     ),
     columns: { id: true, projectNumber: true, name: true },
   });
@@ -415,7 +416,7 @@ app.post("/", async (c) => {
       const latest = await tx.query.estimates.findFirst({
         where: and(
           eq(estimates.estimateNumber, estimateNumber),
-          eq(estimates.deleted, false)
+          softDeleteFilter(estimates.deleted)
         ),
         orderBy: [desc(estimates.version)],
       });
@@ -467,7 +468,7 @@ app.patch("/:id", async (c) => {
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
   const existing = await db.query.estimates.findFirst({
-    where: and(eq(estimates.id, id), eq(estimates.deleted, false)),
+    where: and(eq(estimates.id, id), softDeleteFilter(estimates.deleted)),
     with: { groups: { with: { items: true } } },
   });
   if (!existing) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -517,7 +518,7 @@ app.patch("/:id", async (c) => {
         updatedBy: user.id,
         updatedAt: new Date(),
       })
-      .where(and(eq(estimates.id, id), eq(estimates.deleted, false)))
+      .where(and(eq(estimates.id, id), softDeleteFilter(estimates.deleted)))
       .returning();
 
     if (groups) {

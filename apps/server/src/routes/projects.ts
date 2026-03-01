@@ -7,7 +7,7 @@ import { requireAuth } from "../middleware/auth";
 import { projectWriteSchema } from "@work-manager/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { searchFilter } from "../lib/query-helpers";
+import { searchFilter, softDeleteFilter } from "../lib/query-helpers";
 import { generateProjectNumber } from "../lib/number-generator";
 import type { AppVariables } from "../lib/types";
 
@@ -20,7 +20,7 @@ app.get("/", async (c) => {
   const offset = calcOffset(page, pageSize);
 
   const where = and(
-    eq(projects.deleted, false),
+    softDeleteFilter(projects.deleted),
     search ? searchFilter([projects.name], search) : undefined
   );
 
@@ -30,7 +30,7 @@ app.get("/", async (c) => {
       with: {
         client: true,
         payments: {
-          where: eq(projectPayments.deleted, false),
+          where: softDeleteFilter(projectPayments.deleted),
           columns: { amount: true },
         },
       },
@@ -71,7 +71,7 @@ app.patch("/payments/:id", async (c) => {
       ...(amount !== undefined && { amount: String(amount) }),
       updatedAt: new Date(),
     })
-    .where(and(eq(projectPayments.id, id), eq(projectPayments.deleted, false)))
+    .where(and(eq(projectPayments.id, id), softDeleteFilter(projectPayments.deleted)))
     .returning();
 
   if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -84,7 +84,7 @@ app.delete("/payments/:id", async (c) => {
   const [deleted] = await db
     .update(projectPayments)
     .set({ deleted: true, updatedAt: new Date() })
-    .where(and(eq(projectPayments.id, id), eq(projectPayments.deleted, false)))
+    .where(and(eq(projectPayments.id, id), softDeleteFilter(projectPayments.deleted)))
     .returning();
 
   if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -100,7 +100,7 @@ app.patch("/memos/:id", async (c) => {
   const [updated] = await db
     .update(projectMemos)
     .set({ content: parsed.data.content, updatedAt: new Date() })
-    .where(and(eq(projectMemos.id, id), eq(projectMemos.deleted, false)))
+    .where(and(eq(projectMemos.id, id), softDeleteFilter(projectMemos.deleted)))
     .returning();
 
   if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -113,7 +113,7 @@ app.delete("/memos/:id", async (c) => {
   const [deleted] = await db
     .update(projectMemos)
     .set({ deleted: true, updatedAt: new Date() })
-    .where(and(eq(projectMemos.id, id), eq(projectMemos.deleted, false)))
+    .where(and(eq(projectMemos.id, id), softDeleteFilter(projectMemos.deleted)))
     .returning();
 
   if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -124,15 +124,15 @@ app.delete("/memos/:id", async (c) => {
 app.get("/:id", async (c) => {
   const id = c.req.param("id");
   const project = await db.query.projects.findFirst({
-    where: and(eq(projects.id, id), eq(projects.deleted, false)),
+    where: and(eq(projects.id, id), softDeleteFilter(projects.deleted)),
     with: {
       client: true,
       payments: {
-        where: eq(projectPayments.deleted, false),
+        where: softDeleteFilter(projectPayments.deleted),
         orderBy: [desc(projectPayments.paidDate)],
       },
       memos: {
-        where: eq(projectMemos.deleted, false),
+        where: softDeleteFilter(projectMemos.deleted),
         orderBy: [desc(projectMemos.createdAt)],
       },
     },
@@ -185,7 +185,7 @@ app.patch("/:id", async (c) => {
   const [updated] = await db
     .update(projects)
     .set(setValues)
-    .where(and(eq(projects.id, id), eq(projects.deleted, false)))
+    .where(and(eq(projects.id, id), softDeleteFilter(projects.deleted)))
     .returning();
 
   if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -198,7 +198,7 @@ app.delete("/:id", async (c) => {
   const [deleted] = await db
     .update(projects)
     .set({ deleted: true, updatedAt: new Date() })
-    .where(and(eq(projects.id, id), eq(projects.deleted, false)))
+    .where(and(eq(projects.id, id), softDeleteFilter(projects.deleted)))
     .returning();
 
   if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -221,7 +221,7 @@ app.patch("/:id/status", async (c) => {
   const [updated] = await db
     .update(projects)
     .set({ ...parsed.data, updatedBy: user.id, updatedAt: new Date() })
-    .where(and(eq(projects.id, id), eq(projects.deleted, false)))
+    .where(and(eq(projects.id, id), softDeleteFilter(projects.deleted)))
     .returning();
 
   if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -239,7 +239,7 @@ app.post("/:id/payments", async (c) => {
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
   const project = await db.query.projects.findFirst({
-    where: and(eq(projects.id, projectId), eq(projects.deleted, false)),
+    where: and(eq(projects.id, projectId), softDeleteFilter(projects.deleted)),
   });
   if (!project) return errorResponse(c, ERRORS.NOT_FOUND, 404);
 
@@ -259,7 +259,7 @@ app.post("/:id/memos", async (c) => {
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
   const project = await db.query.projects.findFirst({
-    where: and(eq(projects.id, parentId), eq(projects.deleted, false)),
+    where: and(eq(projects.id, parentId), softDeleteFilter(projects.deleted)),
   });
   if (!project) return errorResponse(c, ERRORS.NOT_FOUND, 404);
 

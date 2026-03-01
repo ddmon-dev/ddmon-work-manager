@@ -7,7 +7,7 @@ import { requireAuth } from "../middleware/auth";
 import { clientWriteSchema } from "@work-manager/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { searchFilter } from "../lib/query-helpers";
+import { searchFilter, softDeleteFilter } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -19,7 +19,7 @@ app.get("/", async (c) => {
   const offset = calcOffset(page, pageSize);
 
   const where = and(
-    eq(clients.deleted, false),
+    softDeleteFilter(clients.deleted),
     search
       ? searchFilter([clients.companyName, clients.contactName, clients.email], search)
       : undefined
@@ -44,7 +44,7 @@ app.patch("/memos/:id", async (c) => {
   const [updated] = await db
     .update(clientMemos)
     .set({ content: parsed.data.content, updatedAt: new Date() })
-    .where(and(eq(clientMemos.id, id), eq(clientMemos.deleted, false)))
+    .where(and(eq(clientMemos.id, id), softDeleteFilter(clientMemos.deleted)))
     .returning();
 
   if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -57,7 +57,7 @@ app.delete("/memos/:id", async (c) => {
   const [deleted] = await db
     .update(clientMemos)
     .set({ deleted: true, updatedAt: new Date() })
-    .where(and(eq(clientMemos.id, id), eq(clientMemos.deleted, false)))
+    .where(and(eq(clientMemos.id, id), softDeleteFilter(clientMemos.deleted)))
     .returning();
 
   if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -68,10 +68,10 @@ app.delete("/memos/:id", async (c) => {
 app.get("/:id", async (c) => {
   const id = c.req.param("id");
   const client = await db.query.clients.findFirst({
-    where: and(eq(clients.id, id), eq(clients.deleted, false)),
+    where: and(eq(clients.id, id), softDeleteFilter(clients.deleted)),
     with: {
       memos: {
-        where: eq(clientMemos.deleted, false),
+        where: softDeleteFilter(clientMemos.deleted),
         orderBy: [desc(clientMemos.createdAt)],
       },
     },
@@ -105,7 +105,7 @@ app.patch("/:id", async (c) => {
   const [updated] = await db
     .update(clients)
     .set({ ...parsed.data, updatedBy: user.id, updatedAt: new Date() })
-    .where(and(eq(clients.id, id), eq(clients.deleted, false)))
+    .where(and(eq(clients.id, id), softDeleteFilter(clients.deleted)))
     .returning();
 
   if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -118,7 +118,7 @@ app.delete("/:id", async (c) => {
   const [deleted] = await db
     .update(clients)
     .set({ deleted: true, updatedAt: new Date() })
-    .where(and(eq(clients.id, id), eq(clients.deleted, false)))
+    .where(and(eq(clients.id, id), softDeleteFilter(clients.deleted)))
     .returning();
 
   if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -133,7 +133,7 @@ app.post("/:id/memos", async (c) => {
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
   const parent = await db.query.clients.findFirst({
-    where: and(eq(clients.id, parentId), eq(clients.deleted, false)),
+    where: and(eq(clients.id, parentId), softDeleteFilter(clients.deleted)),
   });
   if (!parent) return errorResponse(c, ERRORS.NOT_FOUND, 404);
 

@@ -10,6 +10,7 @@ import {
 } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { successResponse } from "../lib/errors";
+import { softDeleteFilter } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -27,19 +28,19 @@ app.get("/stats", async (c) => {
         .select({ total: count() })
         .from(projects)
         .where(
-          and(eq(projects.deleted, false), eq(projects.status, "pending"))
+          and(softDeleteFilter(projects.deleted), eq(projects.status, "pending"))
         ),
       db
         .select({ total: count() })
         .from(projects)
         .where(
-          and(eq(projects.deleted, false), eq(projects.status, "active"))
+          and(softDeleteFilter(projects.deleted), eq(projects.status, "active"))
         ),
       db
         .select({ total: count() })
         .from(projects)
         .where(
-          and(eq(projects.deleted, false), eq(projects.status, "settling"))
+          and(softDeleteFilter(projects.deleted), eq(projects.status, "settling"))
         ),
     ]);
 
@@ -68,7 +69,7 @@ app.get("/revenue-summary", async (c) => {
     .from(projects)
     .where(
       and(
-        eq(projects.deleted, false),
+        softDeleteFilter(projects.deleted),
         sql`${projects.status} != 'discarded'`
       )
     );
@@ -81,7 +82,7 @@ app.get("/revenue-summary", async (c) => {
       paidDate: projectPayments.paidDate,
     })
     .from(projectPayments)
-    .where(eq(projectPayments.deleted, false));
+    .where(softDeleteFilter(projectPayments.deleted));
 
   const validProjectIds = new Set(allProjects.map((p) => p.id));
 
@@ -174,7 +175,7 @@ app.get("/schedules", async (c) => {
     .leftJoin(projects, eq(schedules.projectId, projects.id))
     .where(
       and(
-        eq(schedules.deleted, false),
+        softDeleteFilter(schedules.deleted),
         or(
           and(
             gte(schedules.startDate, todayStr),

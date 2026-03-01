@@ -8,6 +8,7 @@ import { requireAuth, requireSuperAdmin } from "../middleware/auth";
 import { hashPassword } from "better-auth/crypto";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
+import { softDeleteFilter } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -22,7 +23,7 @@ app.get("/", async (c) => {
   const order = query.order || "desc";
   const offset = calcOffset(page, pageSize);
 
-  const conditions: (SQL | undefined)[] = [eq(user.deleted, false)];
+  const conditions: (SQL | undefined)[] = [softDeleteFilter(user.deleted)];
 
   if (search) {
     conditions.push(
@@ -85,7 +86,7 @@ app.get("/:id", async (c) => {
       updatedAt: user.updatedAt,
     })
     .from(user)
-    .where(and(eq(user.id, id), eq(user.deleted, false)));
+    .where(and(eq(user.id, id), softDeleteFilter(user.deleted)));
 
   if (!item) return errorResponse(c, ERRORS.NOT_FOUND, 404);
   return successResponse(c, item);
@@ -112,7 +113,7 @@ app.post("/", async (c) => {
     const [existing] = await db
       .select({ id: user.id })
       .from(user)
-      .where(and(eq(user.superAdmin, true), eq(user.deleted, false)))
+      .where(and(eq(user.superAdmin, true), softDeleteFilter(user.deleted)))
       .limit(1);
     if (existing) {
       return errorResponse(
@@ -187,7 +188,7 @@ app.patch("/:id", async (c) => {
     const [existing] = await db
       .select({ id: user.id })
       .from(user)
-      .where(and(eq(user.superAdmin, true), eq(user.deleted, false)))
+      .where(and(eq(user.superAdmin, true), softDeleteFilter(user.deleted)))
       .limit(1);
     if (existing && existing.id !== id) {
       return errorResponse(
@@ -204,7 +205,7 @@ app.patch("/:id", async (c) => {
     const [updated] = await db
       .update(user)
       .set({ ...updateData, updatedAt: new Date() })
-      .where(and(eq(user.id, id), eq(user.deleted, false)))
+      .where(and(eq(user.id, id), softDeleteFilter(user.deleted)))
       .returning({
         id: user.id,
         name: user.name,
@@ -247,7 +248,7 @@ app.delete("/:id", async (c) => {
   const [target] = await db
     .select({ superAdmin: user.superAdmin })
     .from(user)
-    .where(and(eq(user.id, id), eq(user.deleted, false)));
+    .where(and(eq(user.id, id), softDeleteFilter(user.deleted)));
 
   if (!target) return errorResponse(c, ERRORS.NOT_FOUND, 404);
   if (target.superAdmin) {
@@ -261,7 +262,7 @@ app.delete("/:id", async (c) => {
   const [deleted] = await db
     .update(user)
     .set({ deleted: true, updatedAt: new Date() })
-    .where(and(eq(user.id, id), eq(user.deleted, false)))
+    .where(and(eq(user.id, id), softDeleteFilter(user.deleted)))
     .returning();
 
   if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);

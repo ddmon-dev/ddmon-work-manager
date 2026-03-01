@@ -6,7 +6,7 @@ import { requireAuth } from "../middleware/auth";
 import { scheduleWriteSchema } from "@work-manager/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { searchFilter } from "../lib/query-helpers";
+import { searchFilter, softDeleteFilter } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -155,7 +155,7 @@ app.get("/month", async (c) => {
   // 단발 일정: start_date <= monthEnd AND (end_date >= monthStart OR start_date >= monthStart)
   const singleSchedules = await db.query.schedules.findMany({
     where: and(
-      eq(schedules.deleted, false),
+      softDeleteFilter(schedules.deleted),
       eq(schedules.recurrenceType, "none")
     ),
     with: { client: true, project: true },
@@ -171,7 +171,7 @@ app.get("/month", async (c) => {
 
   // 반복 일정: start_date <= monthEnd
   const recurringSchedules = await db.query.schedules.findMany({
-    where: and(eq(schedules.deleted, false)),
+    where: and(softDeleteFilter(schedules.deleted)),
     with: { client: true, project: true },
   });
 
@@ -193,7 +193,7 @@ app.get("/", async (c) => {
   const offset = calcOffset(page, pageSize);
 
   const where = and(
-    eq(schedules.deleted, false),
+    softDeleteFilter(schedules.deleted),
     search ? searchFilter([schedules.title], search) : undefined
   );
 
@@ -209,7 +209,7 @@ app.get("/", async (c) => {
 app.get("/:id", async (c) => {
   const id = c.req.param("id");
   const schedule = await db.query.schedules.findFirst({
-    where: and(eq(schedules.id, id), eq(schedules.deleted, false)),
+    where: and(eq(schedules.id, id), softDeleteFilter(schedules.deleted)),
     with: { client: true, project: true },
   });
 
@@ -241,7 +241,7 @@ app.patch("/:id", async (c) => {
   const [updated] = await db
     .update(schedules)
     .set({ ...parsed.data, updatedBy: user.id, updatedAt: new Date() })
-    .where(and(eq(schedules.id, id), eq(schedules.deleted, false)))
+    .where(and(eq(schedules.id, id), softDeleteFilter(schedules.deleted)))
     .returning();
 
   if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -254,7 +254,7 @@ app.delete("/:id", async (c) => {
   const [deleted] = await db
     .update(schedules)
     .set({ deleted: true, updatedAt: new Date() })
-    .where(and(eq(schedules.id, id), eq(schedules.deleted, false)))
+    .where(and(eq(schedules.id, id), softDeleteFilter(schedules.deleted)))
     .returning();
 
   if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);

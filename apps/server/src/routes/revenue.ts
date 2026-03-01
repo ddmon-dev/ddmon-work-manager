@@ -5,6 +5,7 @@ import { db } from "../db";
 import { projects, projectPayments, clients } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
+import { softDeleteFilter } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const MONTH_LABELS = [
@@ -47,7 +48,7 @@ app.get("/", async (c) => {
       .leftJoin(clients, eq(projects.clientId, clients.id))
       .where(
         and(
-          eq(projects.deleted, false),
+          softDeleteFilter(projects.deleted),
           sql`${projects.status} != 'discarded'`
         )
       ),
@@ -58,7 +59,7 @@ app.get("/", async (c) => {
         paidDate: projectPayments.paidDate,
       })
       .from(projectPayments)
-      .where(eq(projectPayments.deleted, false)),
+      .where(softDeleteFilter(projectPayments.deleted)),
   ]);
 
   const validProjectIds = new Set(allProjects.map((p) => p.id));
