@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { and, eq, lt, asc } from "drizzle-orm";
+import { and, eq, inArray, lt, asc } from "drizzle-orm";
 import { db } from "../db";
 import { todos, todoTimeBlocks } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
@@ -63,17 +63,11 @@ app.post("/carry-over", async (c) => {
   const { todoIds, targetDate } = parsed.data;
 
   await db.transaction(async (tx) => {
-    // 타임블록 삭제 (해당 투두들의 모든 타임블록)
-    for (const todoId of todoIds) {
-      await tx.delete(todoTimeBlocks).where(eq(todoTimeBlocks.todoId, todoId));
-    }
-    // todoDate 변경
-    for (const todoId of todoIds) {
-      await tx
-        .update(todos)
-        .set({ todoDate: targetDate, updatedAt: new Date() })
-        .where(and(eq(todos.id, todoId), eq(todos.userId, user.id)));
-    }
+    await tx.delete(todoTimeBlocks).where(inArray(todoTimeBlocks.todoId, todoIds));
+    await tx
+      .update(todos)
+      .set({ todoDate: targetDate, updatedAt: new Date() })
+      .where(and(inArray(todos.id, todoIds), eq(todos.userId, user.id)));
   });
 
   return successResponse(c, { count: todoIds.length, targetDate });

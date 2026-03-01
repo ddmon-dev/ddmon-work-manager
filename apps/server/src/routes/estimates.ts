@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { and, asc, count, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, asc, countDistinct, desc, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { db } from "../db";
-import { estimateSeries, estimates, estimateItemGroups, estimateItems, projects, businessInfo } from "../db/schema";
+import { clients, estimateSeries, estimates, estimateItemGroups, estimateItems, projects, businessInfo } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { estimateWriteSchema, type EstimateGroupWriteInput } from "@work-manager/schemas";
 import { calculateTotal } from "@work-manager/utils";
@@ -44,63 +44,56 @@ app.get("/", async (c) => {
   const { page, pageSize, search } = parsePagination(c.req.query() as Record<string, string>);
   const offset = calcOffset(page, pageSize);
 
-  const searchCondition = search
-    ? sql`AND (e.estimate_number ILIKE ${`%${search}%`} OR e.title ILIKE ${`%${search}%`} OR c.company_name ILIKE ${`%${search}%`})`
-    : sql``;
+  const searchFilter = search
+    ? or(
+        ilike(estimates.estimateNumber, `%${search}%`),
+        ilike(estimates.title, `%${search}%`),
+        ilike(clients.companyName, `%${search}%`)
+      )
+    : undefined;
 
-  // DISTINCT ON으로 계열별 대표 버전 추출: finalEstimateId 우선, 없으면 최신 version
-  const rows = await db.execute(sql`
-    WITH series_reps AS (
-      SELECT DISTINCT ON (e.estimate_number)
-        e.id, e.estimate_number, e.title, e.description, e.issued_date,
-        e.tax_type, e.total_amount, e.discount_amount, e.show_tax_amount,
-        e.version, e.version_label, e.created_at, e.updated_at,
-        e.client_id,
-        c.company_name AS client_company_name,
-        s.status AS series_status,
-        s.final_estimate_id
-      FROM estimates e
-      JOIN clients c ON e.client_id = c.id
-      JOIN estimate_series s ON e.estimate_number = s.estimate_number
-      WHERE e.deleted = false ${searchCondition}
-      ORDER BY e.estimate_number,
-        CASE WHEN e.id = s.final_estimate_id THEN 0 ELSE 1 END,
-        e.version DESC
+  const whereCondition = and(eq(estimates.deleted, false), searchFilter);
+
+  // DISTINCT ON 서브쿼리: finalEstimateId 우선, 없으면 최신 version
+  const sq = db
+    .selectDistinctOn([estimates.estimateNumber], {
+      id: estimates.id,
+      estimateNumber: estimates.estimateNumber,
+      title: estimates.title,
+      description: estimates.description,
+      issuedDate: estimates.issuedDate,
+      taxType: estimates.taxType,
+      totalAmount: estimates.totalAmount,
+      discountAmount: estimates.discountAmount,
+      showTaxAmount: estimates.showTaxAmount,
+      version: estimates.version,
+      versionLabel: estimates.versionLabel,
+      createdAt: estimates.createdAt,
+      updatedAt: estimates.updatedAt,
+      clientId: estimates.clientId,
+      clientCompanyName: clients.companyName,
+      seriesStatus: estimateSeries.status,
+      finalEstimateId: estimateSeries.finalEstimateId,
+    })
+    .from(estimates)
+    .innerJoin(clients, eq(estimates.clientId, clients.id))
+    .innerJoin(estimateSeries, eq(estimates.estimateNumber, estimateSeries.estimateNumber))
+    .where(whereCondition)
+    .orderBy(
+      estimates.estimateNumber,
+      sql`CASE WHEN ${estimates.id} = ${estimateSeries.finalEstimateId} THEN 0 ELSE 1 END`,
+      desc(estimates.version)
     )
-    SELECT * FROM series_reps
-    ORDER BY estimate_number DESC
-    LIMIT ${pageSize} OFFSET ${offset}
-  `);
+    .as("series_reps");
 
-  const totalRows = await db.execute(sql`
-    SELECT COUNT(DISTINCT e.estimate_number) AS total
-    FROM estimates e
-    JOIN clients c ON e.client_id = c.id
-    WHERE e.deleted = false ${searchCondition}
-  `);
-
-  const total = Number((totalRows as unknown as { total: string }[])[0]?.total ?? 0);
-
-  // SQL 결과의 snake_case → camelCase 변환
-  const items = (rows as Record<string, unknown>[]).map((row) => ({
-    id: row.id,
-    estimateNumber: row.estimate_number,
-    title: row.title,
-    description: row.description ?? null,
-    issuedDate: row.issued_date,
-    taxType: row.tax_type,
-    totalAmount: row.total_amount,
-    discountAmount: row.discount_amount,
-    showTaxAmount: row.show_tax_amount,
-    version: row.version,
-    versionLabel: row.version_label,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    clientId: row.client_id,
-    clientCompanyName: row.client_company_name,
-    seriesStatus: row.series_status,
-    finalEstimateId: row.final_estimate_id,
-  }));
+  const [items, [{ total }]] = await Promise.all([
+    db.select().from(sq).orderBy(desc(sq.estimateNumber)).limit(pageSize).offset(offset),
+    db
+      .select({ total: countDistinct(estimates.estimateNumber) })
+      .from(estimates)
+      .innerJoin(clients, eq(estimates.clientId, clients.id))
+      .where(whereCondition),
+  ]);
 
   return successResponse(c, { items, total, page, pageSize });
 });
