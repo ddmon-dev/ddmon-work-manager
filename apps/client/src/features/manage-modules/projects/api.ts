@@ -181,10 +181,10 @@ export function useCreatePayment() {
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      toast.success(SUCCESS_MESSAGES.CREATE_SUCCESS("수금"));
+      toast.success(SUCCESS_MESSAGES.CREATE_SUCCESS("입금 내역"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("수금"));
+      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("입금 내역"));
     },
   });
 }
@@ -207,10 +207,10 @@ export function useUpdatePayment() {
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("수금"));
+      toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("입금 내역"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("수금"));
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("입금 내역"));
     },
   });
 }
@@ -224,10 +224,10 @@ export function useDeletePayment() {
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      toast.success(SUCCESS_MESSAGES.DELETE_SUCCESS("수금"));
+      toast.success(SUCCESS_MESSAGES.DELETE_SUCCESS("입금 내역"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("수금"));
+      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("입금 내역"));
     },
   });
 }

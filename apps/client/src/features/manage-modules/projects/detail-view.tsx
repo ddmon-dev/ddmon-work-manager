@@ -89,29 +89,47 @@ function PriceSummaries({ payments, contractAmount, taxType }: PriceSummariesPro
 
   const { supplyAmount, taxAmount, taxLabel } = calculateTaxBreakdown(contractAmount, taxType ?? "");
 
-  // 잔금 기준: withholding은 실수령액 기준, vat는 총수금액(공급가액 + 부가세) 기준
-  const totalReceivable = isVat ? contractAmount + taxAmount : supplyAmount;
-  const remaining = totalReceivable - totalPaid;
+  // VAT: 공급가액/부가세 순차 충당 분리 표기
+  if (isVat) {
+    const supplyPaid = Math.min(totalPaid, contractAmount);
+    const vatPaid = Math.max(totalPaid - contractAmount, 0);
+    const supplyRemaining = contractAmount - supplyPaid;
+    const vatRemaining = taxAmount - vatPaid;
+
+    return (
+      <div className="space-y-2">
+        <AmountRow label="공급가액" value={formatCurrency(contractAmount)}>
+          <AmountDetails
+            items={[
+              { label: "입금", value: formatCurrency(supplyPaid), variant: "positive" },
+              { label: "잔금", value: formatCurrency(supplyRemaining) },
+            ]}
+          />
+        </AmountRow>
+        <AmountRow label="부가세" value={formatCurrency(taxAmount)}>
+          <AmountDetails
+            showDivider={false}
+            items={[
+              { label: "입금", value: formatCurrency(vatPaid), variant: "positive" },
+              { label: "잔금", value: formatCurrency(vatRemaining) },
+            ]}
+          />
+        </AmountRow>
+      </div>
+    );
+  }
+
+  // withholding / null: 기존 방식 (실수령액 기준 잔금)
+  const remaining = supplyAmount - totalPaid;
 
   return (
     <div className="space-y-2">
-      <AmountRow
-        label={isVat ? "공급가액" : "계약금액"}
-        value={formatCurrency(contractAmount)}
-      >
+      <AmountRow label="계약금액" value={formatCurrency(contractAmount)}>
         {isWithholding && (
           <AmountDetails
             items={[
-              { label: taxLabel, value: formatCurrency(taxAmount), negative: true },
+              { label: taxLabel, value: formatCurrency(taxAmount), variant: "negative" },
               { label: "실수령액", value: formatCurrency(supplyAmount) },
-            ]}
-          />
-        )}
-        {isVat && (
-          <AmountDetails
-            items={[
-              { label: "부가세", value: formatCurrency(taxAmount) },
-              { label: "총수금액", value: formatCurrency(contractAmount + taxAmount) },
             ]}
           />
         )}
@@ -173,7 +191,13 @@ function AmountRow({ label, value, children, isDetail, variant = "normal" }: Amo
   );
 }
 
-function AmountDetails({ items }: { items: { label: string; value: string; negative?: boolean }[] }) {
+function AmountDetails({
+  items,
+  showDivider = true,
+}: {
+  items: { label: string; value: string; variant?: "positive" | "negative" }[];
+  showDivider?: boolean;
+}) {
   return (
     <>
       <div className="relative space-y-0.5">
@@ -183,11 +207,11 @@ function AmountDetails({ items }: { items: { label: string; value: string; negat
             label={item.label}
             value={item.value}
             isDetail
-            variant={item.negative ? "negative" : "normal"}
+            variant={item.variant ?? "normal"}
           />
         ))}
       </div>
-      <Divider />
+      {showDivider && <Divider />}
     </>
   );
 }
@@ -477,8 +501,8 @@ function PaymentHistory({ projectId, payments, refetch }: PaymentHistoryProps) {
 
   const handleDelete = (paymentId: string) => {
     dialog.confirm({
-      title: "수금 삭제",
-      description: "이 수금 내역을 삭제하시겠습니까?",
+      title: "입금 내역 삭제",
+      description: "이 입금 내역을 삭제하시겠습니까?",
       variant: "destructive",
       confirmText: "삭제",
       onConfirm: async () => {

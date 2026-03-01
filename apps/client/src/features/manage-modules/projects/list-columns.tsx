@@ -67,7 +67,7 @@ export const listColumns: ColumnDef<ProjectDTO>[] = [
   },
   {
     id: "amount",
-    header: "금액",
+    header: "정산현황",
     size: 220,
     cell: ({ row }) => (
       <AmountIndicator
