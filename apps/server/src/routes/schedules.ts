@@ -77,7 +77,12 @@ function addWeeks(d: Date, n: number): Date {
 
 function addMonths(d: Date, n: number): Date {
   const r = new Date(d);
+  const dayOfMonth = r.getDate();
   r.setMonth(r.getMonth() + n);
+  // 월말 오버플로우 보정: 원래 날짜가 넘어간 경우 해당 월의 마지막 날로 클램핑
+  if (r.getDate() < dayOfMonth) {
+    r.setDate(0);
+  }
   return r;
 }
 

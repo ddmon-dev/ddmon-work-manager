@@ -85,7 +85,7 @@ app.get("/revenue-summary", async (c) => {
 
   const validProjectIds = new Set(allProjects.map((p) => p.id));
 
-  // 계약액 계산 (실수령액 기준)
+  // 계약액 계산
   let contractTotal = 0;
   let allNetReceivableTotal = 0;
 
@@ -105,7 +105,7 @@ app.get("/revenue-summary", async (c) => {
 
     const contractYear = new Date(p.contractDate).getFullYear();
     if (contractYear === currentYear) {
-      contractTotal += netReceivable;
+      contractTotal += amount;
     }
   }
 

@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { auth } from "./auth";
 import apiRoutes from "./routes";
 import type { AppVariables } from "./lib/types";
+import { ERRORS, errorResponse } from "./lib/errors";
 
 const app = new Hono<{ Variables: AppVariables }>();
 
@@ -22,6 +23,11 @@ app.get("/", (c) => {
 });
 
 app.route("/api", apiRoutes);
+
+app.onError((err, c) => {
+  console.error("[Unhandled Error]", err);
+  return errorResponse(c, ERRORS.UNEXPECTED, 500, err.message);
+});
 
 const port = Number(process.env.PORT) || 3001;
 serve({ fetch: app.fetch, port }, (info) => {

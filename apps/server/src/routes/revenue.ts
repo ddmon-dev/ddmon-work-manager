@@ -86,7 +86,7 @@ app.get("/", async (c) => {
     const contractYear = new Date(p.contractDate).getFullYear();
     const bucket = yearBuckets.get(contractYear);
     if (bucket) {
-      bucket.contractTotal += netReceivable;
+      bucket.contractTotal += amount;
       bucket.netReceivableTotal += netReceivable;
     }
   }
@@ -106,7 +106,8 @@ app.get("/", async (c) => {
 
     const contractDate = new Date(p.contractDate);
     if (contractDate.getFullYear() === chartYear) {
-      monthlyContract[contractDate.getMonth()] += netReceivable;
+      const projectAmount = Number(p.contractAmount ?? 0);
+      monthlyContract[contractDate.getMonth()] += projectAmount;
     }
   }
 
