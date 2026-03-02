@@ -163,7 +163,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
                     label="내부 메모"
                     value={<NewlineText>{data.memo}</NewlineText>}
                     vertical
-                    valueClassName="text-left text-wrap"
+                    valueClassName="text-left text-pretty"
                   />
                 )}
               </div>
