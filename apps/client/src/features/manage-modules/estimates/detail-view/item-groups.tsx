@@ -1,5 +1,5 @@
 import { formatCurrency } from "@/shared/utils/format";
-import { calculateGroupSubtotal } from "@work-manager/utils";
+import { calculateGroupSubtotal } from "@packages/utils";
 import type { EstimateGroupDTO } from "../types";
 
 export function ItemGroups({ groups }: { groups: EstimateGroupDTO[] }) {

@@ -35,7 +35,7 @@ import {
   MemoSection,
   useManageSheetData,
 } from "../_base/ui";
-import { calculateTaxBreakdown } from "@work-manager/utils";
+import { calculateTaxBreakdown } from "@packages/utils";
 import {
   useCreatePayment,
   useUpdatePayment,

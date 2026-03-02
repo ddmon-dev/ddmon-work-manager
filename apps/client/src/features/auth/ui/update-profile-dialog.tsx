@@ -24,7 +24,7 @@ import {
   FormPhoneInput,
   FormRootError,
 } from "@/shared/ui/form";
-import { PASSWORD_MIN_LENGTH } from "@work-manager/utils";
+import { PASSWORD_MIN_LENGTH } from "@packages/utils";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { authClient } from "@/features/auth/lib/auth-client";
 import { useDialog } from "@/shared/ui/app-dialog";

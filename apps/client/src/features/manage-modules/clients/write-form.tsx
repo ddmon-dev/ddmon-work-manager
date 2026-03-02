@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { clientWriteSchema, type ClientWriteInput } from "@work-manager/schemas";
+import { clientWriteSchema, type ClientWriteInput } from "@packages/schemas";
 import { FieldGroup } from "@/shared/ui/field";
 import { FormTextInput, FormPhoneInput } from "@/shared/ui/form";
 import {

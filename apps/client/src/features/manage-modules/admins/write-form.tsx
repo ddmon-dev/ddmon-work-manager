@@ -5,7 +5,7 @@ import { z } from "zod";
 import {
   adminCreateSchema,
   type AdminCreateInput,
-} from "@work-manager/schemas";
+} from "@packages/schemas";
 import { FieldGroup } from "@/shared/ui/field";
 import {
   FormTextInput,

@@ -2,7 +2,7 @@ import { Button } from "@/shared/ui/button";
 import { Spinner } from "@/shared/ui/spinner";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import type { ActionResult } from "@work-manager/types";
+import type { ActionResult } from "@packages/types";
 
 interface ReorderButtonsProps {
   id: string;

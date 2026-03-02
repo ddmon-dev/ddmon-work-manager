@@ -1,0 +1,237 @@
+# 아키텍처
+
+## 클라이언트 (`apps/client`)
+
+React 19 + Vite + TanStack Query + React Router v7.
+
+### FSD 구조
+
+```
+src/
+├── app.tsx, router.tsx, app.config.ts, globals.css
+├── pages/              # 라우팅 페이지 (컴포넌트만 배치, 로직 최소화)
+├── layouts/            # 레이아웃 (RootLayout, AuthLayout, ProtectedLayout)
+├── features/           # 기능 모듈
+│   ├── manage-modules/ # CRUD 시스템 (_base + 5개 모듈)
+│   ├── auth/           # 인증
+│   ├── dashboard/      # 대시보드
+│   ├── revenue/        # 매출 현황
+│   ├── settings/       # 설정
+│   └── ui/             # 글로벌 UI (app-sidebar, todo-widget)
+└── shared/             # 공유 레이어
+    ├── ui/             # 기본 컴포넌트, 폼 컴포넌트, DataList
+    ├── lib/            # api-client, query-keys, query-client
+    ├── hooks/          # 커스텀 훅
+    ├── utils/          # 유틸리티 (format, date, download)
+    ├── constants/      # 상수
+    └── types/          # 공유 타입
+```
+
+**의존성 방향**: pages → features → shared (역방향 금지)
+
+**Path Alias**: `@/*` = `./src/*`
+
+### 라우팅 구조
+
+```
+RootLayout (Toaster, ThemeContext)
+├── AuthLayout
+│   └── /auth/sign-in
+└── ProtectedLayout (인증 검증, TodoProvider, SidebarProvider)
+    ├── /              → DashboardPage
+    ├── /clients       → ClientsPage
+    ├── /estimates     → EstimatesPage
+    ├── /projects      → ProjectsPage
+    ├── /schedules     → SchedulesPage
+    ├── /revenue       → RevenuePage
+    ├── /admins        → AdminsPage
+    ├── /unauthorized  → UnauthorizedPage
+    └── *              → NotFoundPage
+```
+
+ProtectedLayout 자식에 별도 `errorElement` 배치 — 에러 시에도 사이드바 유지.
+
+### manage-modules 시스템
+
+`_base/` 인프라 + 5개 모듈 (clients, estimates, projects, schedules, admins).
+
+#### 모듈 파일 구성
+
+```
+features/manage-modules/{module}/
+├── config.ts          # 모듈명 상수
+├── types.ts           # DTO 타입 정의
+├── api.ts             # TanStack Query 훅 (useXxxList, useXxx, useCreateXxx, ...)
+├── index.tsx          # 모듈 엔트리 (데이터 조회 + 렌더링)
+├── list.tsx           # ManageList 래퍼
+├── list-columns.tsx   # 테이블 컬럼 정의
+├── item-sheet.tsx     # ManageSheet 래퍼 (상세/수정/생성 시트)
+├── detail-view.tsx    # 상세 조회 컴포넌트
+├── write-form.tsx     # 폼 컴포넌트 (생성/수정)
+└── row-actions.tsx    # 행 액션 버튼
+```
+
+#### _base 인프라 컴포넌트
+
+| 컴포넌트 | 역할 |
+|---------|------|
+| `ManageContainer` | 모듈 래퍼 (ManageSheetProvider 포함) |
+| `ManageSheet` | Context 기반 시트 (view / modify / create / clone 모드) |
+| `ManageList` | DataList 래퍼 (행 클릭 → 시트 열기, 벌크 액션) |
+| `ManageFormSubmit` | 폼 제출 버튼 |
+| `RowActions` / `RowActionMenu` | 행 액션 (buttons / menu 타입) |
+| `MemoSection` | 메모 폼 + 히스토리 (clients, projects 공유) |
+| `ClientSelect` | 클라이언트 선택 컴포넌트 |
+| `DeleteButton` / `CloneButton` / `ModifyButton` / `ViewButton` | 상세뷰 액션 버튼 |
+| `ExportDataButton` | 엑셀 내보내기 |
+| `DetailSectionTitle` / `DetailInfoRow` | 상세뷰 레이아웃 |
+
+#### ManageSheet 상태 머신
+
+```
+useManageSheet() → { open, close, closeWithGuard, setMode, setModeWithGuard, setCloseGuard }
+모드: "view" | "modify" | "create" | "clone"
+```
+
+- `useFormGuard(form)` 훅으로 RHF isDirty 감지 → 닫기/모드 변경 시 확인 다이얼로그
+- `beforeunload` 이벤트도 등록 (새로고침/탭 닫기 방지)
+
+### 데이터 페칭 패턴
+
+#### api-client.ts
+
+`shared/lib/api-client.ts` — fetch wrapper.
+
+- `api.get/post/put/patch/delete<T>()` 메서드
+- 자동 타임아웃 (15초)
+- `credentials: "include"` (쿠키 전송)
+- 401 → sign-in, 403 → unauthorized 자동 리다이렉트
+- `{ success: true, data }` 구조에서 `data`만 반환
+
+#### TanStack Query
+
+- 쿼리 키: `shared/lib/query-keys.ts`에서 중앙 관리
+- 목록: `useQuery` + `keepPreviousData` (페이지 전환 중 이전 데이터 유지)
+- 생성/수정/삭제: `useMutation` + `onSuccess`에서 `invalidateQueries`
+- URL 파라미터: `useSearchParams` (React Router)로 page/search 관리
+
+#### Optimistic Update
+
+적용 모듈: schedules 인라인 편집, projects/clients 메모 CRUD, projects 입금 내역 CRUD, projects 상태 변경, estimates 상태/계약버전 변경.
+
+패턴: `onMutate` → 캐시 즉시 반영 + `onError` → 롤백 + `cancelQueries` (list + detail 모두)
+
+### 폼 패턴
+
+React Hook Form + Zod + `@hookform/resolvers`.
+
+```typescript
+const form = useForm<T>({
+  resolver: zodResolver(schema),
+  defaultValues: prevValues || defaults,
+});
+useFormGuard(form);  // 변경 감지
+
+async function onSubmit(values: T) {
+  if (id) await updateMutation.mutateAsync({ id, data: values });
+  else await createMutation.mutateAsync(values);
+  sheet.close();
+}
+```
+
+**Zod `.default()` 사용 시**: `zodResolver(schema) as Resolver<T>` 타입 캐스트 필요.
+
+**날짜 필드**: 로컬 스키마에서 `z.date()` override → 제출 시 `format(date, "yyyy-MM-dd")` 변환.
+
+#### 폼 컴포넌트 (`shared/ui/form/`)
+
+FormTextInput, FormPhoneInput, FormEmailInput, FormPasswordInput, FormTextarea, FormSelect, FormNativeSelect, FormCombobox, FormMultiCombobox, FormDatePicker, FormNumberInput, FormCheckbox, FormCheckboxGroup, FormRadioGroup, FormSwitch, FormFileUpload, FormEditor, FormAddressInput, FormFieldArray, FormUrlInput
+
+### Tailwind CSS V4
+
+`globals.css`에서 `@import "tailwindcss"` + `@tailwindcss/vite` 플러그인.
+
+- oklch 색상 시스템 (CSS 변수)
+- Pretendard + Poppins 폰트 (`public/fonts/`)
+- Shadcn UI (New York 스타일)
+
+### 커스텀 훅 (`shared/hooks/`)
+
+| 훅 | 역할 |
+|----|------|
+| `useQueryParams` | URL 쿼리 파라미터 get/set/remove/clear |
+| `useDebounce` | 값 디바운스 (검색어) |
+| `useThrottle` | 값 스로틀 |
+| `useTheme` | 다크모드 토글 (localStorage) |
+| `useMobile` | 모바일 판별 (md 브레이크포인트) |
+| `useScroll` | 스크롤 위치 감지 |
+
+### PDF 생성
+
+`@react-pdf/renderer`로 견적서 PDF 생성. `shared/ui/pdf-preview.tsx`에서 미리보기 제공.
+
+---
+
+## 서버 (`apps/server`)
+
+Hono + Drizzle ORM. 상세한 API 패턴은 [api.md](api.md) 참조.
+
+### 디렉토리 구조
+
+```
+src/
+├── index.ts              # Hono 앱 엔트리 (CORS, Auth, 라우트, 정적 서빙)
+├── auth/index.ts         # Better Auth 설정
+├── middleware/auth.ts     # requireAuth, requireSuperAdmin
+├── routes/               # API 라우트 (모듈별 1파일)
+│   ├── index.ts          # 라우트 조합
+│   ├── clients.ts, estimates.ts, projects.ts, schedules.ts
+│   ├── todos.ts, admins.ts, dashboard.ts, revenue.ts
+│   └── business-info.ts
+├── lib/                  # 유틸리티
+│   ├── errors.ts         # ERRORS 상수, successResponse, errorResponse
+│   ├── pagination.ts     # parsePagination, calcOffset
+│   ├── query-helpers.ts  # softDeleteFilter, softDeletePayload, searchFilter
+│   ├── number-generator.ts # 견적서/프로젝트 번호 생성
+│   ├── types.ts          # AppVariables (AuthUser, AuthSession)
+│   └── constants.ts      # SERVER_PAGE_SIZE_DEFAULT
+└── db/
+    ├── index.ts          # Drizzle 클라이언트
+    ├── schema/           # 테이블 스키마 + 관계 (→ database.md 참조)
+    ├── seed.ts           # 시드 데이터
+    └── reset.ts          # DB 초기화
+```
+
+### 라우트 패턴
+
+각 라우트 파일은 독립된 `Hono` 인스턴스:
+
+1. `app.use("*", requireAuth)` — 전역 인증
+2. 하위 리소스 라우트 (`:id`보다 먼저 등록, 경로 충돌 방지)
+3. CRUD 엔드포인트 (GET list → POST → GET :id → PATCH :id → DELETE :id)
+4. Zod `safeParse`로 입력 검증
+5. `successResponse` / `errorResponse`로 일관된 응답
+
+---
+
+## 공유 패키지 (`packages/`)
+
+### schemas (`@packages/schemas`)
+
+모듈별 Zod 스키마. 클라이언트 폼 검증과 서버 입력 검증에 동시 사용.
+
+파일: `admins.ts`, `clients.ts`, `estimates.ts`, `projects.ts`, `schedules.ts`, `todos.ts`
+
+### types (`@packages/types`)
+
+공유 상수 및 타입 정의.
+
+- `constants.ts` — `TAX_TYPE`, `DISCOUNT_TYPE`, `PROJECT_STATUS`, `ESTIMATE_STATUS` 등
+- `common.ts` — 공통 타입
+- `results.ts` — API 응답 타입 (`ApiResponse`, `PaginatedResponse`)
+
+### utils (`@packages/utils`)
+
+- `amount-calculator.ts` — `calculateTotal()`, `calculateTaxBreakdown()`, `buildPriceSummaryDisplay()`
+- `result.ts` — Result 패턴 헬퍼
+- `constants.ts` — 공유 상수

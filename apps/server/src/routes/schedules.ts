@@ -3,7 +3,7 @@ import { count, desc, eq } from "drizzle-orm";
 import { db } from "../db";
 import { schedules } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
-import { scheduleWriteSchema } from "@work-manager/schemas";
+import { scheduleWriteSchema } from "@packages/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { searchFilter } from "../lib/query-helpers";

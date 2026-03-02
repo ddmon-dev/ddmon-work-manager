@@ -1,4 +1,4 @@
-import { TAX_TYPE, DISCOUNT_TYPE } from '@work-manager/types';
+import { TAX_TYPE, DISCOUNT_TYPE } from '@packages/types';
 
 interface CalcItem {
   amount: number;

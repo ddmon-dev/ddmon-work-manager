@@ -1,9 +1,9 @@
-name: wm-local
+name: ${PROJECT_NAME}-local
 
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: wm-postgres-local
+    container_name: ${PROJECT_NAME}-postgres-local
     environment:
       POSTGRES_USER: wm_user
       POSTGRES_PASSWORD: REDACTED
@@ -11,8 +11,9 @@ services:
     ports:
       - "7020:5432"
     volumes:
-      - wm_pgdata_local:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
 volumes:
-  wm_pgdata_local:
+  pgdata:
+    name: ${PROJECT_NAME}-local_pgdata

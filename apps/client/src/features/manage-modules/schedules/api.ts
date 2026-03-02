@@ -5,7 +5,7 @@ import { queryKeys } from "@/shared/lib/query-keys";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import type { ScheduleDTO, ScheduleListResponse, CalendarSchedule } from "./types";
-import type { ScheduleWriteInput } from "@work-manager/schemas";
+import type { ScheduleWriteInput } from "@packages/schemas";
 
 type ClientOption = { value: string; label: string };
 type ProjectOption = { value: string; label: string; clientId: string };

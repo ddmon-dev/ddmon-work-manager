@@ -23,10 +23,10 @@
   </dict>
 
   <key>StandardOutPath</key>
-  <string>/tmp/wm-react-backup-stdout.log</string>
+  <string>/tmp/__PROJECT_NAME__-backup-stdout.log</string>
 
   <key>StandardErrorPath</key>
-  <string>/tmp/wm-react-backup-stderr.log</string>
+  <string>/tmp/__PROJECT_NAME__-backup-stderr.log</string>
 
   <key>EnvironmentVariables</key>
   <dict>

@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import { ExcelExportButton } from "@/shared/ui/excel-export-button";
 import { type ExcelColumn } from "@/shared/lib/excel";
 export { type ExcelColumn } from "@/shared/lib/excel/types";
-import type { ActionResult } from "@work-manager/types";
+import type { ActionResult } from "@packages/types";
 
 type ExportDataButtonProps<T> = {
   fetchDataFn: () => Promise<ActionResult<T[]>>;

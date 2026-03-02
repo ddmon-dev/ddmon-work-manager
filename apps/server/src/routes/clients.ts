@@ -4,7 +4,7 @@ import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
 import { clients, clientMemos, user } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
-import { clientWriteSchema } from "@work-manager/schemas";
+import { clientWriteSchema } from "@packages/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { searchFilter, softDeleteFilter, softDeletePayload } from "../lib/query-helpers";

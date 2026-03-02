@@ -4,7 +4,7 @@ import { useForm, FormProvider, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format, parseISO } from "date-fns";
 import { z } from "zod";
-import { projectWriteSchema, type ProjectWriteInput } from "@work-manager/schemas";
+import { projectWriteSchema, type ProjectWriteInput } from "@packages/schemas";
 import { Field, FieldGroup, FieldTitle } from "@/shared/ui/field";
 import { Button } from "@/shared/ui/button";
 import {

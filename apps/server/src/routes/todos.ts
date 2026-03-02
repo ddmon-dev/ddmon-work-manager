@@ -4,7 +4,7 @@ import { and, eq, inArray, lt, asc } from "drizzle-orm";
 import { db } from "../db";
 import { todos, todoTimeBlocks } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
-import { todoWriteSchema } from "@work-manager/schemas";
+import { todoWriteSchema } from "@packages/schemas";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import type { AppVariables } from "../lib/types";
 

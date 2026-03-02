@@ -6,7 +6,7 @@ import { GENERAL_ERRORS } from "@/shared/constants/error-messages";
 import { Button } from "@/shared/ui/button";
 import { LoadingButton } from "@/shared/ui/loading-button";
 import { useDialog } from "@/shared/ui/app-dialog";
-import type { ActionResult } from "@work-manager/types";
+import type { ActionResult } from "@packages/types";
 
 interface BulkActionBarProps<TData extends { id?: string }> {
   selectedRows: TData[];

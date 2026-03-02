@@ -3,7 +3,7 @@ import { useForm, FormProvider, Controller, type Resolver } from "react-hook-for
 import { zodResolver } from "@hookform/resolvers/zod";
 import { parseISO, format } from "date-fns";
 import { z } from "zod";
-import { scheduleWriteSchema, type ScheduleWriteInput } from "@work-manager/schemas";
+import { scheduleWriteSchema, type ScheduleWriteInput } from "@packages/schemas";
 import { Input } from "@/shared/ui/input";
 import { Textarea } from "@/shared/ui/textarea";
 import { DatePicker } from "@/shared/ui/date-picker";

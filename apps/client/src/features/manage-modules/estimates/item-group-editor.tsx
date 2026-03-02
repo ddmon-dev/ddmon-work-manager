@@ -24,7 +24,7 @@ import { Textarea } from '@/shared/ui/textarea';
 import { NativeSelect, NativeSelectOption } from '@/shared/ui/native-select';
 import { FormNumberInput } from '@/shared/ui/form';
 import { formatCurrency } from '@/shared/utils/format';
-import { calculateGroupSubtotal } from '@work-manager/utils';
+import { calculateGroupSubtotal } from '@packages/utils';
 import { cn } from '@/shared/utils/classnames';
 import { UNIT_OPTIONS, DEFAULT_UNIT } from './constants';
 

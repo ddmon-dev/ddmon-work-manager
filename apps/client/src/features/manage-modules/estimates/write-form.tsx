@@ -6,8 +6,8 @@ import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import { addMonths, format, parseISO } from "date-fns";
 import { z } from "zod";
-import { estimateWriteSchema } from "@work-manager/schemas";
-import { calculateTotal, buildPriceSummaryDisplay } from "@work-manager/utils";
+import { estimateWriteSchema } from "@packages/schemas";
+import { calculateTotal, buildPriceSummaryDisplay } from "@packages/utils";
 import { FieldGroup } from "@/shared/ui/field";
 import {
   FormTextInput,

@@ -13,7 +13,7 @@ import type {
   ProjectStatus,
   WorkPhase,
 } from "./types";
-import type { ProjectWriteInput } from "@work-manager/schemas";
+import type { ProjectWriteInput } from "@packages/schemas";
 
 type ListParams = {
   page?: number;

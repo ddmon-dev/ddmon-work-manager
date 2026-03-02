@@ -1,5 +1,5 @@
 import { formatCurrency } from "@/shared/utils/format";
-import { calculateTotal, buildPriceSummaryDisplay } from "@work-manager/utils";
+import { calculateTotal, buildPriceSummaryDisplay } from "@packages/utils";
 import type { EstimateGroupDTO } from "../types";
 
 interface PriceSummaryProps {

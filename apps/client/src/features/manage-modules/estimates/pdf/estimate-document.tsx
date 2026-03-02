@@ -10,7 +10,7 @@ import {
   calculateTotal,
   calculateGroupSubtotal,
   buildPriceSummaryDisplay,
-} from '@work-manager/utils';
+} from '@packages/utils';
 import { registerFonts } from './register-fonts';
 import type { EstimateWithDetails } from '../types';
 

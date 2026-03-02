@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PASSWORD_MIN_LENGTH } from "@work-manager/utils";
+import { PASSWORD_MIN_LENGTH } from "@packages/utils";
 
 export const adminCreateSchema = z
   .object({

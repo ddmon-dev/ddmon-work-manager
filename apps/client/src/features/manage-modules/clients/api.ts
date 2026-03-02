@@ -12,7 +12,7 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import type { ClientDTO, ClientWithMemos, ClientListResponse } from "./types";
-import type { ClientWriteInput } from "@work-manager/schemas";
+import type { ClientWriteInput } from "@packages/schemas";
 
 type ListParams = {
   page?: number;

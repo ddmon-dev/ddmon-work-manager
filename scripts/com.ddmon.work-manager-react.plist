@@ -24,10 +24,10 @@
   </dict>
 
   <key>StandardOutPath</key>
-  <string>/tmp/wm-react-stdout.log</string>
+  <string>/tmp/__PROJECT_NAME__-stdout.log</string>
 
   <key>StandardErrorPath</key>
-  <string>/tmp/wm-react-stderr.log</string>
+  <string>/tmp/__PROJECT_NAME__-stderr.log</string>
 
   <key>EnvironmentVariables</key>
   <dict>

@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { LoadingButton } from '@/shared/ui/loading-button';
 import { exportToExcel, type ExcelColumn } from '@/shared/lib/excel';
 import { delay } from '@/shared/utils/delays';
-import type { ActionResult } from '@work-manager/types';
+import type { ActionResult } from '@packages/types';
 
 import { SUCCESS_MESSAGES } from '@/shared/constants/success-messages';
 import { GENERAL_ERRORS } from '@/shared/constants/error-messages';

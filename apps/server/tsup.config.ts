@@ -5,5 +5,5 @@ export default defineConfig({
   format: ["esm"],
   splitting: false,
   outDir: "dist",
-  noExternal: [/@work-manager\/.*/],
+  noExternal: [/@packages\/.*/],
 });

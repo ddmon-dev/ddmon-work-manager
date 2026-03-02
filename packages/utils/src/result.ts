@@ -1,4 +1,4 @@
-import type { ActionResult } from "@work-manager/types";
+import type { ActionResult } from "@packages/types";
 
 /**
  * Result 헬퍼 객체

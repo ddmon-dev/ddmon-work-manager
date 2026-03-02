@@ -6,7 +6,7 @@ import { LoadingButton } from "@/shared/ui/loading-button";
 import type { VariantProps } from "class-variance-authority";
 import { buttonVariants } from "@/shared/ui/button";
 import { useDialog } from "@/shared/ui/app-dialog";
-import type { ActionResult } from "@work-manager/types";
+import type { ActionResult } from "@packages/types";
 
 interface DeleteButtonProps {
   deleteFn: () => Promise<ActionResult<unknown>>;

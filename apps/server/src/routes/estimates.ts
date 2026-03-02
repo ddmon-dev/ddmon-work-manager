@@ -4,8 +4,8 @@ import { and, asc, countDistinct, desc, eq, ilike, inArray, isNotNull, or, sql }
 import { db } from "../db";
 import { clients, estimateSeries, estimates, estimateItemGroups, estimateItems, projects, businessInfo } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
-import { estimateWriteSchema, type EstimateGroupWriteInput } from "@work-manager/schemas";
-import { calculateTotal } from "@work-manager/utils";
+import { estimateWriteSchema, type EstimateGroupWriteInput } from "@packages/schemas";
+import { calculateTotal } from "@packages/utils";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { generateEstimateNumber } from "../lib/number-generator";

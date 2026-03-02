@@ -1,17 +1,18 @@
-name: wm-dev
+name: ${PROJECT_NAME}-dev
 
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: wm-postgres
+    container_name: ${PROJECT_NAME}-postgres-dev
     environment:
       POSTGRES_USER: wm_user
       POSTGRES_PASSWORD: REDACTED
       POSTGRES_DB: work_manager
     ports:
-      - "8002:5432"
+      - '8002:5432'
     volumes:
-      - wm_pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
 
 volumes:
-  wm_pgdata:
+  pgdata:
+    name: ${PROJECT_NAME}-dev_pgdata

@@ -3,17 +3,18 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+source "$PROJECT_DIR/project.env"
 
 echo "[start-local] 로컬 운영환경 시작..."
 
 # Docker PostgreSQL 시작
 echo "[start-local] PostgreSQL 컨테이너 시작 (port 7020)..."
-docker compose -f "$PROJECT_DIR/docker-compose.local.yml" up -d
+docker compose --env-file "$PROJECT_DIR/project.env" -f "$PROJECT_DIR/docker-compose.local.yml" up -d
 
 # 컨테이너 준비 대기
 echo "[start-local] DB 준비 대기 중..."
 for i in $(seq 1 30); do
-  if docker exec wm-postgres-local pg_isready -U wm_user -d work_manager > /dev/null 2>&1; then
+  if docker exec $PROJECT_NAME-postgres-local pg_isready -U wm_user -d work_manager > /dev/null 2>&1; then
     echo "[start-local] DB 준비 완료"
     break
   fi

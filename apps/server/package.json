@@ -1,5 +1,5 @@
 {
-  "name": "@work-manager/server",
+  "name": "@packages/server",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -17,9 +17,9 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.14.1",
-    "@work-manager/schemas": "*",
-    "@work-manager/types": "*",
-    "@work-manager/utils": "*",
+    "@packages/schemas": "*",
+    "@packages/types": "*",
+    "@packages/utils": "*",
     "better-auth": "^1.2.7",
     "drizzle-orm": "^0.43.1",
     "hono": "^4.7.13",
