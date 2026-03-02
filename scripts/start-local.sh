@@ -26,7 +26,7 @@ docker compose --env-file "$PROJECT_DIR/project.env" -f "$PROJECT_DIR/docker-com
 # 컨테이너 준비 대기
 echo "[start-local] DB 준비 대기 중..."
 for i in $(seq 1 30); do
-  if docker exec $PROJECT_NAME-postgres-local pg_isready -U wm_user -d work_manager > /dev/null 2>&1; then
+  if docker exec $PROJECT_NAME-postgres-local pg_isready -U $POSTGRES_USER -d $POSTGRES_DB > /dev/null 2>&1; then
     echo "[start-local] DB 준비 완료"
     break
   fi

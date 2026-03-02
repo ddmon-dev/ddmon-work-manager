@@ -14,7 +14,8 @@ _react/
 │   ├── types/           # 상수, 타입 정의
 │   └── utils/           # 금액 계산 등 유틸리티
 ├── scripts/             # 운영 스크립트
-├── project.env          # 프로젝트명 중앙 관리
+├── project.env          # 프로젝트명 + DB 크레덴셜 (gitignore)
+├── project.env.example  # project.env 템플릿
 ├── docker-compose.yml   # 개발환경 Docker
 ├── docker-compose.local.yml  # 로컬 운영환경 Docker
 ├── .env                 # 개발환경 변수
@@ -23,12 +24,22 @@ _react/
 
 Git은 별도 레포 (`_react/.git`). 상위 레포 `.gitignore`에서 `_react/` 제외.
 
-### 프로젝트명 중앙 관리
+### 프로젝트 환경변수 (`project.env`)
 
-`project.env`에서 프로젝트명을 관리. Docker Compose, 스크립트, plist에서 참조.
+`project.env`에서 프로젝트명과 DB 크레덴셜을 관리. Docker Compose, 스크립트, plist에서 참조.
+
+**이 파일은 `.gitignore`에 포함** — `project.env.example`을 복사하여 생성.
+
+```bash
+cp project.env.example project.env
+# project.env 내 POSTGRES_USER, POSTGRES_PASSWORD 를 실제 값으로 변경
+```
 
 ```env
 PROJECT_NAME=work-manager
+POSTGRES_USER=your_db_user
+POSTGRES_PASSWORD=your_db_password
+POSTGRES_DB=work_manager
 ```
 
 ## 개발환경
@@ -48,7 +59,7 @@ Vite 개발 서버가 `/api` 요청을 서버(8001)로 프록시.
 `docker-compose.yml` (프로젝트명: `${PROJECT_NAME}-dev`)
 
 - PostgreSQL 17 Alpine
-- 크레덴셜: `wm_user:REDACTED` / DB: `work_manager`
+- 크레덴셜: `project.env`의 `POSTGRES_USER`/`POSTGRES_PASSWORD` 참조
 - 컨테이너: `${PROJECT_NAME}-postgres-dev`
 - 볼륨: `${PROJECT_NAME}-dev_pgdata`
 - `docker compose --env-file project.env` 명령 사용
@@ -56,12 +67,14 @@ Vite 개발 서버가 `/api` 요청을 서버(8001)로 프록시.
 ### 환경 변수 (`.env`)
 
 ```env
-DATABASE_URL=postgresql://wm_user:REDACTED@localhost:8002/work_manager
+DATABASE_URL=postgresql://your_db_user:your_db_password@localhost:8002/work_manager
 PORT=8001
 BETTER_AUTH_SECRET=dev-secret-do-not-use-in-production
 BETTER_AUTH_URL=http://localhost:8001
 CLIENT_URL=http://localhost:8000
 ```
+
+`.env.example`을 복사하여 생성. DB 크레덴셜은 `project.env`와 일치시킬 것.
 
 ### 명령어
 
@@ -119,7 +132,7 @@ npm run type-check    # TypeScript 타입 체크
 ### 환경 변수 (`.env.local`)
 
 ```env
-DATABASE_URL=postgresql://wm_user:REDACTED@localhost:7020/work_manager
+DATABASE_URL=postgresql://your_db_user:your_db_password@localhost:7020/work_manager
 BETTER_AUTH_SECRET=your-secret-change-this-in-production
 BETTER_AUTH_URL=http://localhost:7070
 CLIENT_URL=http://localhost:7070
@@ -129,7 +142,7 @@ SERVE_STATIC=true
 STATIC_DIR=../../apps/client/dist-local
 ```
 
-`.env.local.example`이 커밋되어 있으므로 참고하여 생성.
+`.env.local.example`을 복사하여 생성. DB 크레덴셜은 `project.env`와 일치시킬 것.
 
 ### 빌드
 

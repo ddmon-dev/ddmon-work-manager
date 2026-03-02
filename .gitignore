@@ -16,6 +16,19 @@ apps/server/src/db/seed.ts
 .env.local
 .env.*.local
 
+# project env (DB 크레덴셜 포함)
+project.env
+
+# security
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
+
+# test coverage
+coverage/
+
 # IDE
 .idea/
 .vscode/

@@ -14,8 +14,8 @@ BACKUP_FILE="$BACKUP_DIR/work_manager_${TIMESTAMP}.sql"
 echo "[backup-db] DB 백업 중: $BACKUP_FILE"
 
 docker exec $PROJECT_NAME-postgres-local pg_dump \
-  -U wm_user \
-  -d work_manager \
+  -U $POSTGRES_USER \
+  -d $POSTGRES_DB \
   --no-password \
   > "$BACKUP_FILE"
 
