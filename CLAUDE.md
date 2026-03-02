@@ -50,8 +50,7 @@ npm run db:up         # Docker PostgreSQL 시작 (port 8002)
 npm run db:reset      # 마이그레이션 + 시드 재적용
 npm run db:studio     # Drizzle Studio
 npm run type-check    # TypeScript 타입 체크
-npm run local:start   # 로컬 운영환경 시작 (Docker + 마이그레이션 + 서버)
-npm run local:stop    # 로컬 운영환경 중지
+npm run local:rebuild # 운영 배포 (마이그레이션 + 빌드 + 서비스 재시작)
 ```
 
 ## 개발 규칙
