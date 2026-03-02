@@ -3,7 +3,7 @@ import type { SidebarVariant } from '@/shared/ui/sidebar';
 export const APP_CONFIG = {
   META: {
     TITLE: 'Work Manager',
-    DESCRIPTION: '프리랜서를 위한 외주 관리 시스템',
+    DESCRIPTION: 'DDLabs 화이팅!',
   },
   AUTH: {
     PATHS: {
