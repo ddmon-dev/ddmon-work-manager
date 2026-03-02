@@ -29,6 +29,10 @@ project.env
 # test coverage
 coverage/
 
+# AI tools
+.claude/
+.serena/
+
 # IDE
 .idea/
 .vscode/
