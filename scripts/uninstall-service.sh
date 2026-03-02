@@ -1,20 +1,23 @@
 #!/bin/bash
 
-PLIST_DIR="$HOME/Library/LaunchAgents"
+LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
 
-echo "[uninstall-service] LaunchAgent 제거 중..."
+SERVICE_LABEL="com.ddmon.work-manager-react"
+BACKUP_LABEL="com.ddmon.work-manager-react-backup"
+DOMAIN_TARGET="gui/$(id -u)"
 
-# LaunchAgent 해제
-if [ -f "$PLIST_DIR/com.ddmon.work-manager-react.plist" ]; then
-  launchctl unload "$PLIST_DIR/com.ddmon.work-manager-react.plist" 2>/dev/null || true
-  rm -f "$PLIST_DIR/com.ddmon.work-manager-react.plist"
-  echo "  서버 서비스 제거 완료"
-fi
+echo "[uninstall] LaunchAgent 제거 중..."
 
-if [ -f "$PLIST_DIR/com.ddmon.work-manager-react-backup.plist" ]; then
-  launchctl unload "$PLIST_DIR/com.ddmon.work-manager-react-backup.plist" 2>/dev/null || true
-  rm -f "$PLIST_DIR/com.ddmon.work-manager-react-backup.plist"
-  echo "  백업 서비스 제거 완료"
-fi
+# 서버 서비스 제거
+launchctl bootout "$DOMAIN_TARGET/$SERVICE_LABEL" 2>/dev/null || true
+launchctl remove "$SERVICE_LABEL" 2>/dev/null || true
+rm -f "$LAUNCH_AGENTS_DIR/$SERVICE_LABEL.plist"
+echo "  서버 서비스 제거 완료"
 
-echo "[uninstall-service] 완료"
+# 백업 서비스 제거
+launchctl bootout "$DOMAIN_TARGET/$BACKUP_LABEL" 2>/dev/null || true
+launchctl remove "$BACKUP_LABEL" 2>/dev/null || true
+rm -f "$LAUNCH_AGENTS_DIR/$BACKUP_LABEL.plist"
+echo "  백업 서비스 제거 완료"
+
+echo "[uninstall] 완료"

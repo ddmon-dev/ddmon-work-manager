@@ -4,14 +4,15 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo "[rebuild] 재빌드 시작..."
+SERVICE_LABEL="com.ddmon.work-manager-react"
+DOMAIN_TARGET="gui/$(id -u)"
 
-# 서버 프로세스 종료 (Docker는 유지)
-if pgrep -f "dist/index.js" > /dev/null 2>&1; then
-  echo "[rebuild] 서버 프로세스 종료..."
-  pkill -f "dist/index.js" || true
-  sleep 1
-fi
+echo "[rebuild] 리빌드 시작..."
+
+# LaunchAgent 서비스 중지 (KeepAlive 재시작 방지)
+echo "[rebuild] 서비스 중지..."
+launchctl bootout "$DOMAIN_TARGET/$SERVICE_LABEL" 2>/dev/null || true
+sleep 1
 
 # 마이그레이션 적용
 echo "[rebuild] 마이그레이션 실행..."
@@ -23,7 +24,8 @@ echo "[rebuild] 빌드 중..."
 cd "$PROJECT_DIR"
 npm run build:local
 
-# 서버 재시작
-echo "[rebuild] 서버 시작 (port 7070)..."
-cd "$PROJECT_DIR/apps/server"
-node --env-file=../../.env.local dist/index.js
+# LaunchAgent 서비스 재시작
+echo "[rebuild] 서비스 재시작..."
+launchctl bootstrap "$DOMAIN_TARGET" "$HOME/Library/LaunchAgents/$SERVICE_LABEL.plist"
+
+echo "[rebuild] 완료"

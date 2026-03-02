@@ -148,13 +148,22 @@ npm run build:local    # 클라이언트(dist-local) + 서버(tsup) 빌드
 |--------|---------|------|
 | `npm run local:start` | `start-local.sh` | Docker 시작 → 마이그레이션 → 서버 기동 |
 | `npm run local:stop` | `stop-local.sh` | DB 백업 → 서버 종료 → Docker 중지 |
-| `npm run local:rebuild` | `rebuild.sh` | 서버만 종료 → 재빌드 → 재시작 (Docker 유지) |
+| `npm run local:rebuild` | `rebuild.sh` | 서버만 종료 → 리빌드 → 재시작 (Docker 유지) |
 | `npm run local:migrate` | — | 마이그레이션만 (데이터 유지) |
 | `npm run local:backup` | `backup-db.sh` | DB 백업 (최근 30개 유지) |
 | `npm run local:install` | `install-service.sh` | LaunchAgent 등록 |
 | `npm run local:uninstall` | `uninstall-service.sh` | LaunchAgent 제거 |
 
 백업 위치: `_react/backups/work_manager_YYYYMMDD_HHMMSS.sql`
+
+### 워크플로우
+
+| 시나리오 | 명령어 |
+|---------|--------|
+| 초기 배포 | `npm run local:install` (빌드 자동 포함) |
+| 유지보수 (코드/DB 변경) | `npm run local:rebuild` |
+| 완전 종료 | `npm run local:stop` |
+| 서비스 제거 | `npm run local:uninstall` |
 
 ### LaunchAgent
 
