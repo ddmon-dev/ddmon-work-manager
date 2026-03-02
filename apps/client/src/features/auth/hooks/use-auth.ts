@@ -18,16 +18,18 @@ export type AuthState =
       status: "authenticated";
       isLoading: false;
       isSuperAdmin: boolean;
+      refetch: () => void;
     }
   | {
       user: undefined;
       status: "loading" | "unauthenticated";
       isLoading: boolean;
       isSuperAdmin: false;
+      refetch: () => void;
     };
 
 export function useAuth(): AuthState {
-  const { data, isPending } = authClient.useSession();
+  const { data, isPending, refetch } = authClient.useSession();
 
   if (isPending) {
     return {
@@ -35,6 +37,7 @@ export function useAuth(): AuthState {
       status: "loading",
       isLoading: true,
       isSuperAdmin: false,
+      refetch,
     };
   }
 
@@ -44,6 +47,7 @@ export function useAuth(): AuthState {
       status: "unauthenticated",
       isLoading: false,
       isSuperAdmin: false,
+      refetch,
     };
   }
 
@@ -54,6 +58,7 @@ export function useAuth(): AuthState {
     status: "authenticated",
     isLoading: false,
     isSuperAdmin: user.superAdmin ?? false,
+    refetch,
   };
 }
 

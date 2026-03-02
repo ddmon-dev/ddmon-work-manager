@@ -126,6 +126,9 @@ export function UpdateProfileDialog({ children }: UpdateProfileDialogProps) {
         });
       }
 
+      // 세션 데이터 갱신 (UI 반영)
+      auth.refetch();
+
       toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("프로필"));
       setOpen(false);
       form.reset({
