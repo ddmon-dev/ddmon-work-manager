@@ -87,8 +87,9 @@ app.get("/", async (c) => {
   let allBilledTotal = 0;
   let allVatTotal = 0;
 
-  // 프로젝트 → billed 캐시
+  // 프로젝트 → billed 캐시 / 프로젝트 → 계약연도 매핑
   const projectBilledMap = new Map<string, number>();
+  const projectContractYearMap = new Map<string, number>();
 
   for (const p of allProjects) {
     const amount = Number(p.contractAmount ?? 0);
@@ -102,6 +103,7 @@ app.get("/", async (c) => {
     allVatTotal += vatAmount;
 
     const contractYear = new Date(p.contractDate).getFullYear();
+    projectContractYearMap.set(p.id, contractYear);
     const bucket = yearBuckets.get(contractYear);
     if (bucket) {
       bucket.supplyTotal += amount;
@@ -136,10 +138,13 @@ app.get("/", async (c) => {
     const current = paidByProjectId.get(pay.projectId) ?? 0;
     paidByProjectId.set(pay.projectId, current + amount);
 
-    const paidYear = new Date(pay.paidDate).getFullYear();
-    const bucket = yearBuckets.get(paidYear);
-    if (bucket) {
-      bucket.paymentTotal += amount;
+    // 수금은 프로젝트 계약연도 기준으로 집계
+    const contractYear = projectContractYearMap.get(pay.projectId);
+    if (contractYear !== undefined) {
+      const bucket = yearBuckets.get(contractYear);
+      if (bucket) {
+        bucket.paymentTotal += amount;
+      }
     }
 
     const paidDate = new Date(pay.paidDate);
