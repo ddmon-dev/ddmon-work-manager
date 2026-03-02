@@ -17,7 +17,7 @@ src/
 │   ├── dashboard/      # 대시보드
 │   ├── revenue/        # 매출 현황
 │   ├── settings/       # 설정
-│   └── ui/             # 글로벌 UI (app-sidebar, todo-widget)
+│   └── ui/             # 글로벌 UI (app-sidebar, todo-widget, mindnote-widget)
 └── shared/             # 공유 레이어
     ├── ui/             # 기본 컴포넌트, 폼 컴포넌트, DataList
     ├── lib/            # api-client, query-keys, query-client
@@ -37,7 +37,7 @@ src/
 RootLayout (Toaster, ThemeContext)
 ├── AuthLayout
 │   └── /auth/sign-in
-└── ProtectedLayout (인증 검증, TodoProvider, SidebarProvider)
+└── ProtectedLayout (인증 검증, TodoProvider, MindnoteProvider, SidebarProvider)
     ├── /              → DashboardPage
     ├── /clients       → ClientsPage
     ├── /estimates     → EstimatesPage
@@ -186,7 +186,7 @@ src/
 ├── routes/               # API 라우트 (모듈별 1파일)
 │   ├── index.ts          # 라우트 조합
 │   ├── clients.ts, estimates.ts, projects.ts, schedules.ts
-│   ├── todos.ts, admins.ts, dashboard.ts, revenue.ts
+│   ├── todos.ts, mindnotes.ts, admins.ts, dashboard.ts, revenue.ts
 │   └── business-info.ts
 ├── lib/                  # 유틸리티
 │   ├── errors.ts         # ERRORS 상수, successResponse, errorResponse
@@ -220,7 +220,7 @@ src/
 
 모듈별 Zod 스키마. 클라이언트 폼 검증과 서버 입력 검증에 동시 사용.
 
-파일: `admins.ts`, `clients.ts`, `estimates.ts`, `projects.ts`, `schedules.ts`, `todos.ts`
+파일: `admins.ts`, `clients.ts`, `estimates.ts`, `mindnotes.ts`, `projects.ts`, `schedules.ts`, `todos.ts`
 
 ### types (`@packages/types`)
 

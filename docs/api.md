@@ -144,6 +144,18 @@ requireAuth → requireSuperAdmin (선택적)
 
 userId 필터링: 모든 투두 API는 `user.id`로 자동 필터링 (사용자별 데이터 분리).
 
+### Mindnotes (`/api/mindnotes`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/mindnotes` | 전체 목록 (createdAt desc, 비페이지네이션) |
+| GET | `/mindnotes/random` | 랜덤 1건 (대시보드 히어로 섹션용) |
+| POST | `/mindnotes` | 생성 |
+| PATCH | `/mindnotes/:id` | 수정 |
+| DELETE | `/mindnotes/:id` | **하드 삭제** |
+
+userId 필터링: 모든 마인드노트 API는 `user.id`로 자동 필터링 (사용자별 데이터 분리).
+
 ### Admins (`/api/admins`)
 
 | Method | Path | 설명 | 권한 |
@@ -226,7 +238,7 @@ where(softDeleteFilter(table.deleted))
 .set(softDeletePayload())  // { deleted: true, updatedAt: new Date() }
 ```
 
-예외: schedules, todos, todo_time_blocks → 하드 삭제 (`db.delete()`)
+예외: schedules, todos, todo_time_blocks, mindnotes → 하드 삭제 (`db.delete()`)
 
 헬퍼: `apps/server/src/lib/query-helpers.ts`
 
