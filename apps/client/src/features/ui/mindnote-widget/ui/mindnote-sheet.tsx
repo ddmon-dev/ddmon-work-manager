@@ -32,7 +32,7 @@ export function MindnoteSheet() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleAdd();
     }
@@ -77,7 +77,7 @@ export function MindnoteSheet() {
           />
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              Enter 저장 · Shift+Enter 개행
+              Cmd+Enter 저장
             </p>
             <Button size="sm" onClick={handleAdd} disabled={!newContent.trim()}>
               저장
