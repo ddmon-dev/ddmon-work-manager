@@ -239,6 +239,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                     name="notes"
                     label="비고"
                     placeholder="비고를 입력해주세요."
+                    description="줄바꿈으로 항목이 구분됩니다."
                     optional
                     rows={3}
                   />

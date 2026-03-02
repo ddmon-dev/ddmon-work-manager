@@ -498,7 +498,9 @@ export function EstimateDocument({ data }: { data: EstimateDocumentData }) {
         {data.notes && (
           <View style={s.notes} wrap={false}>
             <Text style={s.notesLabel}>{spread('비고')}</Text>
-            <Text style={s.notesBody}>{data.notes}</Text>
+            {data.notes!.split("\n").filter(line => line.trim()).map((line, i) => (
+              <Text key={i} style={s.notesBody}>• {line.trim()}</Text>
+            ))}
           </View>
         )}
 

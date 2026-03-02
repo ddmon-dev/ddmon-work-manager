@@ -147,7 +147,13 @@ export function DetailView({ data, refetch }: DetailViewProps) {
                 {data.notes && (
                   <DetailInfoRow
                     label="비고"
-                    value={<NewlineText>{data.notes}</NewlineText>}
+                    value={
+                      <ul className="space-y-1">
+                        {data.notes!.split("\n").filter(line => line.trim()).map((line, i) => (
+                          <li key={i}>· {line.trim()}</li>
+                        ))}
+                      </ul>
+                    }
                     vertical
                     valueClassName="text-left"
                   />
