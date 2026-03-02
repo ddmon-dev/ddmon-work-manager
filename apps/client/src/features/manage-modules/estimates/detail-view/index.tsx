@@ -148,14 +148,14 @@ export function DetailView({ data, refetch }: DetailViewProps) {
                   <DetailInfoRow
                     label="비고"
                     value={
-                      <ul className="space-y-1">
+                      <ul className="list-disc list-outside pl-5 space-y-1">
                         {data.notes!.split("\n").filter(line => line.trim()).map((line, i) => (
-                          <li key={i}>· {line.trim()}</li>
+                          <li key={i}>{line.trim()}</li>
                         ))}
                       </ul>
                     }
                     vertical
-                    valueClassName="text-left"
+                    valueClassName="text-left text-wrap"
                   />
                 )}
                 {data.memo && (
@@ -163,7 +163,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
                     label="내부 메모"
                     value={<NewlineText>{data.memo}</NewlineText>}
                     vertical
-                    valueClassName="text-left"
+                    valueClassName="text-left text-wrap"
                   />
                 )}
               </div>

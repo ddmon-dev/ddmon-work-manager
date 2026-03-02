@@ -307,10 +307,22 @@ const s = StyleSheet.create({
     letterSpacing: 0.6,
     marginBottom: 6,
   },
+  notesItem: {
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    marginBottom: 2,
+  },
+  notesBullet: {
+    fontSize: 7.5,
+    fontWeight: 'bold',
+    color: C.text,
+    width: 8,
+  },
   notesBody: {
     fontSize: 7.5,
     color: C.text,
     lineHeight: 1.6,
+    flex: 1,
   },
 
   /* -- Footer -- */
@@ -499,7 +511,10 @@ export function EstimateDocument({ data }: { data: EstimateDocumentData }) {
           <View style={s.notes} wrap={false}>
             <Text style={s.notesLabel}>{spread('비고')}</Text>
             {data.notes!.split("\n").filter(line => line.trim()).map((line, i) => (
-              <Text key={i} style={s.notesBody}>• {line.trim()}</Text>
+              <View key={i} style={s.notesItem}>
+                <Text style={s.notesBullet}>*</Text>
+                <Text style={s.notesBody}>{line.trim()}</Text>
+              </View>
             ))}
           </View>
         )}
