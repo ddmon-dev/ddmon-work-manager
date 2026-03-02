@@ -539,7 +539,6 @@ function PaymentHistory({ projectId, payments, refetch }: PaymentHistoryProps) {
                 type="button"
                 size="icon-xs"
                 variant="ghost"
-                className="text-destructive hover:text-destructive"
                 onClick={() => handleDelete(payment.id)}
               >
                 <Trash2Icon className="size-3" />

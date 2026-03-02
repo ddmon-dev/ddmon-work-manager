@@ -71,9 +71,9 @@ export function MindnoteItem({ mindnote, onEdit, onDelete }: MindnoteItemProps) 
   }
 
   return (
-    <div className="group rounded-lg border bg-card p-3 hover:border-primary/30 transition-colors">
+    <div className="group relative rounded-lg border bg-card p-3 hover:border-primary/30 transition-colors">
       <p className="text-sm whitespace-pre-wrap leading-relaxed">{mindnote.content}</p>
-      <div className="flex justify-end gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-1.5 right-1.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
         <Button
           variant="ghost"
           size="icon"

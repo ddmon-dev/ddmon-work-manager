@@ -19,8 +19,7 @@ import { AppSidebarIdentity } from "./identity";
 import { NavMenu } from "./nav-menu";
 import { NavUser } from "./nav-user";
 import { ThemeToggle } from "@/shared/ui/theme-switcher";
-import { TodoTrigger } from "@/features/ui/todo-widget";
-import { MindnoteTrigger } from "@/features/ui/mindnote-widget";
+import { WidgetTriggerGroup } from "./widget-trigger-group";
 import { navigationConfig } from "./config";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -66,8 +65,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarContent>
         <SidebarFooter className="gap-2">
           <NavUser />
-          <TodoTrigger />
-          <MindnoteTrigger />
+          <WidgetTriggerGroup />
           <ThemeToggle />
         </SidebarFooter>
       </Sidebar>
