@@ -66,6 +66,11 @@ CLIENT_URL=http://localhost:8000
 ### 명령어
 
 ```bash
+# 통합 시작/종료
+npm run dev:start     # DB 시작 → client + server + Drizzle Studio 동시 기동
+npm run dev:stop      # Docker PostgreSQL 중지 (Ctrl+C로 dev:start 종료 후 실행)
+
+# 개별 실행
 npm run dev           # client(8000) + server(8001) 동시 기동 (concurrently)
 npm run dev:client    # 클라이언트만
 npm run dev:server    # 서버만 (tsx watch, hot reload)
