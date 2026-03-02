@@ -20,6 +20,7 @@ import { NavMenu } from "./nav-menu";
 import { NavUser } from "./nav-user";
 import { ThemeToggle } from "@/shared/ui/theme-switcher";
 import { TodoTrigger } from "@/features/ui/todo-widget";
+import { MindnoteTrigger } from "@/features/ui/mindnote-widget";
 import { navigationConfig } from "./config";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -66,6 +67,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarFooter className="gap-2">
           <NavUser />
           <TodoTrigger />
+          <MindnoteTrigger />
           <ThemeToggle />
         </SidebarFooter>
       </Sidebar>

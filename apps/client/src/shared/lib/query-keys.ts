@@ -46,4 +46,8 @@ export const queryKeys = {
   businessInfo: {
     single: ["business-info"] as const,
   },
+  mindnotes: {
+    all: ["mindnotes"] as const,
+    random: ["mindnotes", "random"] as const,
+  },
 };

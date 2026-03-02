@@ -9,6 +9,7 @@ import {
 import { projects, projectPayments, projectMemos } from "./projects";
 import { schedules } from "./schedules";
 import { todos, todoTimeBlocks } from "./todos";
+import { mindnotes } from "./mindnotes";
 
 export const clientsRelations = relations(clients, ({ many }) => ({
   memos: many(clientMemos),
@@ -120,3 +121,5 @@ export const todoTimeBlocksRelations = relations(todoTimeBlocks, ({ one }) => ({
     references: [todos.id],
   }),
 }));
+
+export const mindnotesRelations = relations(mindnotes, () => ({}));
