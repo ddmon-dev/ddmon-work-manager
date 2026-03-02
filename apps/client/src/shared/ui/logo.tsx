@@ -1,6 +1,6 @@
 import { Radar } from "lucide-react";
 import { cn } from '../utils/classnames';
-import Link from 'next/link';
+import { Link } from 'react-router';
 
 export function ProjectSymbol({
   className,
@@ -33,7 +33,7 @@ function Wrapper({
 }) {
   if (linkToHome) {
     return (
-      <Link href="/" className={cn(className)}>
+      <Link to="/" className={cn(className)}>
         {children}
       </Link>
     );
