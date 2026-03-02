@@ -40,4 +40,7 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: [process.env.CLIENT_URL ?? "http://localhost:4000"],
+  advanced: {
+    cookiePrefix: process.env.NODE_ENV === "production" ? "wmr" : "wmr-dev",
+  },
 });
