@@ -5,7 +5,6 @@
 npm workspaces 기반 모노레포.
 
 ```
-_react/
 ├── apps/
 │   ├── client/          # React 19 + Vite
 │   └── server/          # Hono API 서버
@@ -22,7 +21,7 @@ _react/
 └── .env.local           # 로컬 운영환경 변수 (gitignore)
 ```
 
-Git은 별도 레포 (`_react/.git`). 상위 레포 `.gitignore`에서 `_react/` 제외.
+npm workspaces 기반. 패키지 스코프: `@packages/*`.
 
 ### 프로젝트 환경변수 (`project.env`)
 
@@ -168,7 +167,7 @@ npm run build:local    # 클라이언트(dist-local) + 서버(tsup) 빌드
 | `npm run local:install` | `install-service.sh` | LaunchAgent 등록 |
 | `npm run local:uninstall` | `uninstall-service.sh` | LaunchAgent 제거 |
 
-백업 위치: `_react/backups/work_manager_YYYYMMDD_HHMMSS.sql`
+백업 위치: `backups/work_manager_YYYYMMDD_HHMMSS.sql`
 
 ### 워크플로우
 

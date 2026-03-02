@@ -31,7 +31,6 @@ React + Hono + Drizzle 기반. 프로덕션 레벨 기준으로 작업한다.
 ## 모노레포 구조
 
 ```
-_react/
 ├── apps/
 │   ├── client/       # React 19 + Vite (FSD 구조)
 │   └── server/       # Hono (API 서버)
@@ -62,7 +61,7 @@ npm run local:stop    # 로컬 운영환경 중지
 - **Path Alias**: `@/*` = `./src/*` (클라이언트)
 - **API 응답**: `{ success: true, data }` / `{ success: false, error, message }`
 - **DB 삭제**: 소프트 삭제 기본 (schedules, todos만 하드 삭제)
-- **Git**: 별도 레포 (`_react/.git`). 커밋: `타입: 제목` (feat, fix, refactor, docs, style, test, chore)
+- **Git**: 커밋: `타입: 제목` (feat, fix, refactor, docs, style, test, chore)
 
 ## 문서
 
