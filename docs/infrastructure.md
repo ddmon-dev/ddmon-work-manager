@@ -150,6 +150,7 @@ npm run build:local    # 클라이언트(dist-local) + 서버(tsup) 빌드
 | `npm run local:stop` | `stop-local.sh` | DB 백업 → 서버 종료 → Docker 중지 |
 | `npm run local:rebuild` | `rebuild.sh` | 서버만 종료 → 리빌드 → 재시작 (Docker 유지) |
 | `npm run local:migrate` | — | 마이그레이션만 (데이터 유지) |
+| `npm run local:seed` | — | 시드 데이터 적용 |
 | `npm run local:backup` | `backup-db.sh` | DB 백업 (최근 30개 유지) |
 | `npm run local:install` | `install-service.sh` | LaunchAgent 등록 |
 | `npm run local:uninstall` | `uninstall-service.sh` | LaunchAgent 제거 |
@@ -208,5 +209,6 @@ npm run local:migrate
 `apps/server/src/db/seed.ts` — 기존 Next.js 운영 DB에서 이관한 데이터. `.gitignore`에 포함(개인정보).
 
 ```bash
-npm run db:reset    # reset.ts(DB 초기화) + migrate + seed 통합
+npm run db:reset      # reset.ts(DB 초기화) + migrate + seed 통합
+npm run local:seed    # 로컬 운영환경에 시드 적용
 ```

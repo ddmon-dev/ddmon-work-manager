@@ -26,6 +26,7 @@
     "local:stop": "./scripts/stop-local.sh",
     "local:rebuild": "./scripts/rebuild.sh",
     "local:migrate": "npm run db:migrate:local --workspace=apps/server",
+    "local:seed": "npm run db:seed:local --workspace=apps/server",
     "local:backup": "./scripts/backup-db.sh",
     "local:install": "./scripts/install-service.sh",
     "local:uninstall": "./scripts/uninstall-service.sh"
