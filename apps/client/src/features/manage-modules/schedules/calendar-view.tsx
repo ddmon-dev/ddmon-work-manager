@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   startOfMonth,
   endOfMonth,
@@ -34,7 +34,7 @@ function getCalendarWeeks(year: number, month: number): Date[][] {
 
 export function CalendarView({ year, month, schedules }: CalendarViewProps) {
   const currentDate = new Date(year, month - 1);
-  const weeks = useMemo(() => getCalendarWeeks(year, month), [year, month]);
+  const weeks = getCalendarWeeks(year, month);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   return (

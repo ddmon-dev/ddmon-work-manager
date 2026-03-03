@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, use, useState, useEffect } from "react";
 
 type Theme = "light" | "dark" | "system";
 
@@ -54,16 +54,16 @@ export function useThemeProvider() {
     return () => mql.removeEventListener("change", onChange);
   }, [theme]);
 
-  const setTheme = useCallback((newTheme: Theme) => {
+  const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
     try {
       localStorage.setItem(STORAGE_KEY, newTheme);
     } catch {}
-  }, []);
+  };
 
   return { theme, setTheme, resolvedTheme };
 }
 
 export function useTheme() {
-  return useContext(ThemeContext);
+  return use(ThemeContext);
 }

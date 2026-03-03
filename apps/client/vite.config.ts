@@ -4,7 +4,14 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react({
+      babel: {
+        plugins: ["babel-plugin-react-compiler"],
+      },
+    }),
+    tailwindcss(),
+  ],
   define: {
     "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV ?? "production"),
   },

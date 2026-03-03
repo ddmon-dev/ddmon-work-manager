@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Maximize, ArrowLeftRight, Download, Loader2 } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { downloadBlob } from "@/shared/utils/download";
@@ -66,8 +66,7 @@ export function PdfPreview({
     }
   }
 
-  const renderToCanvas = useCallback(
-    async (gen: number, mode: FitMode) => {
+  const renderToCanvas = async (gen: number, mode: FitMode) => {
       const blob = await generateBlob();
 
       if (gen !== generationRef.current) return;
@@ -152,9 +151,7 @@ export function PdfPreview({
       }
 
       pdfDoc.destroy();
-    },
-    [generateBlob]
-  );
+  };
 
   useEffect(() => {
     const key = `${dependencyKey}__${fitMode}`;

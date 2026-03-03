@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { Input } from "@/shared/ui/input";
 import { Textarea } from "@/shared/ui/textarea";
 import { DatePicker } from "@/shared/ui/date-picker";
@@ -24,33 +23,20 @@ export function DetailView({ data }: { data: ScheduleDTO; refetch: () => void })
   const { data: clientData } = useClientList({ pageSize: 200 });
   const { data: projectData } = useProjectList({ pageSize: 200 });
 
-  const clientOptions = useMemo(
-    () =>
-      clientData?.items.map((c) => ({ value: c.id, label: c.companyName })) ??
-      [],
-    [clientData]
-  );
-  const clientSelectOptions = useMemo(
-    () => [{ value: "", label: "연결 안함" }, ...clientOptions],
-    [clientOptions]
-  );
+  const clientOptions =
+    clientData?.items.map((c) => ({ value: c.id, label: c.companyName })) ?? [];
+  const clientSelectOptions = [{ value: "", label: "연결 안함" }, ...clientOptions];
 
-  const projectOptions = useMemo(
-    () =>
-      projectData?.items.map((p) => ({
-        value: p.id,
-        label: p.name,
-        clientId: p.clientId,
-      })) ?? [],
-    [projectData]
-  );
-  const projectSelectOptions = useMemo(
-    () => [
-      { value: "", label: "연결 안함" },
-      ...projectOptions.map((p) => ({ value: p.value, label: p.label })),
-    ],
-    [projectOptions]
-  );
+  const projectOptions =
+    projectData?.items.map((p) => ({
+      value: p.id,
+      label: p.name,
+      clientId: p.clientId,
+    })) ?? [];
+  const projectSelectOptions = [
+    { value: "", label: "연결 안함" },
+    ...projectOptions.map((p) => ({ value: p.value, label: p.label })),
+  ];
 
   const { saveField, saveFields, savingField, getValue } = useInlineSave({
     data,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 import { useForm, useFormContext, FormProvider, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -432,11 +432,7 @@ function EstimateFormPdfPreview({
 
   const dependencyKey = JSON.stringify(documentData);
 
-  const generateBlob = useCallback(
-    () => generateEstimateDocumentPdfBlob(documentData),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dependencyKey]
-  );
+  const generateBlob = () => generateEstimateDocumentPdfBlob(documentData);
 
   const fileName = prevValues
     ? `견적서_${prevValues.estimateNumber}.pdf`

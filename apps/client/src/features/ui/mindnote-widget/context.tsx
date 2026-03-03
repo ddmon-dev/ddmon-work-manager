@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, use, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 
@@ -24,7 +24,7 @@ interface MindnoteContextType {
 const MindnoteContext = createContext<MindnoteContextType | null>(null);
 
 export function useMindnote() {
-  const ctx = useContext(MindnoteContext);
+  const ctx = use(MindnoteContext);
   if (!ctx) throw new Error("useMindnote must be used within MindnoteProvider");
   return ctx;
 }
@@ -34,7 +34,7 @@ export function MindnoteProvider({ children }: { children: React.ReactNode }) {
   const [mindnotes, setMindnotes] = useState<Mindnote[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const loadMindnotes = useCallback(async () => {
+  const loadMindnotes = async () => {
     setIsLoading(true);
     try {
       const items = await fetchMindnotes();
@@ -44,27 +44,27 @@ export function MindnoteProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     if (isOpen) {
       loadMindnotes();
     }
-  }, [isOpen, loadMindnotes]);
+  }, [isOpen]);
 
-  const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => setIsOpen(false), []);
+  const open = () => setIsOpen(true);
+  const close = () => setIsOpen(false);
 
-  const addMindnote = useCallback(async (content: string) => {
+  const addMindnote = async (content: string) => {
     try {
       const created = await apiCreate(content);
       setMindnotes((prev) => [created, ...prev]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : CRUD_ERRORS.CREATE_FAILED("마인드노트"));
     }
-  }, []);
+  };
 
-  const editMindnote = useCallback(async (id: string, content: string) => {
+  const editMindnote = async (id: string, content: string) => {
     const snapshot = mindnotes;
     setMindnotes((prev) =>
       prev.map((m) => (m.id === id ? { ...m, content } : m))
@@ -76,9 +76,9 @@ export function MindnoteProvider({ children }: { children: React.ReactNode }) {
       setMindnotes(snapshot);
       toast.error(CRUD_ERRORS.UPDATE_FAILED("마인드노트"));
     }
-  }, [mindnotes]);
+  };
 
-  const removeMindnote = useCallback(async (id: string) => {
+  const removeMindnote = async (id: string) => {
     const snapshot = mindnotes;
     setMindnotes((prev) => prev.filter((m) => m.id !== id));
 
@@ -88,7 +88,7 @@ export function MindnoteProvider({ children }: { children: React.ReactNode }) {
       setMindnotes(snapshot);
       toast.error(CRUD_ERRORS.DELETE_FAILED("마인드노트"));
     }
-  }, [mindnotes]);
+  };
 
   return (
     <MindnoteContext.Provider

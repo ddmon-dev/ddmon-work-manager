@@ -67,8 +67,7 @@ const DEFAULT_PRESETS = [
   { label: '한 달 후', date: addMonths(new Date(), 1) },
 ];
 
-export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
-  (props, ref) => {
+export function DatePicker({ ref, ...props }: DatePickerProps & { ref?: React.Ref<HTMLButtonElement> }) {
     const [open, setOpen] = React.useState(false);
 
     const currentYear = new Date().getFullYear();
@@ -333,7 +332,4 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
         {renderMultipleBadges()}
       </div>
     );
-  }
-);
-
-DatePicker.displayName = 'DatePicker';
+}

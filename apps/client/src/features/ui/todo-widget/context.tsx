@@ -1,7 +1,6 @@
 import {
   createContext,
-  useCallback,
-  useContext,
+  use,
   useEffect,
   useRef,
   useState,
@@ -54,7 +53,7 @@ interface TodoContextType {
 const TodoContext = createContext<TodoContextType | null>(null);
 
 export function useTodo() {
-  const ctx = useContext(TodoContext);
+  const ctx = use(TodoContext);
   if (!ctx) throw new Error("useTodo must be used within TodoProvider");
   return ctx;
 }
@@ -76,7 +75,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
     new Map()
   );
 
-  const loadTodos = useCallback(async (targetDate: Date) => {
+  const loadTodos = async (targetDate: Date) => {
     setIsLoading(true);
     try {
       const dateStr = formatDate(targetDate);
@@ -110,29 +109,26 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
-  // 날짜 변경 시 데이터 재조회
+  // 날짜 변경 또는 Sheet 열릴 때 데이터 재조회
   useEffect(() => {
     if (isOpen) {
       loadTodos(date);
     }
-  }, [date, isOpen, loadTodos]);
+  }, [date, isOpen]);
 
-  // Sheet 열릴 때 최초 로드 + dismiss 상태 초기화
+  // Sheet 열릴 때 dismiss 상태 초기화
   useEffect(() => {
     if (isOpen) {
       setIsDismissed(false);
-      loadTodos(date);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => setIsOpen(false), []);
+  const open = () => setIsOpen(true);
+  const close = () => setIsOpen(false);
 
-  const addTodo = useCallback(
-    async (content: string) => {
+  const addTodo = async (content: string) => {
       const maxOrder =
         todos.length > 0 ? Math.max(...todos.map((t) => t.sortOrder)) + 1 : 0;
       try {
@@ -145,12 +141,9 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
         toast.error(e instanceof Error ? e.message : CRUD_ERRORS.CREATE_FAILED("투두"));
       }
-    },
-    [todos, date]
-  );
+  };
 
-  const toggleComplete = useCallback(
-    (todoId: string) => {
+  const toggleComplete = (todoId: string) => {
       const todo = todos.find((t) => t.id === todoId);
       if (todo) {
         const newCompleted = !todo.completed;
@@ -200,12 +193,9 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
           toast.error(CRUD_ERRORS.UPDATE_FAILED("투두"));
         });
       }
-    },
-    [todos, incompleteTodos]
-  );
+  };
 
-  const updateColor = useCallback(
-    (todoId: string, color: string) => {
+  const updateColor = (todoId: string, color: string) => {
       const todo = todos.find((t) => t.id === todoId);
       if (!todo) return;
 
@@ -233,12 +223,9 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
         );
         toast.error(CRUD_ERRORS.UPDATE_FAILED("투두"));
       });
-    },
-    [todos]
-  );
+  };
 
-  const updateContent = useCallback(
-    (todoId: string, content: string) => {
+  const updateContent = (todoId: string, content: string) => {
       const todo = todos.find((t) => t.id === todoId);
       if (!todo) return;
 
@@ -266,12 +253,9 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
         );
         toast.error(CRUD_ERRORS.UPDATE_FAILED("투두"));
       });
-    },
-    [todos]
-  );
+  };
 
-  const handleDeleteTodo = useCallback(
-    async (todoId: string) => {
+  const handleDeleteTodo = async (todoId: string) => {
       const todo = todos.find((t) => t.id === todoId);
       if (todo) {
         const snapshot = { todos, timeBlocks };
@@ -305,12 +289,9 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
           toast.error(CRUD_ERRORS.DELETE_FAILED("투두"));
         }
       }
-    },
-    [todos, timeBlocks, incompleteTodos]
-  );
+  };
 
-  const reorderTodos = useCallback(
-    (activeId: string, overId: string) => {
+  const reorderTodos = (activeId: string, overId: string) => {
       setTodos((prev) => {
         const activeIdx = prev.findIndex((t) => t.id === activeId);
         const overIdx = prev.findIndex((t) => t.id === overId);
@@ -335,12 +316,9 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
 
         return updated;
       });
-    },
-    []
-  );
+  };
 
-  const placeBlock = useCallback(
-    (todoId: string, startSlot: number) => {
+  const placeBlock = (todoId: string, startSlot: number) => {
       const todo = todos.find((t) => t.id === todoId);
       if (!todo) return;
 
@@ -383,12 +361,9 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
           );
           toast.error(CRUD_ERRORS.CREATE_FAILED("타임블록"));
         });
-    },
-    [todos, date]
-  );
+  };
 
-  const moveBlock = useCallback(
-    (blockId: string, startSlot: number) => {
+  const moveBlock = (blockId: string, startSlot: number) => {
       const block = timeBlocks.find((b) => b.id === blockId);
       if (!block) return;
 
@@ -408,12 +383,9 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
         );
         toast.error(CRUD_ERRORS.UPDATE_FAILED("타임블록"));
       });
-    },
-    [timeBlocks]
-  );
+  };
 
-  const resizeBlock = useCallback(
-    (blockId: string, durationSlots: number) => {
+  const resizeBlock = (blockId: string, durationSlots: number) => {
       const block = timeBlocks.find((b) => b.id === blockId);
       if (!block) return;
 
@@ -435,12 +407,9 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
         );
         toast.error(CRUD_ERRORS.UPDATE_FAILED("타임블록"));
       });
-    },
-    [timeBlocks]
-  );
+  };
 
-  const removeBlock = useCallback(
-    (blockId: string) => {
+  const removeBlock = (blockId: string) => {
       const snapshot = timeBlocks;
       setTimeBlocks((prev) => prev.filter((b) => b.id !== blockId));
 
@@ -448,12 +417,9 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
         setTimeBlocks(snapshot);
         toast.error(CRUD_ERRORS.DELETE_FAILED("타임블록"));
       });
-    },
-    [timeBlocks]
-  );
+  };
 
-  const carryOver = useCallback(
-    async (todoIds: string[], options?: CarryOverOptions) => {
+  const carryOver = async (todoIds: string[], options?: CarryOverOptions) => {
       const todayStr = formatDate(new Date());
       const todosToCarry = incompleteTodos.filter((t) =>
         todoIds.includes(t.id)
@@ -556,15 +522,13 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
           toast.error(CRUD_ERRORS.CREATE_FAILED("타임블록"));
         }
       }
-    },
-    [incompleteTodos, todos, timeBlocks]
-  );
+  };
 
-  const carryOverAll = useCallback(() => {
+  const carryOverAll = () => {
     return carryOver(incompleteTodos.map((t) => t.id));
-  }, [incompleteTodos, carryOver]);
+  };
 
-  const dismissCarryOver = useCallback(() => setIsDismissed(true), []);
+  const dismissCarryOver = () => setIsDismissed(true);
 
   // dismiss 시 빈 배열로 노출
   const visibleIncompleteTodos = isDismissed ? [] : incompleteTodos;

@@ -1,4 +1,4 @@
-import { createContext, use, useCallback, useRef, useState } from 'react';
+import { createContext, use, useRef, useState } from 'react';
 import {
   type DialogState,
   type DialogContextType,
@@ -17,29 +17,29 @@ export function DialogProvider({ children }: DialogProviderProps) {
   const [dialogState, setDialogState] = useState<DialogState>(null);
   const resolveRef = useRef<(() => void) | null>(null);
 
-  const confirm = useCallback((data: ConfirmDialogData): Promise<void> => {
+  const confirm = (data: ConfirmDialogData): Promise<void> => {
     return new Promise((resolve) => {
       resolveRef.current = () => resolve();
       setDialogState({ type: 'confirm', data });
     });
-  }, []);
+  };
 
-  const alert = useCallback((data: AlertDialogData): Promise<void> => {
+  const alert = (data: AlertDialogData): Promise<void> => {
     return new Promise((resolve) => {
       resolveRef.current = () => resolve();
       setDialogState({ type: 'alert', data });
     });
-  }, []);
+  };
 
-  const close = useCallback(() => {
+  const close = () => {
     if (resolveRef.current) {
       resolveRef.current();
       resolveRef.current = null;
     }
     setDialogState(null);
-  }, []);
+  };
 
-  const handleConfirm = useCallback(async () => {
+  const handleConfirm = async () => {
     if (dialogState?.type === 'confirm' && dialogState.data.onConfirm) {
       try {
         const result = await dialogState.data.onConfirm();
@@ -53,9 +53,9 @@ export function DialogProvider({ children }: DialogProviderProps) {
       resolveRef.current = null;
     }
     setDialogState(null);
-  }, [dialogState]);
+  };
 
-  const handleCancel = useCallback(async () => {
+  const handleCancel = async () => {
     let shouldClose = true;
     if (dialogState?.type === 'confirm' && dialogState.data.onCancel) {
       const result = await dialogState.data.onCancel();
@@ -68,9 +68,9 @@ export function DialogProvider({ children }: DialogProviderProps) {
       }
       setDialogState(null);
     }
-  }, [dialogState]);
+  };
 
-  const handleAlertClose = useCallback(async () => {
+  const handleAlertClose = async () => {
     let shouldClose = true;
     if (dialogState?.type === 'alert' && dialogState.data.onConfirm) {
       const result = await dialogState.data.onConfirm();
@@ -83,7 +83,7 @@ export function DialogProvider({ children }: DialogProviderProps) {
       }
       setDialogState(null);
     }
-  }, [dialogState]);
+  };
 
   return (
     <DialogContext.Provider value={{ confirm, alert, close }}>

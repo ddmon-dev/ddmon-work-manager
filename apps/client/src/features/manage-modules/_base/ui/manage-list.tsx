@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { APP_CONFIG } from "@/app.config";
 import { type ColumnDef } from "@tanstack/react-table";
 import { DataList, useDataList, createSelectionColumn } from "@/shared/ui/data-list";
@@ -30,13 +30,13 @@ export function ManageList<TData extends { id?: string }>({
   const isInitialMount = useRef(true);
 
   // 컬럼 처리
-  const processedColumns = useMemo(() => {
+  const processedColumns = (() => {
     let columns: ColumnDef<TData>[] = [...listColumns];
     if (enableBulkAction) {
       columns = [createSelectionColumn<TData>(), ...columns];
     }
     return columns;
-  }, [listColumns, enableBulkAction]);
+  })();
 
   // 데이터 변경 시 선택 상태 초기화
   useEffect(() => {
@@ -63,9 +63,9 @@ export function ManageList<TData extends { id?: string }>({
     }
   };
 
-  const handleSelectionChange = useCallback((rows: TData[]) => {
+  const handleSelectionChange = (rows: TData[]) => {
     setSelectedRows(rows);
-  }, []);
+  };
 
   if (isLoading) return null;
 
