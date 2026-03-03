@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 interface CalculatorDisplayProps {
   content: string;
@@ -16,7 +16,7 @@ export function CalculatorDisplay({ content, subtitle, onCopy }: CalculatorDispl
   const contentRef = useRef<HTMLDivElement>(null);
   const subtitleRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = contentRef.current;
     if (!el) return;
 
@@ -33,7 +33,7 @@ export function CalculatorDisplay({ content, subtitle, onCopy }: CalculatorDispl
     }
   }, [content]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = subtitleRef.current;
     if (!el) return;
     if (el.scrollWidth > el.clientWidth) {
