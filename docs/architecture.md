@@ -17,7 +17,7 @@ src/
 │   ├── dashboard/      # 대시보드
 │   ├── revenue/        # 매출 현황
 │   ├── settings/       # 설정
-│   └── ui/             # 글로벌 UI (app-sidebar, todo-widget, mindnote-widget)
+│   └── ui/             # 글로벌 UI (app-sidebar, todo-widget, mindnote-widget, calculator-widget)
 └── shared/             # 공유 레이어
     ├── ui/             # 기본 컴포넌트, 폼 컴포넌트, DataList
     ├── lib/            # api-client, query-keys, query-client
@@ -37,7 +37,7 @@ src/
 RootLayout (Toaster, ThemeContext)
 ├── AuthLayout
 │   └── /auth/sign-in
-└── ProtectedLayout (인증 검증, TodoProvider, MindnoteProvider, SidebarProvider)
+└── ProtectedLayout (인증 검증, CalculatorProvider, TodoProvider, MindnoteProvider, SidebarProvider)
     ├── /              → DashboardPage
     ├── /clients       → ClientsPage
     ├── /estimates     → EstimatesPage
