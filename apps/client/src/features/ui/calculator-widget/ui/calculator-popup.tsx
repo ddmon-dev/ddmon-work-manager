@@ -150,7 +150,7 @@ export function CalculatorPopup() {
   const displayContent = state.expression.endsWith("=")
     ? state.display
     : state.expression
-      ? state.waitingForOperand ? state.expression : `${state.expression} ${state.display}`
+      ? state.waitingForOperand ? state.expression : `${state.expression}${state.display}`
       : state.display;
 
   // 포커스 상태 (비활성화 시 opacity 적용)

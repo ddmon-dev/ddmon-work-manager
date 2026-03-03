@@ -88,7 +88,7 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
         const result = calculate(state.previousValue!, state.operator, currentValue);
         return {
           display: formatDisplay(result),
-          expression: `${state.expression} ${state.display} ${sym}`,
+          expression: `${state.expression}${state.display}${sym}`,
           previousValue: result,
           operator: action.operator,
           waitingForOperand: true,
@@ -99,7 +99,7 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
       if (state.waitingForOperand && state.previousValue !== null) {
         return {
           ...state,
-          expression: state.expression.replace(/\s\S+$/, ` ${sym}`),
+          expression: state.expression.replace(/\S+$/, sym),
           operator: action.operator,
         };
       }
@@ -107,7 +107,7 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
       // 첫 연산자 입력
       return {
         ...state,
-        expression: `${state.display} ${sym}`,
+        expression: `${state.display}${sym}`,
         previousValue: currentValue,
         operator: action.operator,
         waitingForOperand: true,
@@ -120,7 +120,7 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
       const result = calculate(state.previousValue, state.operator, currentValue);
       return {
         display: formatDisplay(result),
-        expression: `${state.expression} ${state.display} =`,
+        expression: `${state.expression}${state.display}=`,
         previousValue: null,
         operator: null,
         waitingForOperand: true,
