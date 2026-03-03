@@ -23,23 +23,31 @@ export type CalculatorAction =
   | { type: "NEGATE" }
   | { type: "PERCENT" };
 
-export const initialState: CalculatorState = {
+const INITIAL_SNAPSHOT: CalculatorSnapshot = {
   display: "0",
   expression: "",
   previousValue: null,
   operator: null,
   waitingForOperand: false,
+};
+
+export const initialState: CalculatorState = {
+  ...INITIAL_SNAPSHOT,
   history: [],
 };
 
-export const operatorSymbol: Record<string, string> = {
+function parseDisplay(display: string): number {
+  return parseFloat(display.replace(/,/g, ""));
+}
+
+const operatorSymbol: Record<string, string> = {
   "+": "+",
   "-": "-",
   "*": "×",
   "/": "÷",
 };
 
-export function calculate(a: number, op: string, b: number): number {
+function calculate(a: number, op: string, b: number): number {
   switch (op) {
     case "+": return a + b;
     case "-": return a - b;
@@ -49,7 +57,7 @@ export function calculate(a: number, op: string, b: number): number {
   }
 }
 
-export function formatDisplay(value: number): string {
+function formatDisplay(value: number): string {
   if (!Number.isFinite(value)) return "오류";
 
   if (Number.isInteger(value) && Math.abs(value) < 1e15) {
@@ -63,8 +71,45 @@ export function formatDisplay(value: number): string {
 }
 
 export function reducer(state: CalculatorState, action: CalculatorAction): CalculatorState {
-  // Backspace: 히스토리에서 이전 상태 복원 (undo)
+  // Backspace: 문자 삭제 + 상태 undo 혼합 (macOS 계산기 방식)
   if (action.type === "BACKSPACE") {
+    const raw = state.display.replace(/,/g, "");
+    const isAtomic = raw === "0" || raw === "오류" || /^-?\d$/.test(raw);
+
+    // 연산자 대기 중(두 번째 피연산자 입력 전): 연산자 제거 (상태 undo)
+    if (state.waitingForOperand && state.operator !== null) {
+      if (state.history.length === 0) return state;
+      const prev = state.history[state.history.length - 1];
+      return { ...prev, history: state.history.slice(0, -1) };
+    }
+
+    // 여러 자릿수: 마지막 문자 삭제
+    if (!isAtomic) {
+      const trimmed = raw.slice(0, -1);
+      const newDisplay = trimmed === "" || trimmed === "-" ? "0" : trimmed;
+      return {
+        ...state,
+        display: newDisplay,
+        expression: state.expression.endsWith("=") ? "" : state.expression,
+        waitingForOperand: false,
+      };
+    }
+
+    // 단일 자릿수(0 제외): 히스토리 undo 또는 "0"으로 리셋
+    if (raw !== "0") {
+      if (state.history.length > 0) {
+        const prev = state.history[state.history.length - 1];
+        return { ...prev, history: state.history.slice(0, -1) };
+      }
+      return {
+        ...state,
+        display: "0",
+        expression: state.expression.endsWith("=") ? "" : state.expression,
+        waitingForOperand: false,
+      };
+    }
+
+    // "0" 상태: 히스토리 undo 또는 no-op
     if (state.history.length === 0) return state;
     const prev = state.history[state.history.length - 1];
     return { ...prev, history: state.history.slice(0, -1) };
@@ -75,7 +120,9 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
 
   // 나머지 액션: 현재 상태를 히스토리에 push 후 처리
   const { history, ...snapshot } = state;
-  const newHistory = [...history, snapshot];
+  const newHistory = state.expression.endsWith("=")
+    ? [INITIAL_SNAPSHOT]
+    : [...history, snapshot];
 
   switch (action.type) {
     case "DIGIT": {
@@ -84,23 +131,35 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
           ...state,
           history: newHistory,
           display: action.digit,
+          expression: state.expression.endsWith("=") ? "" : state.expression,
           waitingForOperand: false,
         };
       }
-      const newDisplay = state.display === "0" ? action.digit : state.display + action.digit;
-      return { ...state, history: newHistory, display: newDisplay };
+      if (state.display === "0") {
+        return { ...state, history: newHistory, display: action.digit };
+      }
+      return { ...state, display: state.display + action.digit };
     }
 
     case "DECIMAL": {
       if (state.waitingForOperand) {
-        return { ...state, history: newHistory, display: "0.", waitingForOperand: false };
+        return {
+          ...state,
+          history: newHistory,
+          display: "0.",
+          expression: state.expression.endsWith("=") ? "" : state.expression,
+          waitingForOperand: false,
+        };
       }
       if (state.display.includes(".")) return state;
-      return { ...state, history: newHistory, display: state.display + "." };
+      if (state.display === "0") {
+        return { ...state, history: newHistory, display: "0." };
+      }
+      return { ...state, display: state.display + "." };
     }
 
     case "OPERATOR": {
-      const currentValue = parseFloat(state.display);
+      const currentValue = parseDisplay(state.display);
       const sym = operatorSymbol[action.operator] ?? action.operator;
 
       // 연쇄 연산: 이전 연산자 + 새 피연산자가 있으면 즉시 계산
@@ -121,7 +180,7 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
         return {
           ...state,
           history: newHistory,
-          expression: state.expression.replace(/\S+$/, sym),
+          expression: state.expression.slice(0, -1) + sym,
           operator: action.operator,
         };
       }
@@ -129,7 +188,9 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
       // 첫 연산자 입력
       return {
         ...state,
-        history: newHistory,
+        history: state.expression.endsWith("=")
+          ? [...newHistory, { ...snapshot, expression: "", waitingForOperand: false }]
+          : newHistory,
         expression: `${state.display}${sym}`,
         previousValue: currentValue,
         operator: action.operator,
@@ -139,7 +200,7 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
 
     case "EQUALS": {
       if (state.operator === null || state.previousValue === null) return state;
-      const currentValue = parseFloat(state.display);
+      const currentValue = parseDisplay(state.display);
       const result = calculate(state.previousValue, state.operator, currentValue);
       return {
         history: [],
@@ -152,10 +213,16 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
     }
 
     case "CLEAR_ENTRY":
-      return { ...state, history: newHistory, display: "0", waitingForOperand: true };
+      return {
+        ...state,
+        history: newHistory,
+        display: "0",
+        expression: state.expression.endsWith("=") ? "" : state.expression,
+        waitingForOperand: true,
+      };
 
     case "NEGATE": {
-      if (state.display === "0") return state;
+      if (state.display === "0" || state.waitingForOperand) return state;
       const negated = state.display.startsWith("-")
         ? state.display.slice(1)
         : "-" + state.display;
@@ -163,7 +230,8 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
     }
 
     case "PERCENT": {
-      const value = parseFloat(state.display) / 100;
+      if (state.waitingForOperand) return state;
+      const value = parseDisplay(state.display) / 100;
       return { ...state, history: newHistory, display: formatDisplay(value) };
     }
 

@@ -46,14 +46,12 @@ export function CalculatorDisplay({ content, subtitle, onCopy }: CalculatorDispl
       className="px-5 py-3 cursor-pointer select-none"
       onClick={onCopy}
     >
-      {subtitle && (
-        <div
-          ref={subtitleRef}
-          className="h-5 text-right text-muted-foreground text-sm whitespace-nowrap overflow-x-auto hide-scrollbar"
-        >
-          {subtitle}
-        </div>
-      )}
+      <div
+        ref={subtitleRef}
+        className="h-5 text-right text-muted-foreground text-sm whitespace-nowrap overflow-x-auto hide-scrollbar"
+      >
+        {subtitle ?? "\u00A0"}
+      </div>
       <div
         ref={contentRef}
         className="h-11 leading-[2.75rem] text-right text-foreground font-light tracking-tight whitespace-nowrap overflow-x-auto hide-scrollbar"
