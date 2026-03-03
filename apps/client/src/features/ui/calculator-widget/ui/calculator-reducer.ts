@@ -88,19 +88,27 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
         const result = calculate(state.previousValue!, state.operator, currentValue);
         return {
           display: formatDisplay(result),
-          expression: `${formatDisplay(result)} ${sym}`,
+          expression: `${state.expression} ${state.display} ${sym}`,
           previousValue: result,
           operator: action.operator,
           waitingForOperand: true,
         };
       }
 
-      // 연산자만 교체하거나 첫 연산자 입력
-      const hasPendingValue = state.waitingForOperand && state.previousValue !== null;
+      // 연산자 교체 (이미 연산자가 눌린 상태에서 다른 연산자 입력)
+      if (state.waitingForOperand && state.previousValue !== null) {
+        return {
+          ...state,
+          expression: state.expression.replace(/\s\S+$/, ` ${sym}`),
+          operator: action.operator,
+        };
+      }
+
+      // 첫 연산자 입력
       return {
         ...state,
-        expression: `${hasPendingValue ? formatDisplay(state.previousValue!) : state.display} ${sym}`,
-        previousValue: hasPendingValue ? state.previousValue : currentValue,
+        expression: `${state.display} ${sym}`,
+        previousValue: currentValue,
         operator: action.operator,
         waitingForOperand: true,
       };
@@ -110,10 +118,9 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
       if (state.operator === null || state.previousValue === null) return state;
       const currentValue = parseFloat(state.display);
       const result = calculate(state.previousValue, state.operator, currentValue);
-      const prevSym = operatorSymbol[state.operator] ?? state.operator;
       return {
         display: formatDisplay(result),
-        expression: `${formatDisplay(state.previousValue)} ${prevSym} ${state.display} =`,
+        expression: `${state.expression} ${state.display} =`,
         previousValue: null,
         operator: null,
         waitingForOperand: true,

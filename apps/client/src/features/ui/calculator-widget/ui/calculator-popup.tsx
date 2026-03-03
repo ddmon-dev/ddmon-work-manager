@@ -146,37 +146,43 @@ export function CalculatorPopup() {
   const handleNegate = useCallback(() => dispatch({ type: "NEGATE" }), []);
   const handlePercent = useCallback(() => dispatch({ type: "PERCENT" }), []);
 
+  // 포커스 상태 (비활성화 시 opacity 적용)
+  const [isFocused, setIsFocused] = useState(false);
+
+  const handleBlur = useCallback((e: React.FocusEvent) => {
+    // 내부 요소로의 포커스 이동은 무시
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsFocused(false);
+    }
+  }, []);
+
   // 키보드 입력 (컨테이너에 포커스가 있을 때만 onKeyDown으로 수신)
+  const showAC = state.display === "0" || state.waitingForOperand;
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key >= "0" && e.key <= "9") {
-      e.preventDefault();
       dispatch({ type: "DIGIT", digit: e.key });
     } else if (e.key === ".") {
-      e.preventDefault();
       dispatch({ type: "DECIMAL" });
     } else if (e.key === "+" || e.key === "-") {
-      e.preventDefault();
       dispatch({ type: "OPERATOR", operator: e.key });
     } else if (e.key === "*") {
-      e.preventDefault();
       dispatch({ type: "OPERATOR", operator: "*" });
     } else if (e.key === "/") {
-      e.preventDefault();
       dispatch({ type: "OPERATOR", operator: "/" });
     } else if (e.key === "Enter" || e.key === "=") {
-      e.preventDefault();
       dispatch({ type: "EQUALS" });
     } else if (e.key === "Backspace") {
-      e.preventDefault();
       dispatch({ type: "BACKSPACE" });
     } else if (e.key === "Escape") {
-      e.preventDefault();
-      close();
+      dispatch({ type: showAC ? "CLEAR" : "CLEAR_ENTRY" });
     } else if (e.key === "%") {
-      e.preventDefault();
       dispatch({ type: "PERCENT" });
+    } else {
+      return; // 처리하지 않는 키는 전파 허용
     }
-  }, [close]);
+    e.preventDefault();
+    e.stopPropagation();
+  }, [showAC]);
 
   if (!isOpen) return null;
 
@@ -186,6 +192,8 @@ export function CalculatorPopup() {
       tabIndex={-1}
       onKeyDown={handleKeyDown}
       onClick={() => containerRef.current?.focus()}
+      onFocus={() => setIsFocused(true)}
+      onBlur={handleBlur}
       className="fixed z-[100] select-none outline-none"
       style={{
         left: position.x,
@@ -193,7 +201,10 @@ export function CalculatorPopup() {
         transition: isDragging ? "none" : "left 0.3s cubic-bezier(0.25, 1, 0.5, 1), top 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
       }}
     >
-      <div className="relative w-[260px] bg-popover rounded-2xl shadow-2xl border border-border">
+      <div className={cn(
+        "relative w-[260px] bg-popover rounded-2xl shadow-2xl border border-border transition-opacity duration-200",
+        !isFocused && "opacity-50",
+      )}>
         {/* 복사 툴팁 */}
         <span
           className={cn(
@@ -234,7 +245,7 @@ export function CalculatorPopup() {
           onClearEntry={handleClearEntry}
           onNegate={handleNegate}
           onPercent={handlePercent}
-          showAC={state.display === "0" || state.waitingForOperand}
+          showAC={showAC}
         />
       </div>
     </div>,
