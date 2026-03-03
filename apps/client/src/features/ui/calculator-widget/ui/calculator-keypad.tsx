@@ -6,8 +6,10 @@ interface CalculatorKeypadProps {
   onOperator: (op: string) => void;
   onEquals: () => void;
   onClear: () => void;
+  onClearEntry: () => void;
   onNegate: () => void;
   onPercent: () => void;
+  showAC: boolean;
 }
 
 type ButtonVariant = "function" | "operator" | "number";
@@ -37,12 +39,14 @@ export function CalculatorKeypad({
   onOperator,
   onEquals,
   onClear,
+  onClearEntry,
   onNegate,
   onPercent,
+  showAC,
 }: CalculatorKeypadProps) {
   const keys: KeyDef[][] = [
     [
-      { label: "AC", variant: "function", action: onClear },
+      { label: showAC ? "AC" : "C", variant: "function", action: showAC ? onClear : onClearEntry },
       { label: "+/-", variant: "function", action: onNegate },
       { label: "%", variant: "function", action: onPercent },
       { label: "÷", variant: "operator", action: () => onOperator("/") },

@@ -142,6 +142,7 @@ export function CalculatorPopup() {
   const handleOperator = useCallback((operator: string) => dispatch({ type: "OPERATOR", operator }), []);
   const handleEquals = useCallback(() => dispatch({ type: "EQUALS" }), []);
   const handleClear = useCallback(() => dispatch({ type: "CLEAR" }), []);
+  const handleClearEntry = useCallback(() => dispatch({ type: "CLEAR_ENTRY" }), []);
   const handleNegate = useCallback(() => dispatch({ type: "NEGATE" }), []);
   const handlePercent = useCallback(() => dispatch({ type: "PERCENT" }), []);
 
@@ -167,7 +168,7 @@ export function CalculatorPopup() {
       dispatch({ type: "EQUALS" });
     } else if (e.key === "Backspace") {
       e.preventDefault();
-      dispatch({ type: "CLEAR" });
+      dispatch({ type: "BACKSPACE" });
     } else if (e.key === "Escape") {
       e.preventDefault();
       close();
@@ -230,8 +231,10 @@ export function CalculatorPopup() {
           onOperator={handleOperator}
           onEquals={handleEquals}
           onClear={handleClear}
+          onClearEntry={handleClearEntry}
           onNegate={handleNegate}
           onPercent={handlePercent}
+          showAC={state.display === "0" || state.waitingForOperand}
         />
       </div>
     </div>,

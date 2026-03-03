@@ -14,6 +14,8 @@ export type CalculatorAction =
   | { type: "OPERATOR"; operator: string }
   | { type: "EQUALS" }
   | { type: "CLEAR" }
+  | { type: "CLEAR_ENTRY" }
+  | { type: "BACKSPACE" }
   | { type: "NEGATE" }
   | { type: "PERCENT" };
 
@@ -120,6 +122,15 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
 
     case "CLEAR":
       return initialState;
+
+    case "CLEAR_ENTRY":
+      return { ...state, display: "0", waitingForOperand: true };
+
+    case "BACKSPACE": {
+      if (state.waitingForOperand) return state;
+      const trimmed = state.display.slice(0, -1);
+      return { ...state, display: trimmed === "" || trimmed === "-" ? "0" : trimmed };
+    }
 
     case "NEGATE": {
       if (state.display === "0") return state;
