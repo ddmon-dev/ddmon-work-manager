@@ -1,23 +1,21 @@
 import { useEffect, useRef } from "react";
 
 interface CalculatorDisplayProps {
-  expression: string;
-  display: string;
+  content: string;
   onCopy: () => void;
 }
 
 // 2px 단위로 축소 후 스크롤
 const MAX_FONT = 36;
-const MIN_FONT = 24;
+const MIN_FONT = 20;
 const FONT_STEP = 2;
 const LINE_HEIGHT = 44; // h-11
 
-export function CalculatorDisplay({ expression, display, onCopy }: CalculatorDisplayProps) {
-  const valueRef = useRef<HTMLDivElement>(null);
-  const exprRef = useRef<HTMLDivElement>(null);
+export function CalculatorDisplay({ content, onCopy }: CalculatorDisplayProps) {
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = valueRef.current;
+    const el = ref.current;
     if (!el) return;
 
     let size = MAX_FONT;
@@ -31,34 +29,18 @@ export function CalculatorDisplay({ expression, display, onCopy }: CalculatorDis
     if (el.scrollWidth > el.clientWidth) {
       el.scrollLeft = el.scrollWidth;
     }
-  }, [display]);
-
-  // 수식도 넘치면 우측 끝 스크롤
-  useEffect(() => {
-    const el = exprRef.current;
-    if (!el) return;
-
-    if (el.scrollWidth > el.clientWidth) {
-      el.scrollLeft = el.scrollWidth;
-    }
-  }, [expression]);
+  }, [content]);
 
   return (
     <div
-      className="px-5 py-3 cursor-pointer select-none space-y-0.5"
+      className="px-5 py-3 cursor-pointer select-none"
       onClick={onCopy}
     >
       <div
-        ref={exprRef}
-        className="h-5 text-right text-muted-foreground text-sm whitespace-nowrap overflow-x-auto hide-scrollbar"
-      >
-        {expression}
-      </div>
-      <div
-        ref={valueRef}
+        ref={ref}
         className="h-11 leading-[2.75rem] text-right text-foreground font-light tracking-tight whitespace-nowrap overflow-x-auto hide-scrollbar"
       >
-        {display}
+        {content}
       </div>
     </div>
   );
