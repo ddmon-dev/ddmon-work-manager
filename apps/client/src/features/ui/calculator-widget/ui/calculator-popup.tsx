@@ -224,8 +224,10 @@ export function CalculatorPopup() {
       }}
     >
       <div className={cn(
-        "relative w-[260px] bg-popover rounded-2xl shadow-2xl border border-border transition-opacity duration-200",
-        !isFocused && "opacity-50",
+        "relative w-[260px] rounded-2xl shadow-2xl border border-border transition-all duration-200",
+        isFocused
+          ? "bg-popover"
+          : "bg-popover/50 backdrop-blur-md [&>*]:opacity-50",
       )}>
         {/* 복사 툴팁 */}
         <span
