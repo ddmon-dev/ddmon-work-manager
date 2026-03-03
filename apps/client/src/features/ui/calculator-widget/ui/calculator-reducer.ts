@@ -1,11 +1,15 @@
 // --- Calculator State & Reducer ---
 
-export interface CalculatorState {
+interface CalculatorSnapshot {
   display: string;
   expression: string;
   previousValue: number | null;
   operator: string | null;
   waitingForOperand: boolean;
+}
+
+export interface CalculatorState extends CalculatorSnapshot {
+  history: CalculatorSnapshot[];
 }
 
 export type CalculatorAction =
@@ -25,6 +29,7 @@ export const initialState: CalculatorState = {
   previousValue: null,
   operator: null,
   waitingForOperand: false,
+  history: [],
 };
 
 export const operatorSymbol: Record<string, string> = {
@@ -58,25 +63,40 @@ export function formatDisplay(value: number): string {
 }
 
 export function reducer(state: CalculatorState, action: CalculatorAction): CalculatorState {
+  // Backspace: 히스토리에서 이전 상태 복원 (undo)
+  if (action.type === "BACKSPACE") {
+    if (state.history.length === 0) return state;
+    const prev = state.history[state.history.length - 1];
+    return { ...prev, history: state.history.slice(0, -1) };
+  }
+
+  // Clear: 전체 초기화 (히스토리 포함)
+  if (action.type === "CLEAR") return initialState;
+
+  // 나머지 액션: 현재 상태를 히스토리에 push 후 처리
+  const { history, ...snapshot } = state;
+  const newHistory = [...history, snapshot];
+
   switch (action.type) {
     case "DIGIT": {
       if (state.waitingForOperand) {
         return {
           ...state,
+          history: newHistory,
           display: action.digit,
           waitingForOperand: false,
         };
       }
       const newDisplay = state.display === "0" ? action.digit : state.display + action.digit;
-      return { ...state, display: newDisplay };
+      return { ...state, history: newHistory, display: newDisplay };
     }
 
     case "DECIMAL": {
       if (state.waitingForOperand) {
-        return { ...state, display: "0.", waitingForOperand: false };
+        return { ...state, history: newHistory, display: "0.", waitingForOperand: false };
       }
       if (state.display.includes(".")) return state;
-      return { ...state, display: state.display + "." };
+      return { ...state, history: newHistory, display: state.display + "." };
     }
 
     case "OPERATOR": {
@@ -87,6 +107,7 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
       if (state.operator && !state.waitingForOperand) {
         const result = calculate(state.previousValue!, state.operator, currentValue);
         return {
+          history: newHistory,
           display: formatDisplay(result),
           expression: `${state.expression}${state.display}${sym}`,
           previousValue: result,
@@ -99,6 +120,7 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
       if (state.waitingForOperand && state.previousValue !== null) {
         return {
           ...state,
+          history: newHistory,
           expression: state.expression.replace(/\S+$/, sym),
           operator: action.operator,
         };
@@ -107,6 +129,7 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
       // 첫 연산자 입력
       return {
         ...state,
+        history: newHistory,
         expression: `${state.display}${sym}`,
         previousValue: currentValue,
         operator: action.operator,
@@ -119,6 +142,7 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
       const currentValue = parseFloat(state.display);
       const result = calculate(state.previousValue, state.operator, currentValue);
       return {
+        history: newHistory,
         display: formatDisplay(result),
         expression: `${state.expression}${state.display}=`,
         previousValue: null,
@@ -127,29 +151,20 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
       };
     }
 
-    case "CLEAR":
-      return initialState;
-
     case "CLEAR_ENTRY":
-      return { ...state, display: "0", waitingForOperand: true };
-
-    case "BACKSPACE": {
-      if (state.waitingForOperand) return state;
-      const trimmed = state.display.slice(0, -1);
-      return { ...state, display: trimmed === "" || trimmed === "-" ? "0" : trimmed };
-    }
+      return { ...state, history: newHistory, display: "0", waitingForOperand: true };
 
     case "NEGATE": {
       if (state.display === "0") return state;
       const negated = state.display.startsWith("-")
         ? state.display.slice(1)
         : "-" + state.display;
-      return { ...state, display: negated };
+      return { ...state, history: newHistory, display: negated };
     }
 
     case "PERCENT": {
       const value = parseFloat(state.display) / 100;
-      return { ...state, display: formatDisplay(value) };
+      return { ...state, history: newHistory, display: formatDisplay(value) };
     }
 
     default:
