@@ -146,12 +146,14 @@ export function CalculatorPopup() {
   const handleNegate = useCallback(() => dispatch({ type: "NEGATE" }), []);
   const handlePercent = useCallback(() => dispatch({ type: "PERCENT" }), []);
 
-  // 통합 디스플레이: 수식을 이어 보여주다 = 누르면 결과값만 표시
-  const displayContent = state.expression.endsWith("=")
+  // 통합 디스플레이: 수식을 이어 보여주다 = 누르면 결과값 + 수식 서브타이틀
+  const isResult = state.expression.endsWith("=");
+  const displayContent = isResult
     ? state.display
     : state.expression
       ? state.waitingForOperand ? state.expression : `${state.expression}${state.display}`
       : state.display;
+  const displaySubtitle = isResult ? state.expression : undefined;
 
   // 포커스 상태 (비활성화 시 opacity 적용)
   const [isFocused, setIsFocused] = useState(false);
@@ -241,7 +243,7 @@ export function CalculatorPopup() {
           </button>
         </div>
 
-        <CalculatorDisplay content={displayContent} onCopy={handleCopy} />
+        <CalculatorDisplay content={displayContent} subtitle={displaySubtitle} onCopy={handleCopy} />
 
         <CalculatorKeypad
           onDigit={handleDigit}

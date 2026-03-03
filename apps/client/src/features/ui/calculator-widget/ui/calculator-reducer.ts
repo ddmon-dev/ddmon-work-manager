@@ -142,7 +142,7 @@ export function reducer(state: CalculatorState, action: CalculatorAction): Calcu
       const currentValue = parseFloat(state.display);
       const result = calculate(state.previousValue, state.operator, currentValue);
       return {
-        history: newHistory,
+        history: [],
         display: formatDisplay(result),
         expression: `${state.expression}${state.display}=`,
         previousValue: null,
