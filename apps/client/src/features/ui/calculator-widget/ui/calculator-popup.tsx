@@ -148,8 +148,9 @@ function reducer(state: CalculatorState, action: CalculatorAction): CalculatorSt
 
 // --- Drag Hook (document-level move/up) ---
 
-function useDrag() {
+function useDrag(containerRef: React.RefObject<HTMLDivElement | null>) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
   const positionRef = useRef(position);
   positionRef.current = position;
 
@@ -162,6 +163,7 @@ function useDrag() {
 
   const startDrag = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
+    setIsDragging(true);
     dragRef.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -171,16 +173,50 @@ function useDrag() {
   }, []);
 
   useEffect(() => {
+    const DAMPING = 0.15;
+
+    function rubberBand(value: number, min: number, max: number) {
+      if (value < min) return min + (value - min) * DAMPING;
+      if (value > max) return max + (value - max) * DAMPING;
+      return value;
+    }
+
+    function getBounds() {
+      const el = containerRef.current;
+      if (!el) return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+      return {
+        minX: 0,
+        minY: 0,
+        maxX: window.innerWidth - el.offsetWidth,
+        maxY: window.innerHeight - el.offsetHeight,
+      };
+    }
+
     function handleMove(e: PointerEvent) {
       if (!dragRef.current) return;
+      const rawX = dragRef.current.origX + (e.clientX - dragRef.current.startX);
+      const rawY = dragRef.current.origY + (e.clientY - dragRef.current.startY);
+      const { minX, minY, maxX, maxY } = getBounds();
+
       setPosition({
-        x: dragRef.current.origX + (e.clientX - dragRef.current.startX),
-        y: dragRef.current.origY + (e.clientY - dragRef.current.startY),
+        x: rubberBand(rawX, minX, maxX),
+        y: rubberBand(rawY, minY, maxY),
       });
     }
 
     function handleUp() {
+      if (!dragRef.current) return;
       dragRef.current = null;
+      setIsDragging(false);
+
+      // 경계 밖이면 안쪽으로 스냅백
+      const { minX, minY, maxX, maxY } = getBounds();
+      setPosition((prev) => {
+        const clampedX = Math.max(minX, Math.min(maxX, prev.x));
+        const clampedY = Math.max(minY, Math.min(maxY, prev.y));
+        if (clampedX === prev.x && clampedY === prev.y) return prev;
+        return { x: clampedX, y: clampedY };
+      });
     }
 
     document.addEventListener("pointermove", handleMove);
@@ -189,9 +225,9 @@ function useDrag() {
       document.removeEventListener("pointermove", handleMove);
       document.removeEventListener("pointerup", handleUp);
     };
-  }, []);
+  }, [containerRef]);
 
-  return { position, setPosition, startDrag };
+  return { position, setPosition, startDrag, isDragging };
 }
 
 // --- Component ---
@@ -201,7 +237,7 @@ export function CalculatorPopup() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasPositioned = useRef(false);
-  const { position, setPosition, startDrag } = useDrag();
+  const { position, setPosition, startDrag, isDragging } = useDrag(containerRef);
 
   // 최초 오픈 시에만 트리거 위치 기반 배치, 이후에는 마지막 위치 유지
   useEffect(() => {
@@ -288,7 +324,11 @@ export function CalculatorPopup() {
       onKeyDown={handleKeyDown}
       onClick={() => containerRef.current?.focus()}
       className="fixed z-[100] select-none outline-none"
-      style={{ left: position.x, top: position.y }}
+      style={{
+        left: position.x,
+        top: position.y,
+        transition: isDragging ? "none" : "left 0.3s cubic-bezier(0.25, 1, 0.5, 1), top 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
+      }}
     >
       <div className="relative w-[260px] bg-popover rounded-2xl shadow-2xl border border-border">
         {/* 복사 툴팁 */}
