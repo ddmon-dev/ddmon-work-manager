@@ -164,7 +164,7 @@ export function CalculatorPopup() {
   }, []);
 
   // 키보드 입력 (컨테이너에 포커스가 있을 때만 onKeyDown으로 수신)
-  const showAC = state.display === "0" || state.waitingForOperand;
+  const showAC = state.display === "0";
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key >= "0" && e.key <= "9") {
       dispatch({ type: "DIGIT", digit: e.key });
