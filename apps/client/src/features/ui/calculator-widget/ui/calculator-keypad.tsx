@@ -1,3 +1,5 @@
+import { cn } from "@/shared/utils/classnames";
+
 interface CalculatorKeypadProps {
   onDigit: (digit: string) => void;
   onDecimal: () => void;
@@ -18,9 +20,15 @@ interface KeyDef {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  function: "bg-secondary/65 text-foreground hover:bg-secondary active:bg-muted-dark dark:bg-[#a5a5a5] dark:text-black dark:hover:bg-[#c0c0c0] dark:active:bg-[#d4d4d4]",
+  function: cn(
+    "bg-secondary/65 text-foreground hover:bg-secondary active:bg-muted-dark",
+    "dark:bg-[#a5a5a5] dark:text-black dark:hover:bg-[#c0c0c0] dark:active:bg-[#d4d4d4]",
+  ),
   operator: "bg-[#ff9f0a] text-white hover:bg-[#ffb640] active:bg-[#ffc766]",
-  number: "bg-muted/75 text-secondary-foreground hover:bg-muted active:bg-muted-dark dark:bg-[#333333] dark:text-white dark:hover:bg-[#4a4a4a] dark:active:bg-[#5a5a5a]",
+  number: cn(
+    "bg-muted/75 text-secondary-foreground hover:bg-muted active:bg-muted-dark",
+    "dark:bg-[#333333] dark:text-white dark:hover:bg-[#4a4a4a] dark:active:bg-[#5a5a5a]",
+  ),
 };
 
 export function CalculatorKeypad({
@@ -66,21 +74,25 @@ export function CalculatorKeypad({
 
   return (
     <div className="grid grid-cols-4 gap-2.5 p-4 pt-2">
-      {keys.flat().map((key) => (
-        <button
-          key={key.label}
-          type="button"
-          onClick={key.action}
-          className={`
-            ${variantStyles[key.variant]}
-            ${key.colSpan === 2 ? "col-span-2 rounded-full px-6 text-left" : "rounded-full aspect-square"}
-            flex items-center ${key.colSpan === 2 ? "justify-start" : "justify-center"}
-            text-xl font-medium transition-colors cursor-pointer
-          `}
-        >
-          {key.label}
-        </button>
-      ))}
+      {keys.flat().map((key) => {
+        const isWide = key.colSpan === 2;
+        return (
+          <button
+            key={key.label}
+            type="button"
+            onClick={key.action}
+            className={cn(
+              variantStyles[key.variant],
+              "flex items-center rounded-full text-xl font-medium transition-colors cursor-pointer",
+              isWide
+                ? "col-span-2 px-6 text-left justify-start"
+                : "aspect-square justify-center",
+            )}
+          >
+            {key.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
