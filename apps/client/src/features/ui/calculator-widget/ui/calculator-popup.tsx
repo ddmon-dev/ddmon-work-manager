@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { GripHorizontal, X } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
@@ -95,7 +95,7 @@ function useDrag(containerRef: React.RefObject<HTMLDivElement | null>) {
 // --- Component ---
 
 export function CalculatorPopup() {
-  const { isOpen, close, triggerRef } = useCalculator();
+  const { isOpen, close, toggle, triggerRef } = useCalculator();
   const [state, dispatch] = useReducer(reducer, initialState);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasPositioned = useRef(false);
@@ -134,6 +134,18 @@ export function CalculatorPopup() {
     }
   }, [isOpen, transitionReady]);
 
+  // Cmd+E 토글
+  useEffect(() => {
+    function handleGlobalKeyDown(e: KeyboardEvent) {
+      if (e.metaKey && e.key === "e") {
+        e.preventDefault();
+        toggle();
+      }
+    }
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [toggle]);
+
   // 오픈 시 포커스
   useEffect(() => {
     if (isOpen) containerRef.current?.focus();
@@ -143,12 +155,12 @@ export function CalculatorPopup() {
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
-  const handleCopy = useCallback(() => {
+  const handleCopy = useEffectEvent(() => {
     navigator.clipboard.writeText(state.display);
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
     setCopied(true);
     copyTimerRef.current = setTimeout(() => setCopied(false), 1500);
-  }, [state.display]);
+  });
 
   const handleDigit = useCallback((digit: string) => dispatch({ type: "DIGIT", digit }), []);
   const handleDecimal = useCallback(() => dispatch({ type: "DECIMAL" }), []);
@@ -178,33 +190,47 @@ export function CalculatorPopup() {
     }
   }, []);
 
-  // 키보드 입력 (컨테이너에 포커스가 있을 때만 onKeyDown으로 수신)
+  // 키보드 입력 (window 캡처 페이즈 — Radix UI의 document 캡처보다 먼저 실행)
   const showAC = state.display === "0";
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key >= "0" && e.key <= "9") {
-      dispatch({ type: "DIGIT", digit: e.key });
-    } else if (e.key === ".") {
-      dispatch({ type: "DECIMAL" });
-    } else if (e.key === "+" || e.key === "-") {
-      dispatch({ type: "OPERATOR", operator: e.key });
-    } else if (e.key === "*") {
-      dispatch({ type: "OPERATOR", operator: "*" });
-    } else if (e.key === "/") {
-      dispatch({ type: "OPERATOR", operator: "/" });
-    } else if (e.key === "Enter" || e.key === "=") {
-      dispatch({ type: "EQUALS" });
-    } else if (e.key === "Backspace") {
-      dispatch({ type: "BACKSPACE" });
-    } else if (e.key === "Escape") {
-      dispatch({ type: showAC ? "CLEAR" : "CLEAR_ENTRY" });
-    } else if (e.key === "%") {
-      dispatch({ type: "PERCENT" });
-    } else {
-      return; // 처리하지 않는 키는 전파 허용
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (!containerRef.current?.contains(e.target as Node)) return;
+      if ((e.metaKey || e.ctrlKey) && e.key === "c") {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        handleCopy();
+        return;
+      }
+      if (e.metaKey || e.ctrlKey) return;
+
+      if (e.key >= "0" && e.key <= "9") {
+        dispatch({ type: "DIGIT", digit: e.key });
+      } else if (e.key === ".") {
+        dispatch({ type: "DECIMAL" });
+      } else if (e.key === "+" || e.key === "-") {
+        dispatch({ type: "OPERATOR", operator: e.key });
+      } else if (e.key === "*") {
+        dispatch({ type: "OPERATOR", operator: "*" });
+      } else if (e.key === "/") {
+        dispatch({ type: "OPERATOR", operator: "/" });
+      } else if (e.key === "Enter" || e.key === "=") {
+        dispatch({ type: "EQUALS" });
+      } else if (e.key === "Backspace" || e.key === "Delete") {
+        dispatch({ type: "BACKSPACE" });
+      } else if (e.key === "Escape") {
+        dispatch({ type: showAC ? "CLEAR" : "CLEAR_ENTRY" });
+      } else if (e.key === "%") {
+        dispatch({ type: "PERCENT" });
+      }
+      e.preventDefault();
+      e.stopImmediatePropagation();
     }
-    e.preventDefault();
-    e.stopPropagation();
-  }, [showAC]);
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [isOpen, showAC]);
 
   if (!isOpen) return null;
 
@@ -212,7 +238,6 @@ export function CalculatorPopup() {
     <div
       ref={containerRef}
       tabIndex={-1}
-      onKeyDown={handleKeyDown}
       onClick={() => containerRef.current?.focus()}
       onFocus={() => setIsFocused(true)}
       onBlur={handleBlur}
@@ -230,14 +255,11 @@ export function CalculatorPopup() {
           : "bg-popover/50 backdrop-blur-md [&>*]:opacity-50",
       )}>
         {/* 복사 툴팁 */}
-        <span
-          className={cn(
-            "absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-muted text-muted-foreground text-xs px-2.5 py-1 rounded-full backdrop-blur-sm transition-opacity duration-200",
-            copied ? "opacity-100" : "opacity-0 pointer-events-none"
-          )}
-        >
-          값 복사됨
-        </span>
+        {copied && (
+          <span className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-muted text-muted-foreground text-xs px-2.5 py-1 rounded-full backdrop-blur-sm animate-in fade-in duration-200">
+            값 복사됨
+          </span>
+        )}
 
         {/* Drag Handle + Header */}
         <div

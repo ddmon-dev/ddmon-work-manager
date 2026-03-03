@@ -92,9 +92,16 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
   useFormGuard(form);
 
   useEffect(() => {
-    form.reset(prevValues ? toFormValues(prevValues) : formDefaultValues);
+    form.reset(
+      prevValues
+        ? toFormValues(prevValues)
+        : {
+            ...formDefaultValues,
+            ...(createDate ? { startDate: parseISO(createDate) } : {}),
+          },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prevValues]);
+  }, [prevValues, createDate]);
 
   const { errors } = form.formState;
 
