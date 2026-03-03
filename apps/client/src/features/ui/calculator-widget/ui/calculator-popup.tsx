@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { GripHorizontal, X } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
@@ -99,32 +99,45 @@ export function CalculatorPopup() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasPositioned = useRef(false);
+  const [transitionReady, setTransitionReady] = useState(false);
   const { position, setPosition, startDrag, isDragging } = useDrag(containerRef);
 
-  // 최초 오픈 시에만 트리거 위치 기반 배치, 이후에는 마지막 위치 유지
-  useEffect(() => {
-    if (!isOpen) return;
+  // 최초 오픈 시 트리거 위치 기반 배치 (transition 비활성 상태에서 위치 확정)
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setTransitionReady(false);
+      return;
+    }
+    if (hasPositioned.current) {
+      setTransitionReady(true);
+      return;
+    }
+    const container = containerRef.current;
+    if (!container) return;
 
-    requestAnimationFrame(() => {
-      const container = containerRef.current;
-      if (!container) return;
-
-      if (!hasPositioned.current) {
-        const trigger = triggerRef.current;
-        if (trigger) {
-          const triggerRect = trigger.getBoundingClientRect();
-          const calcHeight = container.offsetHeight;
-          setPosition({
-            x: triggerRect.left,
-            y: Math.max(8, triggerRect.top - calcHeight - 8),
-          });
-        }
-        hasPositioned.current = true;
-      }
-
-      container.focus();
-    });
+    const trigger = triggerRef.current;
+    if (trigger) {
+      const triggerRect = trigger.getBoundingClientRect();
+      const calcHeight = container.offsetHeight;
+      setPosition({
+        x: triggerRect.left,
+        y: Math.max(8, triggerRect.top - calcHeight - 8),
+      });
+    }
+    hasPositioned.current = true;
   }, [isOpen, triggerRef, setPosition]);
+
+  // 위치 확정 후 다음 프레임에서 transition 활성화
+  useEffect(() => {
+    if (isOpen && hasPositioned.current && !transitionReady) {
+      requestAnimationFrame(() => setTransitionReady(true));
+    }
+  }, [isOpen, transitionReady]);
+
+  // 오픈 시 포커스
+  useEffect(() => {
+    if (isOpen) containerRef.current?.focus();
+  }, [isOpen]);
 
   // 복사 툴팁
   const [copied, setCopied] = useState(false);
@@ -207,7 +220,7 @@ export function CalculatorPopup() {
       style={{
         left: position.x,
         top: position.y,
-        transition: isDragging ? "none" : "left 0.3s cubic-bezier(0.25, 1, 0.5, 1), top 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
+        transition: isDragging || !transitionReady ? "none" : "left 0.3s cubic-bezier(0.25, 1, 0.5, 1), top 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
       }}
     >
       <div className={cn(
