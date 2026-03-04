@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarInset } from "@/shared/ui/sidebar";
 import { AppSidebar } from "@/features/ui/app-sidebar";
 import { TodoProvider, TodoSheet } from "@/features/ui/todo-widget";
 import { MindnoteProvider, MindnoteSheet } from "@/features/ui/mindnote-widget";
+import { MemoProvider, MemoSheet } from "@/features/ui/memo-widget";
 import { CalculatorProvider, CalculatorPopup } from "@/features/ui/calculator-widget";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useAtLeastLoading } from "@/shared/utils/delays";
@@ -25,14 +26,17 @@ export function ProtectedLayout() {
     <CalculatorProvider>
       <TodoProvider>
         <MindnoteProvider>
-          <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-              <Outlet />
-            </SidebarInset>
-          </SidebarProvider>
-          <TodoSheet />
-          <MindnoteSheet />
+          <MemoProvider>
+            <SidebarProvider>
+              <AppSidebar />
+              <SidebarInset>
+                <Outlet />
+              </SidebarInset>
+            </SidebarProvider>
+            <TodoSheet />
+            <MindnoteSheet />
+            <MemoSheet />
+          </MemoProvider>
         </MindnoteProvider>
       </TodoProvider>
       <CalculatorPopup />

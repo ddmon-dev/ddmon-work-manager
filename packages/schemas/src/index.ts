@@ -5,3 +5,4 @@ export * from "./projects";
 export * from "./schedules";
 export * from "./todos";
 export * from "./mindnotes";
+export * from "./memos";

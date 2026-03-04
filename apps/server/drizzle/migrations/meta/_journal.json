@@ -15,6 +15,13 @@
       "when": 1772428586221,
       "tag": "0001_empty_punisher",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772583972974,
+      "tag": "0002_shocking_nemesis",
+      "breakpoints": true
     }
   ]
 }
