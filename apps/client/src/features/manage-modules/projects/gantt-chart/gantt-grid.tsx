@@ -56,7 +56,7 @@ export function GanttGrid({
           <div
             key={i}
             className={cn(
-              "absolute top-0 bottom-0 border-r border-border/20",
+              "absolute top-0 bottom-0 border-r border-border/50",
               weekend && "bg-muted/30"
             )}
             style={{ left: i * DAY_WIDTH, width: DAY_WIDTH }}
