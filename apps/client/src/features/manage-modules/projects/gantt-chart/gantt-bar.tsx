@@ -43,6 +43,8 @@ export function GanttBar({
   onDragEnd,
 }: GanttBarProps) {
   const barRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLSpanElement>(null);
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const [dragMode, setDragMode] = useState<DragMode>(null);
   // 드래그 중에는 픽셀 단위 (부드럽게), 놓을 때 스냅
   const [preview, setPreview] = useState({ left: 0, width: 0, top: 0 });
@@ -197,8 +199,16 @@ export function GanttBar({
       <div
         className="flex items-center gap-1.5 flex-1 min-w-0 cursor-grab active:cursor-grabbing"
         onPointerDown={(e) => handlePointerDown(e, "move")}
+        onPointerEnter={() => {
+          const el = titleRef.current;
+          if (el && el.scrollWidth > el.clientWidth) {
+            const rect = el.getBoundingClientRect();
+            setTooltip({ text: schedule.title, x: rect.left, y: rect.top });
+          }
+        }}
+        onPointerLeave={() => setTooltip(null)}
       >
-        <span className="text-xs truncate">{schedule.title}</span>
+        <span ref={titleRef} className="text-xs truncate">{schedule.title}</span>
       </div>
 
       {/* 우측 리사이즈 핸들 */}
@@ -206,6 +216,16 @@ export function GanttBar({
         className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize rounded-r-md hover:bg-foreground/10"
         onPointerDown={(e) => handlePointerDown(e, "resize-right")}
       />
+
+      {/* truncate 시 툴팁 */}
+      {tooltip && (
+        <div
+          className="fixed z-50 px-2.5 py-1 text-xs rounded-md bg-popover text-popover-foreground border border-border shadow-md animate-in fade-in-0 zoom-in-95 duration-100"
+          style={{ left: tooltip.x, top: tooltip.y - 32 }}
+        >
+          {tooltip.text}
+        </div>
+      )}
     </div>
   );
 }
