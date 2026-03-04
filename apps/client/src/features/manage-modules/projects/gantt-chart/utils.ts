@@ -46,10 +46,8 @@ export function computeTimelineRange({
   if (deliveredDate) dates.push(parseISO(deliveredDate));
   if (completedDate) dates.push(parseISO(completedDate));
 
-  if (dates.length === 0) {
-    const today = startOfDay(new Date());
-    return { start: subDays(today, 7), end: addDays(today, 21) };
-  }
+  // 오늘은 항상 포함
+  dates.push(startOfDay(new Date()));
 
   const timestamps = dates.map((d) => d.getTime());
   const min = new Date(Math.min(...timestamps));

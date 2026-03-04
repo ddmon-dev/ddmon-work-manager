@@ -200,6 +200,7 @@ export function GanttChart({
         <BarPopover
           schedule={popover.schedule}
           anchorRect={popover.rect}
+          containerRef={scrollRef}
           onClose={() => setPopover(null)}
         />
       )}

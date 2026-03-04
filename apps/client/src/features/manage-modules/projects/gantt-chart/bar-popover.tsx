@@ -3,17 +3,20 @@ import { Trash2Icon } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { Button } from "@/shared/ui/button";
 import { useDialog } from "@/shared/ui/app-dialog";
-import { SCHEDULE_COLORS, getColorConfig } from "../../schedules/constants";
+import { SCHEDULE_COLORS } from "../../schedules/constants";
 import { useUpdateSchedule, useDeleteSchedule } from "../../schedules/api";
 import type { ScheduleDTO } from "../../schedules/types";
+
+const POPOVER_WIDTH = 280;
 
 interface BarPopoverProps {
   schedule: ScheduleDTO;
   anchorRect: DOMRect;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   onClose: () => void;
 }
 
-export function BarPopover({ schedule, anchorRect, onClose }: BarPopoverProps) {
+export function BarPopover({ schedule, anchorRect, containerRef, onClose }: BarPopoverProps) {
   const [title, setTitle] = useState(schedule.title);
   const inputRef = useRef<HTMLInputElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -21,8 +24,6 @@ export function BarPopover({ schedule, anchorRect, onClose }: BarPopoverProps) {
   const updateSchedule = useUpdateSchedule();
   const deleteSchedule = useDeleteSchedule();
   const dialog = useDialog();
-
-  const currentColor = getColorConfig(schedule.color);
 
   // 포커스
   useEffect(() => {
@@ -80,16 +81,19 @@ export function BarPopover({ schedule, anchorRect, onClose }: BarPopoverProps) {
     }
   };
 
-  // 위치 계산: 바 아래에 표시
+  // 위치 계산: 바 아래, 컨테이너 좌우 경계 내
+  const containerRect = containerRef.current?.getBoundingClientRect();
+  const minLeft = containerRect?.left ?? 0;
+  const maxRight = containerRect?.right ?? window.innerWidth;
   const top = anchorRect.bottom + 4;
-  const left = anchorRect.left;
+  const left = Math.max(minLeft, Math.min(anchorRect.left, maxRight - POPOVER_WIDTH));
 
   return (
     <div className="fixed inset-0 z-50" data-gantt-bar>
       <div
         ref={popoverRef}
-        className="fixed bg-popover border border-border rounded-lg shadow-lg p-3 w-56 space-y-3"
-        style={{ top, left }}
+        className="fixed bg-popover border border-border rounded-lg shadow-lg p-3 space-y-3"
+        style={{ top, left, width: POPOVER_WIDTH }}
       >
         {/* 제목 편집 */}
         <input
