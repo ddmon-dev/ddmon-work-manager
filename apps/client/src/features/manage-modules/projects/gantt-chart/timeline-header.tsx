@@ -26,14 +26,19 @@ export function TimelineHeader({ rangeStart, rangeEnd, totalWidth }: TimelineHea
       style={{ width: totalWidth, height: HEADER_HEIGHT }}
     >
       {/* 월 레이블 */}
-      <div className="flex h-6 border-b border-border/50">
-        {months.map((month) => (
+      <div className="relative h-6 border-b border-border">
+        {months.map((month, i) => (
           <div
             key={month.label}
-            className="text-xs font-medium text-muted-foreground flex items-center px-2 border-r border-border/30"
-            style={{ position: "absolute", left: month.x, width: month.width }}
+            className={cn(
+              "absolute top-0 bottom-0 overflow-hidden",
+              i > 0 && "border-l border-border"
+            )}
+            style={{ left: month.x, width: month.width }}
           >
-            {month.label}
+            <div className="sticky left-0 w-fit text-xs font-medium text-muted-foreground flex items-center h-full px-2">
+              {month.label}
+            </div>
           </div>
         ))}
       </div>
@@ -43,6 +48,7 @@ export function TimelineHeader({ rangeStart, rangeEnd, totalWidth }: TimelineHea
         {days.map((day, i) => {
           const isToday = isSameDay(day, today);
           const weekend = isWeekend(day);
+          const isFirstOfMonth = day.getDate() === 1 && i > 0;
 
           return (
             <div
@@ -50,7 +56,8 @@ export function TimelineHeader({ rangeStart, rangeEnd, totalWidth }: TimelineHea
               className={cn(
                 "flex items-center justify-center text-[10px] tabular-nums shrink-0",
                 weekend && "text-muted-foreground/50",
-                isToday && "text-primary font-bold"
+                isToday && "text-primary font-bold",
+                isFirstOfMonth && "border-l border-border"
               )}
               style={{ width: DAY_WIDTH }}
             >
