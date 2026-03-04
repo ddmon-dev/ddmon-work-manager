@@ -52,14 +52,15 @@ export function GanttGrid({
       {/* 세로 그리드 줄 + 주말 배경 */}
       {days.map((day, i) => {
         const weekend = isWeekend(day);
-        const isFirstOfMonth = day.getDate() === 1 && i > 0;
+        const isLastOfMonth =
+          i < days.length - 1 && days[i + 1].getDate() === 1;
         return (
           <div
             key={i}
             className={cn(
               "absolute top-0 bottom-0 border-r border-border/50",
-              weekend && "bg-muted/30",
-              isFirstOfMonth && "border-l border-l-border"
+              weekend && "bg-muted/50",
+              isLastOfMonth && "border-r-border"
             )}
             style={{ left: i * DAY_WIDTH, width: DAY_WIDTH }}
           />

@@ -30,7 +30,7 @@ export function TimelineHeader({ rangeStart, rangeEnd, totalWidth }: TimelineHea
         {months.map((month, i) => (
           <div
             key={month.label}
-            className={cn("shrink-0", i > 0 && "border-l border-border")}
+            className={cn("shrink-0", i < months.length - 1 && "border-r border-border")}
             style={{ width: month.width }}
           >
             <div className="sticky left-0 w-fit text-xs font-medium text-muted-foreground flex items-center h-full px-2">
@@ -47,14 +47,17 @@ export function TimelineHeader({ rangeStart, rangeEnd, totalWidth }: TimelineHea
           const weekend = isWeekend(day);
           const isFirstOfMonth = day.getDate() === 1 && i > 0;
 
+          const isLastOfMonth =
+            i < days.length - 1 && days[i + 1].getDate() === 1;
+
           return (
             <div
               key={i}
               className={cn(
                 "flex items-center justify-center text-[10px] tabular-nums shrink-0",
-                weekend && "text-muted-foreground/50",
+                weekend && "text-destructive/60",
                 isToday && "text-primary font-bold",
-                isFirstOfMonth && "border-l border-border"
+                isLastOfMonth && "border-r border-border"
               )}
               style={{ width: DAY_WIDTH }}
             >
