@@ -13,9 +13,10 @@ interface TimelineHeaderProps {
   rangeStart: Date;
   rangeEnd: Date;
   totalWidth: number;
+  scrollLeft: number;
 }
 
-export function TimelineHeader({ rangeStart, rangeEnd, totalWidth }: TimelineHeaderProps) {
+export function TimelineHeader({ rangeStart, rangeEnd, totalWidth, scrollLeft }: TimelineHeaderProps) {
   const today = startOfDay(new Date());
   const months = getMonthsInRange(rangeStart, rangeEnd);
   const days = getDaysInRange(rangeStart, rangeEnd);
@@ -27,20 +28,28 @@ export function TimelineHeader({ rangeStart, rangeEnd, totalWidth }: TimelineHea
     >
       {/* 월 레이블 */}
       <div className="relative h-6 border-b border-border">
-        {months.map((month, i) => (
-          <div
-            key={month.label}
-            className={cn(
-              "absolute top-0 bottom-0 overflow-hidden",
-              i > 0 && "border-l border-border"
-            )}
-            style={{ left: month.x, width: month.width }}
-          >
-            <div className="sticky left-0 w-fit text-xs font-medium text-muted-foreground flex items-center h-full px-2">
-              {month.label}
+        {months.map((month, i) => {
+          // 월 블록 내에서 레이블을 스크롤 위치에 고정
+          const labelOffset = Math.max(0, Math.min(scrollLeft - month.x, month.width - 40));
+
+          return (
+            <div
+              key={month.label}
+              className={cn(
+                "absolute top-0 bottom-0",
+                i > 0 && "border-l border-border"
+              )}
+              style={{ left: month.x, width: month.width }}
+            >
+              <div
+                className="text-xs font-medium text-muted-foreground flex items-center h-full px-2"
+                style={{ transform: `translateX(${labelOffset}px)` }}
+              >
+                {month.label}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* 일 숫자 */}
