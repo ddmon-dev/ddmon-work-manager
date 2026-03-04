@@ -12,6 +12,11 @@ SERVICE_PLIST="$SERVICE_LABEL.plist"
 BACKUP_PLIST="$BACKUP_LABEL.plist"
 DOMAIN_TARGET="gui/$(id -u)"
 
+# 강제 빌드 (최신 코드로 설치 보장)
+echo "[install] 빌드 중..."
+cd "$PROJECT_DIR"
+npm run build:production
+
 echo "[install] LaunchAgent 설치 중..."
 
 mkdir -p "$LAUNCH_AGENTS_DIR"
