@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from "react";
+
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { DetailSectionTitle } from "../../_base/ui";
@@ -56,20 +57,12 @@ export function GanttChart({
   // Popover 상태
   const [popover, setPopover] = useState<{ schedule: ScheduleDTO; rect: DOMRect } | null>(null);
 
-  // 스크롤 위치 추적 (월 레이블 sticky용)
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const handleScroll = useCallback(() => {
-    if (scrollRef.current) setScrollLeft(scrollRef.current.scrollLeft);
-  }, []);
-
   // 초기 스크롤: 오늘이 보이도록
   useEffect(() => {
     if (!scrollRef.current) return;
     const todayX = dateToX(startOfDay(new Date()), range.start);
     const containerWidth = scrollRef.current.clientWidth;
-    const initialScroll = Math.max(0, todayX - containerWidth / 3);
-    scrollRef.current.scrollLeft = initialScroll;
-    setScrollLeft(initialScroll);
+    scrollRef.current.scrollLeft = Math.max(0, todayX - containerWidth / 3);
   }, [range.start]);
 
   const handleEmptyClick = (date: Date) => {
@@ -141,14 +134,12 @@ export function GanttChart({
         <div
           ref={scrollRef}
           className="overflow-x-auto rounded-lg border border-border"
-          onScroll={handleScroll}
         >
           <div style={{ width: totalWidth }}>
             <TimelineHeader
               rangeStart={range.start}
               rangeEnd={range.end}
               totalWidth={totalWidth}
-              scrollLeft={scrollLeft}
             />
             <GanttGrid
               rangeStart={range.start}
