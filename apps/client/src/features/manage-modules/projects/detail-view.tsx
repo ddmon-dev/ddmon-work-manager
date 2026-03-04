@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { PencilIcon, Trash2Icon, FileTextIcon, LoaderIcon, XIcon } from "lucide-react";
+import { PencilIcon, Trash2Icon, FileTextIcon, LoaderIcon, XIcon, PlusIcon } from "lucide-react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -51,6 +51,9 @@ import {
 } from "../estimates/api";
 import { EstimatePdfPreview } from "../estimates/pdf/estimate-pdf-preview";
 import type { EstimateWithDetails } from "../estimates/types";
+import { useScheduleList } from "../schedules/api";
+import { getColorConfig } from "../schedules/constants";
+import { CreateScheduleDialog } from "./create-schedule-dialog";
 import { StatusBadge } from "./status-badge";
 import { WorkPhaseIndicator } from "./work-phase-indicator";
 import type { ProjectWithDetails, PaymentDTO } from "./types";
@@ -581,6 +584,57 @@ function EditPaymentButton({
   );
 }
 
+// ── 일정 섹션 ────────────────────────────────────────────────
+
+function ProjectSchedules({ projectId, clientId }: { projectId: string; clientId: string }) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const { data } = useScheduleList({ projectId, pageSize: 50 });
+  const items = data?.items ?? [];
+
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <DetailSectionTitle>일정</DetailSectionTitle>
+        <Button variant="ghost" size="icon-xs" onClick={() => setDialogOpen(true)}>
+          <PlusIcon className="size-4" />
+        </Button>
+      </div>
+
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4 text-center">
+          등록된 일정이 없습니다.
+        </p>
+      ) : (
+        <ul className="space-y-1">
+          {items.map((schedule) => {
+            const color = getColorConfig(schedule.color);
+            return (
+              <li
+                key={schedule.id}
+                className="flex items-center gap-2.5 py-1.5 px-1 rounded-md text-sm"
+              >
+                <span className={cn("size-2.5 rounded-full shrink-0", color.dot)} />
+                <span className="truncate flex-1">{schedule.title}</span>
+                <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
+                  {schedule.startDate}
+                  {schedule.endDate && ` ~ ${schedule.endDate}`}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <CreateScheduleDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        projectId={projectId}
+        clientId={clientId}
+      />
+    </div>
+  );
+}
+
 // ── 상세 보기 ────────────────────────────────────────────────
 
 interface DetailViewProps {
@@ -663,13 +717,16 @@ export function DetailView({ data, refetch }: DetailViewProps) {
           </SheetContainer>
         </SheetScrollColumn>
 
-        {/* 우측: 견적서 버전 + 메모 */}
+        {/* 우측: 견적서 버전 + 일정 + 메모 */}
         <SheetScrollColumn>
           {data.estimateNumber && (
             <SheetContainer>
               <EstimateVersions estimateNumber={data.estimateNumber} />
             </SheetContainer>
           )}
+          <SheetContainer>
+            <ProjectSchedules projectId={data.id} clientId={data.clientId} />
+          </SheetContainer>
           <SheetContainer>
             <MemoSection
               memos={data.memos}

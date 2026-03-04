@@ -47,6 +47,7 @@ type ListParams = {
   page?: number;
   pageSize?: number;
   search?: string;
+  projectId?: string;
 };
 
 // ── 월별 캘린더 조회 ─────────────────────────────────────────
@@ -69,6 +70,7 @@ export function useScheduleList(params: ListParams = {}) {
         page: params.page,
         pageSize: params.pageSize,
         search: params.search,
+        projectId: params.projectId,
       }),
     placeholderData: keepPreviousData,
   });

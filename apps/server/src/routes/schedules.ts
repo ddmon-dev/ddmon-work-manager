@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import { db } from "../db";
 import { schedules } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
@@ -187,8 +187,12 @@ app.get("/month", async (c) => {
 app.get("/", async (c) => {
   const { page, pageSize, search } = parsePagination(c.req.query());
   const offset = calcOffset(page, pageSize);
+  const projectId = c.req.query("projectId");
 
-  const where = search ? searchFilter([schedules.title], search) : undefined;
+  const where = and(
+    search ? searchFilter([schedules.title], search) : undefined,
+    projectId ? eq(schedules.projectId, projectId) : undefined,
+  );
 
   const [items, [{ total }]] = await Promise.all([
     db.select().from(schedules).where(where).orderBy(desc(schedules.startDate)).limit(pageSize).offset(offset),
