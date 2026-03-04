@@ -1,4 +1,4 @@
-import { useFieldArray, useFormContext } from 'react-hook-form';
+import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import {
   DndContext,
@@ -115,7 +115,7 @@ interface GroupRowProps {
 }
 
 function GroupRow({ id, groupIndex, onRemove, canRemove }: GroupRowProps) {
-  const { control, register, watch } = useFormContext();
+  const { control, register } = useFormContext();
 
   const {
     fields: itemFields,
@@ -145,7 +145,7 @@ function GroupRow({ id, groupIndex, onRemove, canRemove }: GroupRowProps) {
     moveItem(oldIndex, newIndex);
   }
 
-  const items = watch(`groups.${groupIndex}.items`) ?? [];
+  const items = useWatch({ control, name: `groups.${groupIndex}.items` as const }) ?? [];
   const groupSubtotal = calculateGroupSubtotal(items);
 
   const style = {

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useForm, useFormContext, FormProvider, type Resolver } from "react-hook-form";
+import { useForm, useFormContext, useWatch, FormProvider, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
@@ -118,6 +118,8 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
     defaultValues: prevValues ? toFormValues(prevValues) : formDefaultValues,
   });
   useFormGuard(form);
+
+  const discountType = useWatch({ control: form.control, name: "discountType" });
 
   useEffect(() => {
     if (prevValues) {
@@ -276,20 +278,20 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                             control={form.control}
                             name="discountValue"
                             label={
-                              form.watch("discountType") === "percentage"
+                              discountType === "percentage"
                                 ? "할인율 (%)"
                                 : "할인 금액 (원)"
                             }
                             suffix={
-                              form.watch("discountType") === "percentage"
+                              discountType === "percentage"
                                 ? "%"
                                 : "원"
                             }
                             thousandSeparator={
-                              form.watch("discountType") !== "percentage"
+                              discountType !== "percentage"
                             }
                             placeholder="0"
-                            disabled={form.watch("discountType") === "none"}
+                            disabled={discountType === "none"}
                           />
                         </div>
                         <div className="pb-2 ml-auto">
@@ -325,13 +327,13 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
 }
 
 function EstimateTotalSummary() {
-  const { watch } = useFormContext<FormValues>();
+  const { control } = useFormContext<FormValues>();
 
-  const groups = watch("groups") ?? [];
-  const taxType = watch("taxType") ?? "vat";
-  const discountType = watch("discountType");
-  const discountValue = watch("discountValue") ?? 0;
-  const showTaxAmount = watch("showTaxAmount") ?? true;
+  const groups = useWatch({ control, name: "groups" }) ?? [];
+  const taxType = useWatch({ control, name: "taxType" }) ?? "vat";
+  const discountType = useWatch({ control, name: "discountType" });
+  const discountValue = useWatch({ control, name: "discountValue" }) ?? 0;
+  const showTaxAmount = useWatch({ control, name: "showTaxAmount" }) ?? true;
 
   const totals = calculateTotal(groups, taxType, discountType, discountValue);
   const { hasDiscount, showTaxRows, hasDetails, totalLabel, totalValue } =
@@ -389,10 +391,10 @@ function EstimateFormPdfPreview({
 }: {
   prevValues: EstimateWithDetails | null;
 }) {
-  const { watch } = useFormContext<FormValues>();
+  const { control } = useFormContext<FormValues>();
   const { user } = useAuth();
   const { data: bizInfo } = useBusinessInfo();
-  const values = watch();
+  const values = useWatch({ control }) as FormValues;
 
   const documentData: EstimateDocumentData = {
     title: values.title || "(제목 없음)",

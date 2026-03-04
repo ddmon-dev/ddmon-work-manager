@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useForm, FormProvider, Controller, type Resolver } from "react-hook-form";
+import { useForm, useWatch, FormProvider, Controller, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { parseISO, format } from "date-fns";
 import { z } from "zod";
@@ -103,6 +103,9 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prevValues, createDate]);
 
+  const selectedClientId = useWatch({ control: form.control, name: "clientId" });
+  const watchedEndDate = useWatch({ control: form.control, name: "endDate" });
+
   const { errors } = form.formState;
 
   async function onSubmit(values: FormValues) {
@@ -185,7 +188,6 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                 control={form.control}
                 name="projectId"
                 render={({ field }) => {
-                  const selectedClientId = form.watch("clientId");
                   const filteredOptions = selectedClientId
                     ? (projectOptions ?? []).filter(
                         (o) =>
@@ -247,13 +249,12 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                 control={form.control}
                 name="startDate"
                 render={({ field: startField }) => {
-                  const endDate = form.watch("endDate");
                   return (
                     <DatePicker
                       mode="range"
                       value={{
                         from: startField.value,
-                        to: endDate ?? undefined,
+                        to: watchedEndDate ?? undefined,
                       }}
                       onValueChange={(range) => {
                         if (!range) {
