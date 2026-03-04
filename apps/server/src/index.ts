@@ -26,7 +26,7 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 app.route("/api", apiRoutes);
 
 if (isServeStatic) {
-  const staticDir = process.env.STATIC_DIR ?? "../../apps/client/dist-local";
+  const staticDir = process.env.STATIC_DIR ?? "../../apps/client/dist-production";
 
   // Vite 빌드 에셋 (장기 캐시)
   app.use(

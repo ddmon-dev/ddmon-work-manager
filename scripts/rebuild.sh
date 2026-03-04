@@ -17,12 +17,12 @@ sleep 1
 # 마이그레이션 적용
 echo "[rebuild] 마이그레이션 실행..."
 cd "$PROJECT_DIR/apps/server"
-node --env-file=../../.env.local ../../node_modules/.bin/drizzle-kit migrate
+node --env-file=../../.env.production ../../node_modules/.bin/drizzle-kit migrate
 
 # 빌드 (클라이언트 + 서버)
 echo "[rebuild] 빌드 중..."
 cd "$PROJECT_DIR"
-npm run build:local
+npm run build:production
 
 # LaunchAgent 서비스 재시작
 echo "[rebuild] 서비스 재시작..."

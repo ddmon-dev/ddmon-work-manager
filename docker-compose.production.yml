@@ -1,9 +1,9 @@
-name: ${PROJECT_NAME}-local
+name: ${PROJECT_NAME}-production
 
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: ${PROJECT_NAME}-postgres-local
+    container_name: ${PROJECT_NAME}-postgres-production
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -16,4 +16,4 @@ services:
 
 volumes:
   pgdata:
-    name: ${PROJECT_NAME}-local_pgdata
+    name: ${PROJECT_NAME}-production_pgdata

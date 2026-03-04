@@ -4,7 +4,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BACKUP_DIR="$PROJECT_DIR/backups"
-source "$PROJECT_DIR/project.env"
+source "$PROJECT_DIR/.env.project"
 
 mkdir -p "$BACKUP_DIR"
 
@@ -13,7 +13,7 @@ BACKUP_FILE="$BACKUP_DIR/work_manager_${TIMESTAMP}.sql"
 
 echo "[backup-db] DB 백업 중: $BACKUP_FILE"
 
-docker exec $PROJECT_NAME-postgres-local pg_dump \
+docker exec $PROJECT_NAME-postgres-production pg_dump \
   -U $POSTGRES_USER \
   -d $POSTGRES_DB \
   --no-password \

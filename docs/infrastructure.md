@@ -13,25 +13,25 @@ npm workspaces 기반 모노레포.
 │   ├── types/           # 상수, 타입 정의
 │   └── utils/           # 금액 계산 등 유틸리티
 ├── scripts/             # 운영 스크립트
-├── project.env          # 프로젝트명 + DB 크레덴셜 (gitignore)
-├── project.env.example  # project.env 템플릿
+├── .env.project         # 프로젝트명 + DB 크레덴셜 (gitignore)
+├── .env.project.example # .env.project 템플릿
 ├── docker-compose.yml   # 개발환경 Docker
-├── docker-compose.local.yml  # 로컬 운영환경 Docker
+├── docker-compose.production.yml  # 운영환경 Docker
 ├── .env                 # 개발환경 변수
-└── .env.local           # 로컬 운영환경 변수 (gitignore)
+└── .env.production      # 운영환경 변수 (gitignore)
 ```
 
 npm workspaces 기반. 패키지 스코프: `@packages/*`.
 
-### 프로젝트 환경변수 (`project.env`)
+### 프로젝트 환경변수 (`.env.project`)
 
-`project.env`에서 프로젝트명과 DB 크레덴셜을 관리. Docker Compose, 스크립트, plist에서 참조.
+`.env.project`에서 프로젝트명과 DB 크레덴셜을 관리. Docker Compose, 스크립트, plist에서 참조.
 
-**이 파일은 `.gitignore`에 포함** — `project.env.example`을 복사하여 생성.
+**이 파일은 `.gitignore`에 포함** — `.env.project.example`을 복사하여 생성.
 
 ```bash
-cp project.env.example project.env
-# project.env 내 POSTGRES_USER, POSTGRES_PASSWORD 를 실제 값으로 변경
+cp .env.project.example .env.project
+# .env.project 내 POSTGRES_USER, POSTGRES_PASSWORD 를 실제 값으로 변경
 ```
 
 ```env
@@ -58,10 +58,10 @@ Vite 개발 서버가 `/api` 요청을 서버(8001)로 프록시.
 `docker-compose.yml` (프로젝트명: `${PROJECT_NAME}-dev`)
 
 - PostgreSQL 17 Alpine
-- 크레덴셜: `project.env`의 `POSTGRES_USER`/`POSTGRES_PASSWORD` 참조
+- 크레덴셜: `.env.project`의 `POSTGRES_USER`/`POSTGRES_PASSWORD` 참조
 - 컨테이너: `${PROJECT_NAME}-postgres-dev`
 - 볼륨: `${PROJECT_NAME}-dev_pgdata`
-- `docker compose --env-file project.env` 명령 사용
+- `docker compose --env-file .env.project` 명령 사용
 
 ### 환경 변수 (`.env`)
 
@@ -73,7 +73,7 @@ BETTER_AUTH_URL=http://localhost:8001
 CLIENT_URL=http://localhost:8000
 ```
 
-`.env.example`을 복사하여 생성. DB 크레덴셜은 `project.env`와 일치시킬 것.
+`.env.example`을 복사하여 생성. DB 크레덴셜은 `.env.project`와 일치시킬 것.
 
 ### 명령어
 
@@ -96,7 +96,7 @@ npm run db:studio     # Drizzle Studio (DB GUI)
 npm run type-check    # TypeScript 타입 체크
 ```
 
-## 로컬 운영환경
+## 운영환경
 
 개발환경과 완전히 분리된 독립 환경. macOS LaunchAgent로 시스템 부팅 시 자동 기동.
 
@@ -120,15 +120,15 @@ npm run type-check    # TypeScript 타입 체크
 
 ### Docker
 
-`docker-compose.local.yml` (프로젝트명: `${PROJECT_NAME}-local`)
+`docker-compose.production.yml` (프로젝트명: `${PROJECT_NAME}-production`)
 
 - PostgreSQL 17 Alpine, 포트 7020
-- 컨테이너: `${PROJECT_NAME}-postgres-local`
-- 볼륨: `${PROJECT_NAME}-local_pgdata` (개발환경과 완전 분리)
+- 컨테이너: `${PROJECT_NAME}-postgres-production`
+- 볼륨: `${PROJECT_NAME}-production_pgdata` (개발환경과 완전 분리)
 - `restart: unless-stopped`
-- `docker compose --env-file project.env` 명령 사용
+- `docker compose --env-file .env.project` 명령 사용
 
-### 환경 변수 (`.env.local`)
+### 환경 변수 (`.env.production`)
 
 ```env
 DATABASE_URL=postgresql://your_db_user:your_db_password@localhost:7020/work_manager
@@ -138,18 +138,18 @@ CLIENT_URL=http://localhost:7070
 PORT=7070
 NODE_ENV=production
 SERVE_STATIC=true
-STATIC_DIR=../../apps/client/dist-local
+STATIC_DIR=../../apps/client/dist-production
 ```
 
-`.env.local.example`을 복사하여 생성. DB 크레덴셜은 `project.env`와 일치시킬 것.
+`.env.production.example`을 복사하여 생성. DB 크레덴셜은 `.env.project`와 일치시킬 것.
 
 ### 빌드
 
 ```bash
-npm run build:local    # 클라이언트(dist-local) + 서버(tsup) 빌드
+npm run build:production    # 클라이언트(dist-production) + 서버(tsup) 빌드
 ```
 
-- **클라이언트**: Vite → `apps/client/dist-local/`
+- **클라이언트**: Vite → `apps/client/dist-production/`
 - **서버**: tsup → `apps/server/dist/`
   - `noExternal: [/@packages\/.*/]` — 워크스페이스 패키지를 번들에 포함
   - tsup 사용 이유: `moduleResolution: bundler`와 Node.js ESM 간 디렉토리 임포트 충돌 해결
@@ -158,14 +158,14 @@ npm run build:local    # 클라이언트(dist-local) + 서버(tsup) 빌드
 
 | 명령어 | 스크립트 | 설명 |
 |--------|---------|------|
-| `npm run local:start` | `start-local.sh` | Docker 시작 → 마이그레이션 → 서버 기동 |
-| `npm run local:stop` | `stop-local.sh` | DB 백업 → 서버 종료 → Docker 중지 |
-| `npm run local:rebuild` | `rebuild.sh` | 서버만 종료 → 리빌드 → 재시작 (Docker 유지) |
-| `npm run local:migrate` | — | 마이그레이션만 (데이터 유지) |
-| `npm run local:seed` | — | 시드 데이터 적용 |
-| `npm run local:backup` | `backup-db.sh` | DB 백업 (최근 30개 유지) |
-| `npm run local:install` | `install-service.sh` | LaunchAgent 등록 |
-| `npm run local:uninstall` | `uninstall-service.sh` | LaunchAgent 제거 |
+| `npm run production:start` | `start-production.sh` | Docker 시작 → 마이그레이션 → 서버 기동 |
+| `npm run production:stop` | `stop-production.sh` | DB 백업 → 서버 종료 → Docker 중지 |
+| `npm run production:rebuild` | `rebuild.sh` | 서버만 종료 → 리빌드 → 재시작 (Docker 유지) |
+| `npm run production:migrate` | — | 마이그레이션만 (데이터 유지) |
+| `npm run production:seed` | — | 시드 데이터 적용 |
+| `npm run production:backup` | `backup-db.sh` | DB 백업 (최근 30개 유지) |
+| `npm run production:install` | `install-service.sh` | LaunchAgent 등록 |
+| `npm run production:uninstall` | `uninstall-service.sh` | LaunchAgent 제거 |
 
 백업 위치: `backups/work_manager_YYYYMMDD_HHMMSS.sql`
 
@@ -173,21 +173,21 @@ npm run build:local    # 클라이언트(dist-local) + 서버(tsup) 빌드
 
 | 시나리오 | 명령어 |
 |---------|--------|
-| 초기 배포 | `npm run local:install` (빌드 자동 포함) |
-| 유지보수 (코드/DB 변경) | `npm run local:rebuild` |
-| 완전 종료 | `npm run local:stop` |
-| 서비스 제거 | `npm run local:uninstall` |
+| 초기 배포 | `npm run production:install` (빌드 자동 포함) |
+| 유지보수 (코드/DB 변경) | `npm run production:rebuild` |
+| 완전 종료 | `npm run production:stop` |
+| 서비스 제거 | `npm run production:uninstall` |
 
 ### LaunchAgent
 
 | plist | 역할 |
 |-------|------|
-| `com.ddmon.work-manager-react.plist` | 시스템 부팅 시 `start-local.sh` 실행. KeepAlive 설정 |
+| `com.ddmon.work-manager-react.plist` | 시스템 부팅 시 `start-production.sh` 실행. KeepAlive 설정 |
 | `com.ddmon.work-manager-react-backup.plist` | 매일 03:00 UTC에 `backup-db.sh` 실행 |
 
 로그 위치: `/tmp/work-manager-stdout.log`, `/tmp/work-manager-stderr.log`
 
-설치: `npm run local:install` — sed로 `__PROJECT_DIR__`, `__PROJECT_NAME__` 치환 후 `~/Library/LaunchAgents/`에 복사.
+설치: `npm run production:install` — sed로 `__PROJECT_DIR__`, `__PROJECT_NAME__` 치환 후 `~/Library/LaunchAgents/`에 복사.
 
 ## DB 마이그레이션
 
@@ -207,13 +207,13 @@ npm run db:generate    # 스키마 변경 감지 → 마이그레이션 파일 �
 npm run db:migrate     # 마이그레이션 실행
 ```
 
-### 로컬 운영환경 마이그레이션
+### 운영환경 마이그레이션
 
 drizzle-kit은 현재 디렉토리 기준으로 경로 해석하므로 `apps/server`에서 실행 필수:
 
 ```bash
-npm run local:migrate
-# 내부: node --env-file=../../.env.local ../../node_modules/.bin/drizzle-kit migrate
+npm run production:migrate
+# 내부: node --env-file=../../.env.production ../../node_modules/.bin/drizzle-kit migrate
 ```
 
 ### 시드 데이터
@@ -222,5 +222,5 @@ npm run local:migrate
 
 ```bash
 npm run db:reset      # reset.ts(DB 초기화) + migrate + seed 통합
-npm run local:seed    # 로컬 운영환경에 시드 적용
+npm run production:seed    # 운영환경에 시드 적용
 ```

@@ -4,7 +4,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
-source "$PROJECT_DIR/project.env"
+source "$PROJECT_DIR/.env.project"
 
 SERVICE_LABEL="com.ddmon.work-manager-react"
 BACKUP_LABEL="com.ddmon.work-manager-react-backup"

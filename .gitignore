@@ -3,7 +3,7 @@ node_modules/
 
 # build
 dist/
-dist-local/
+dist-production/
 
 # local env
 backups/
@@ -13,11 +13,8 @@ apps/server/src/db/seed.ts
 
 # env
 .env
-.env.local
-.env.*.local
-
-# project env (DB 크레덴셜 포함)
-project.env
+.env.*
+!.env.*.example
 
 # security
 *.pem
