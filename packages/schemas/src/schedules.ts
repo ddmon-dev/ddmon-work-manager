@@ -11,6 +11,7 @@ export const scheduleWriteSchema = z.object({
   clientId: z.string().uuid().nullable().optional(),
   projectId: z.string().uuid().nullable().optional(),
   location: z.string().optional(),
+  sortOrder: z.number().int().optional(),
   recurrenceType: z
     .enum(["none", "daily", "weekly", "monthly"])
     .default("none"),

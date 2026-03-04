@@ -51,6 +51,7 @@ import {
 } from "../estimates/api";
 import { EstimatePdfPreview } from "../estimates/pdf/estimate-pdf-preview";
 import type { EstimateWithDetails } from "../estimates/types";
+import { GanttChart } from "./gantt-chart";
 import { StatusBadge } from "./status-badge";
 import { WorkPhaseIndicator } from "./work-phase-indicator";
 import type { ProjectWithDetails, PaymentDTO } from "./types";
@@ -663,13 +664,22 @@ export function DetailView({ data, refetch }: DetailViewProps) {
           </SheetContainer>
         </SheetScrollColumn>
 
-        {/* 우측: 견적서 버전 + 메모 */}
+        {/* 우측: 견적서 버전 + 일정 + 메모 */}
         <SheetScrollColumn>
           {data.estimateNumber && (
             <SheetContainer>
               <EstimateVersions estimateNumber={data.estimateNumber} />
             </SheetContainer>
           )}
+          <SheetContainer>
+            <GanttChart
+              projectId={data.id}
+              clientId={data.clientId}
+              contractDate={data.contractDate}
+              deliveredDate={data.deliveredDate}
+              completedDate={data.completedDate}
+            />
+          </SheetContainer>
           <SheetContainer>
             <MemoSection
               memos={data.memos}

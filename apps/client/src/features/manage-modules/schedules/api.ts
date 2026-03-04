@@ -47,6 +47,7 @@ type ListParams = {
   page?: number;
   pageSize?: number;
   search?: string;
+  projectId?: string;
 };
 
 // ── 월별 캘린더 조회 ─────────────────────────────────────────
@@ -69,6 +70,7 @@ export function useScheduleList(params: ListParams = {}) {
         page: params.page,
         pageSize: params.pageSize,
         search: params.search,
+        projectId: params.projectId,
       }),
     placeholderData: keepPreviousData,
   });
@@ -105,12 +107,73 @@ export function useUpdateSchedule() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<ScheduleWriteInput> }) =>
       api.patch<ScheduleDTO>(`/schedules/${id}`, data),
-    onSuccess: (_, { id }) => {
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.schedules.all });
+      const listQueries = queryClient.getQueriesData<ScheduleListResponse>({
+        queryKey: ["schedules", "list"],
+      });
+      for (const [key, old] of listQueries) {
+        if (!old) continue;
+        queryClient.setQueryData(key, {
+          ...old,
+          items: old.items.map((item) =>
+            item.id === id ? { ...item, ...data } : item
+          ),
+        });
+      }
+      return { listQueries };
+    },
+    onError: (error, _, ctx) => {
+      if (ctx?.listQueries) {
+        for (const [key, old] of ctx.listQueries) {
+          queryClient.setQueryData(key, old);
+        }
+      }
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("일정"));
+    },
+    onSettled: (_, __, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.detail(id) });
     },
-    onError: (error: Error) => {
+  });
+}
+
+// ── 순서 변경 ─────────────────────────────────────────────────
+
+export function useReorderSchedules() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (items: { id: string; sortOrder: number }[]) =>
+      api.put<{ updated: number }>("/schedules/reorder", { items }),
+    onMutate: async (reorderedItems) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.schedules.all });
+      const orderMap = new Map(reorderedItems.map((item) => [item.id, item.sortOrder]));
+      const listQueries = queryClient.getQueriesData<ScheduleListResponse>({
+        queryKey: ["schedules", "list"],
+      });
+      for (const [key, old] of listQueries) {
+        if (!old) continue;
+        const updated = old.items
+          .map((item) => ({
+            ...item,
+            sortOrder: orderMap.get(item.id) ?? item.sortOrder,
+          }))
+          .sort((a, b) => a.sortOrder - b.sortOrder);
+        queryClient.setQueryData(key, { ...old, items: updated });
+      }
+      return { listQueries };
+    },
+    onError: (error, _, ctx) => {
+      if (ctx?.listQueries) {
+        for (const [key, old] of ctx.listQueries) {
+          queryClient.setQueryData(key, old);
+        }
+      }
       toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("일정"));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
     },
   });
 }

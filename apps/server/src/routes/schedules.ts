@@ -1,8 +1,9 @@
 import { Hono } from "hono";
-import { count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq } from "drizzle-orm";
 import { db } from "../db";
 import { schedules } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
+import { z } from "zod";
 import { scheduleWriteSchema } from "@packages/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
@@ -187,11 +188,19 @@ app.get("/month", async (c) => {
 app.get("/", async (c) => {
   const { page, pageSize, search } = parsePagination(c.req.query());
   const offset = calcOffset(page, pageSize);
+  const projectId = c.req.query("projectId");
 
-  const where = search ? searchFilter([schedules.title], search) : undefined;
+  const where = and(
+    search ? searchFilter([schedules.title], search) : undefined,
+    projectId ? eq(schedules.projectId, projectId) : undefined,
+  );
+
+  const orderBy = projectId
+    ? [asc(schedules.sortOrder), asc(schedules.createdAt)]
+    : [desc(schedules.startDate)];
 
   const [items, [{ total }]] = await Promise.all([
-    db.select().from(schedules).where(where).orderBy(desc(schedules.startDate)).limit(pageSize).offset(offset),
+    db.select().from(schedules).where(where).orderBy(...orderBy).limit(pageSize).offset(offset),
     db.select({ total: count() }).from(schedules).where(where),
   ]);
 
@@ -239,6 +248,27 @@ app.patch("/:id", async (c) => {
 
   if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
   return successResponse(c, updated);
+});
+
+// PUT /schedules/reorder — 순서 일괄 변경
+const reorderSchema = z.object({
+  items: z.array(z.object({ id: z.string().uuid(), sortOrder: z.number().int() })),
+});
+
+app.put("/reorder", async (c) => {
+  const parsed = reorderSchema.safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  const user = c.get("user");
+  await Promise.all(
+    parsed.data.items.map(({ id, sortOrder }) =>
+      db.update(schedules)
+        .set({ sortOrder, updatedBy: user.id, updatedAt: new Date() })
+        .where(eq(schedules.id, id))
+    )
+  );
+
+  return successResponse(c, { updated: parsed.data.items.length });
 });
 
 // DELETE /schedules/:id — 하드 삭제

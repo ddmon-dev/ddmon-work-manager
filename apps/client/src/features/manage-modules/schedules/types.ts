@@ -10,6 +10,7 @@ export interface ScheduleDTO {
   location: string | null;
   clientId: string | null;
   projectId: string | null;
+  sortOrder: number;
   recurrenceType: "none" | "daily" | "weekly" | "monthly";
   recurrenceEndDate: string | null;
   author: string;
