@@ -191,7 +191,6 @@ export function GanttBar({
         className="flex items-center gap-1.5 flex-1 min-w-0 cursor-grab active:cursor-grabbing"
         onPointerDown={(e) => handlePointerDown(e, "move")}
       >
-        <span className={cn("size-2 rounded-full shrink-0", color.dot)} />
         <span className="text-xs truncate">{schedule.title}</span>
       </div>
 
