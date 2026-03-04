@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, date } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, date, integer } from "drizzle-orm/pg-core";
 import { clients } from "./clients";
 import { projects } from "./projects";
 
@@ -14,6 +14,7 @@ export const schedules = pgTable("schedules", {
   color: text("color").notNull().default("default"),
   projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
   clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
+  sortOrder: integer("sort_order").notNull().default(0),
   recurrenceType: text("recurrence_type").notNull().default("none"), // none, daily, weekly, monthly
   recurrenceEndDate: date("recurrence_end_date"),
   author: text("author"),

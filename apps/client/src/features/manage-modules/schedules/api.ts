@@ -117,6 +117,23 @@ export function useUpdateSchedule() {
   });
 }
 
+// ── 순서 변경 ─────────────────────────────────────────────────
+
+export function useReorderSchedules() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (items: { id: string; sortOrder: number }[]) =>
+      api.put<{ updated: number }>("/schedules/reorder", { items }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("일정"));
+    },
+  });
+}
+
 // ── 삭제 ────────────────────────────────────────────────────
 
 export function useDeleteSchedule() {
