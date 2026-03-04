@@ -23,6 +23,8 @@ interface GanttBarProps {
   onDateChange: (id: string, newStartDate: string, newEndDate: string | null) => void;
   onRowChange: (fromIndex: number, toIndex: number) => void;
   onBarClick: (schedule: ScheduleDTO, rect: DOMRect) => void;
+  onDragRow?: (targetRow: number) => void;
+  onDragEnd?: () => void;
 }
 
 type DragMode = "move" | "resize-left" | "resize-right" | null;
@@ -37,6 +39,8 @@ export function GanttBar({
   onDateChange,
   onRowChange,
   onBarClick,
+  onDragRow,
+  onDragEnd,
 }: GanttBarProps) {
   const barRef = useRef<HTMLDivElement>(null);
   const [dragMode, setDragMode] = useState<DragMode>(null);
@@ -78,9 +82,10 @@ export function GanttBar({
 
       if (dragMode === "move") {
         // 행 클램핑
-        const targetRow = rowIndex + Math.round(deltaY / ROW_HEIGHT);
-        const clampedRowDelta = (Math.max(0, Math.min(totalRows - 1, targetRow)) - rowIndex) * ROW_HEIGHT;
+        const targetRow = Math.max(0, Math.min(totalRows - 1, rowIndex + Math.round(deltaY / ROW_HEIGHT)));
+        const clampedRowDelta = (targetRow - rowIndex) * ROW_HEIGHT;
         setPreview({ left: deltaX, width: 0, top: clampedRowDelta });
+        onDragRow?.(targetRow);
       } else if (dragMode === "resize-left") {
         const maxShrink = dragStart.current.originalWidth - DAY_WIDTH;
         const clamped = Math.min(deltaX, maxShrink);
@@ -92,7 +97,7 @@ export function GanttBar({
         }
       }
     },
-    [dragMode, rowIndex, totalRows]
+    [dragMode, rowIndex, totalRows, onDragRow]
   );
 
   const handlePointerUp = useCallback(
@@ -105,6 +110,7 @@ export function GanttBar({
         // 클릭 → Popover 열기
         setDragMode(null);
         setPreview({ left: 0, width: 0, top: 0 });
+        onDragEnd?.();
         if (dragMode === "move" && barRef.current) {
           onBarClick(schedule, barRef.current.getBoundingClientRect());
         }
@@ -150,9 +156,10 @@ export function GanttBar({
       }
 
       setDragMode(null);
+      onDragEnd?.();
       setPreview({ left: 0, width: 0, top: 0 });
     },
-    [dragMode, preview, left, width, rangeStart, schedule, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick]
+    [dragMode, preview, left, width, rangeStart, schedule, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick, onDragEnd]
   );
 
   const displayLeft = left + preview.left;

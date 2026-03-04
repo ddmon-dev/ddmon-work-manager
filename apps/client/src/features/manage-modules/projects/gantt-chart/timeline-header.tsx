@@ -55,7 +55,7 @@ export function TimelineHeader({ rangeStart, rangeEnd, totalWidth }: TimelineHea
               key={i}
               className={cn(
                 "flex items-center justify-center text-[10px] tabular-nums shrink-0",
-                weekend && "text-destructive/60",
+                weekend && "text-destructive",
                 isToday && "text-primary font-bold",
                 isLastOfMonth && "border-r border-border"
               )}

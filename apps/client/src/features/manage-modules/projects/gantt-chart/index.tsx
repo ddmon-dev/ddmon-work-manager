@@ -57,9 +57,28 @@ export function GanttChart({
   // Popover 상태
   const [popover, setPopover] = useState<{ schedule: ScheduleDTO; rect: DOMRect } | null>(null);
 
-  // 초기 스크롤: 오늘이 보이도록
+  // 드래그 중 실시간 순서 프리뷰
+  const [dragReorder, setDragReorder] = useState<{ fromIndex: number; toIndex: number } | null>(null);
+
+  const getVisualIndex = useCallback(
+    (i: number) => {
+      if (!dragReorder || i === dragReorder.fromIndex) return i;
+      const { fromIndex, toIndex } = dragReorder;
+      if (fromIndex < toIndex) {
+        if (i > fromIndex && i <= toIndex) return i - 1;
+      } else {
+        if (i >= toIndex && i < fromIndex) return i + 1;
+      }
+      return i;
+    },
+    [dragReorder]
+  );
+
+  // 초기 스크롤: 오늘이 보이도록 (마운트 시 1회)
+  const didScroll = useRef(false);
   useEffect(() => {
-    if (!scrollRef.current) return;
+    if (didScroll.current || !scrollRef.current) return;
+    didScroll.current = true;
     const todayX = dateToX(startOfDay(new Date()), range.start);
     const containerWidth = scrollRef.current.clientWidth;
     scrollRef.current.scrollLeft = Math.max(0, todayX - containerWidth / 3);
@@ -133,7 +152,7 @@ export function GanttChart({
       ) : (
         <div
           ref={scrollRef}
-          className="overflow-x-auto rounded-lg border border-border"
+          className="overflow-x-auto hide-scrollbar rounded-lg border border-border"
         >
           <div style={{ width: totalWidth }}>
             <TimelineHeader
@@ -152,12 +171,14 @@ export function GanttChart({
                 <GanttBar
                   key={schedule.id}
                   schedule={schedule}
-                  rowIndex={i}
+                  rowIndex={getVisualIndex(i)}
                   rangeStart={range.start}
                   totalRows={items.length}
                   onDateChange={handleDateChange}
                   onRowChange={handleRowChange}
                   onBarClick={handleBarClick}
+                  onDragRow={(toIndex) => setDragReorder({ fromIndex: i, toIndex })}
+                  onDragEnd={() => setDragReorder(null)}
                 />
               ))}
 
