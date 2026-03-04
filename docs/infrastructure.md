@@ -13,25 +13,25 @@ npm workspaces 기반 모노레포.
 │   ├── types/           # 상수, 타입 정의
 │   └── utils/           # 금액 계산 등 유틸리티
 ├── scripts/             # 운영 스크립트
-├── .env.project         # 프로젝트명 + DB 크레덴셜 (gitignore)
-├── .env.project.example # .env.project 템플릿
+├── .env                 # 프로젝트명 + DB 크레덴셜 (gitignore)
+├── .env.example         # .env 템플릿
 ├── docker-compose.yml   # 개발환경 Docker
 ├── docker-compose.production.yml  # 운영환경 Docker
-├── .env                 # 개발환경 변수
+├── .env.development     # 개발환경 변수
 └── .env.production      # 운영환경 변수 (gitignore)
 ```
 
 npm workspaces 기반. 패키지 스코프: `@packages/*`.
 
-### 프로젝트 환경변수 (`.env.project`)
+### 프로젝트 환경변수 (`.env`)
 
-`.env.project`에서 프로젝트명과 DB 크레덴셜을 관리. Docker Compose, 스크립트, plist에서 참조.
+`.env`에서 프로젝트명과 DB 크레덴셜을 관리. Docker Compose, 스크립트, plist에서 참조.
 
-**이 파일은 `.gitignore`에 포함** — `.env.project.example`을 복사하여 생성.
+**이 파일은 `.gitignore`에 포함** — `.env.example`을 복사하여 생성.
 
 ```bash
-cp .env.project.example .env.project
-# .env.project 내 POSTGRES_USER, POSTGRES_PASSWORD 를 실제 값으로 변경
+cp .env.example .env
+# .env 내 POSTGRES_USER, POSTGRES_PASSWORD 를 실제 값으로 변경
 ```
 
 ```env
@@ -58,12 +58,12 @@ Vite 개발 서버가 `/api` 요청을 서버(8001)로 프록시.
 `docker-compose.yml` (프로젝트명: `${PROJECT_NAME}-dev`)
 
 - PostgreSQL 17 Alpine
-- 크레덴셜: `.env.project`의 `POSTGRES_USER`/`POSTGRES_PASSWORD` 참조
+- 크레덴셜: `.env`의 `POSTGRES_USER`/`POSTGRES_PASSWORD` 참조
 - 컨테이너: `${PROJECT_NAME}-postgres-dev`
 - 볼륨: `${PROJECT_NAME}-dev_pgdata`
-- `docker compose --env-file .env.project` 명령 사용
+- `docker compose up -d` 명령 사용 (`.env` 자동 로드)
 
-### 환경 변수 (`.env`)
+### 환경 변수 (`.env.development`)
 
 ```env
 DATABASE_URL=postgresql://your_db_user:your_db_password@localhost:8002/work_manager
@@ -73,7 +73,7 @@ BETTER_AUTH_URL=http://localhost:8001
 CLIENT_URL=http://localhost:8000
 ```
 
-`.env.example`을 복사하여 생성. DB 크레덴셜은 `.env.project`와 일치시킬 것.
+`.env.development.example`을 복사하여 생성. DB 크레덴셜은 `.env`와 일치시킬 것.
 
 ### 명령어
 
@@ -126,7 +126,7 @@ npm run type-check    # TypeScript 타입 체크
 - 컨테이너: `${PROJECT_NAME}-postgres-production`
 - 볼륨: `${PROJECT_NAME}-production_pgdata` (개발환경과 완전 분리)
 - `restart: unless-stopped`
-- `docker compose --env-file .env.project` 명령 사용
+- `docker compose --env-file .env` 명령 사용
 
 ### 환경 변수 (`.env.production`)
 
@@ -141,7 +141,7 @@ SERVE_STATIC=true
 STATIC_DIR=../../apps/client/dist-production
 ```
 
-`.env.production.example`을 복사하여 생성. DB 크레덴셜은 `.env.project`와 일치시킬 것.
+`.env.production.example`을 복사하여 생성. DB 크레덴셜은 `.env`와 일치시킬 것.
 
 ### 빌드
 

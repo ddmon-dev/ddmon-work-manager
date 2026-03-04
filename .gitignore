@@ -14,6 +14,7 @@ apps/server/src/db/seed.ts
 # env
 .env
 .env.*
+!.env.example
 !.env.*.example
 
 # security

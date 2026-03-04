@@ -7,7 +7,7 @@ eval "$(fnm env)" 2>/dev/null || true
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-source "$PROJECT_DIR/.env.project"
+source "$PROJECT_DIR/.env"
 
 echo "[start-production] 운영환경 시작..."
 
@@ -21,7 +21,7 @@ done
 
 # Docker PostgreSQL 시작
 echo "[start-production] PostgreSQL 컨테이너 시작 (port 7020)..."
-docker compose --env-file "$PROJECT_DIR/.env.project" -f "$PROJECT_DIR/docker-compose.production.yml" up -d
+docker compose --env-file "$PROJECT_DIR/.env" -f "$PROJECT_DIR/docker-compose.production.yml" up -d
 
 # 컨테이너 준비 대기
 echo "[start-production] DB 준비 대기 중..."

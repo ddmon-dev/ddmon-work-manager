@@ -27,11 +27,11 @@
 
 ```bash
 # 1) 환경변수 파일 생성
-cp .env.project.example .env.project
 cp .env.example .env
+cp .env.development.example .env.development
 
-# 2) .env.project에서 DB 크레덴셜 설정
-# 3) .env의 DATABASE_URL을 .env.project 크레덴셜과 일치시킬 것
+# 2) .env에서 DB 크레덴셜 설정
+# 3) .env.development의 DATABASE_URL을 .env 크레덴셜과 일치시킬 것
 ```
 
 ### 개발 서버 실행
@@ -84,7 +84,7 @@ npm run dev           # client(8000) + server(8001) 동시 기동
 │   ├── types/           # 상수, 타입 정의
 │   └── utils/           # 금액 계산 등 유틸리티
 ├── scripts/             # 운영 스크립트
-├── .env.project         # 프로젝트명 + DB 크레덴셜 (gitignore)
+├── .env                 # 프로젝트명 + DB 크레덴셜 (gitignore)
 ├── docker-compose.yml   # 개발환경 Docker
 └── docker-compose.production.yml  # 운영환경 Docker
 ```
