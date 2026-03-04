@@ -13,6 +13,12 @@ import { successResponse } from "../lib/errors";
 import { softDeleteFilter } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
+function getBilledAmount(amount: number, taxType: string | null): number {
+  if (taxType === "withholding") return amount - Math.round(amount * 0.033);
+  if (taxType === "vat") return amount + Math.round(amount * 0.1);
+  return amount;
+}
+
 const app = new Hono<{ Variables: AppVariables }>();
 app.use("*", requireAuth);
 
@@ -86,31 +92,29 @@ app.get("/revenue-summary", async (c) => {
 
   const validProjectIds = new Set(allProjects.map((p) => p.id));
 
-  // 계약액 계산
+  // 계약액·청구액 계산
   let contractTotal = 0;
-  let allNetReceivableTotal = 0;
+  let billedTotal = 0;
+  let allBilledTotal = 0;
+  const projectContractYearMap = new Map<string, number>();
 
   for (const p of allProjects) {
     const amount = Number(p.contractAmount ?? 0);
     if (amount === 0) continue;
 
-    // withholding: 계약액 - 3.3%, vat: 계약액 + 10%, 그 외: 계약액 그대로
-    const netReceivable =
-      p.taxType === "withholding"
-        ? amount - Math.round(amount * 0.033)
-        : p.taxType === "vat"
-          ? amount + Math.round(amount * 0.1)
-          : amount;
-
-    allNetReceivableTotal += netReceivable;
+    const billed = getBilledAmount(amount, p.taxType);
+    allBilledTotal += billed;
 
     const contractYear = new Date(p.contractDate).getFullYear();
+    projectContractYearMap.set(p.id, contractYear);
+
     if (contractYear === currentYear) {
       contractTotal += amount;
+      billedTotal += billed;
     }
   }
 
-  // 수금액 집계
+  // 수금액 집계 (프로젝트 계약연도 기준)
   let paymentTotal = 0;
   let allPaymentTotal = 0;
 
@@ -119,22 +123,23 @@ app.get("/revenue-summary", async (c) => {
     const amount = Number(pay.amount);
     allPaymentTotal += amount;
 
-    const paidYear = new Date(pay.paidDate).getFullYear();
-    if (paidYear === currentYear) {
+    const contractYear = projectContractYearMap.get(pay.projectId);
+    if (contractYear === currentYear) {
       paymentTotal += amount;
     }
   }
 
   const collectionRate =
-    contractTotal > 0
-      ? Math.round((paymentTotal / contractTotal) * 1000) / 10
+    billedTotal > 0
+      ? Math.round((paymentTotal / billedTotal) * 1000) / 10
       : 0;
 
-  const cumulativeOutstanding = allNetReceivableTotal - allPaymentTotal;
+  const cumulativeOutstanding = allBilledTotal - allPaymentTotal;
 
   return successResponse(c, {
     currentYear,
     contractTotal,
+    billedTotal,
     paymentTotal,
     collectionRate,
     cumulativeOutstanding,

@@ -36,7 +36,7 @@ export function RevenueSummary() {
 
       <div className="grid grid-cols-2 gap-4 mb-4">
         <SummaryItem
-          label="계약액"
+          label="매출액"
           value={`${formatCurrency(data.contractTotal)}원`}
         />
         <SummaryItem
