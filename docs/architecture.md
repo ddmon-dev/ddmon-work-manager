@@ -55,6 +55,27 @@ ProtectedLayout 자식에 별도 `errorElement` 배치 — 에러 시에도 사�
 
 `_base/` 인프라 + 5개 모듈 (clients, estimates, projects, schedules, admins).
 
+#### 프로젝트 간트 차트 (`projects/gantt-chart/`)
+
+프로젝트 상세 페이지의 일정 섹션. 타임라인/간트 차트 뷰로 일정을 시각화하고 인라인 편집.
+
+```
+gantt-chart/
+├── index.tsx              # 메인 컴포넌트 (데이터 조회 + 조합)
+├── timeline-header.tsx    # 날짜 축 (월/일 레이블, 월 sticky)
+├── gantt-grid.tsx         # 배경 그리드 (날짜 세로줄, 주말 배경, 오늘선)
+├── gantt-bar.tsx          # 개별 바 (드래그 이동 + 좌우 리사이즈 + 행 순서 변경)
+├── bar-popover.tsx        # 바 클릭 팝오버 (제목 편집, 색상 변경, 삭제)
+├── inline-create-row.tsx  # 빈 영역 클릭 시 인라인 제목 입력
+├── use-gantt.ts           # 범위 계산, 인라인 생성 상태 관리
+└── utils.ts               # dateToX, xToDate, computeTimelineRange 등
+```
+
+- DAY_WIDTH=40px, ROW_HEIGHT=36px, absolute 포지셔닝 기반
+- Pointer Events API로 드래그 (픽셀 단위 이동, 놓을 때 스냅)
+- 클릭 vs 드래그 판별 (4px threshold)
+- `useScheduleList`, `useUpdateSchedule`, `useReorderSchedules` 재사용
+
 #### 모듈 파일 구성
 
 ```
@@ -117,7 +138,7 @@ useManageSheet() → { open, close, closeWithGuard, setMode, setModeWithGuard, s
 
 #### Optimistic Update
 
-적용 모듈: schedules 인라인 편집, projects/clients 메모 CRUD, projects 입금 내역 CRUD, projects 상태 변경, estimates 상태/계약버전 변경.
+적용 모듈: schedules 수정/순서 변경, schedules 인라인 편집, projects/clients 메모 CRUD, projects 입금 내역 CRUD, projects 상태 변경, estimates 상태/계약버전 변경.
 
 패턴: `onMutate` → 캐시 즉시 반영 + `onError` → 롤백 + `cancelQueries` (list + detail 모두)
 

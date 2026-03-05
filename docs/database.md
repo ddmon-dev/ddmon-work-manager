@@ -30,7 +30,7 @@ Admins = Better Auth user 테이블 (별도 admins 테이블 없음).
 | `projects` | 프로젝트 | uuid | 소프트 |
 | `project_payments` | 입금 내역 | uuid | 소프트 |
 | `project_memos` | 프로젝트 메모 | uuid | 소프트 |
-| `schedules` | 일정 | uuid | **하드** |
+| `schedules` | 일정 (sortOrder로 프로젝트 내 수동 정렬) | uuid | **하드** |
 | `todos` | 투두 | uuid | **하드** |
 | `todo_time_blocks` | 타임블록 (30분 단위) | uuid | **하드** |
 | `mindnotes` | 마인드노트 | uuid | **하드** |
@@ -121,6 +121,13 @@ user ─────┬── todos (1:N, CASCADE)
 - `tax_type`: nullable. 신규 기본값 `"vat"`, 기존 withholding 유지
 - `estimate_number`: nullable. 견적서 없이도 프로젝트 생성 가능
 
+### 일정 (schedules)
+
+- `sort_order`: integer — 프로젝트 간트 차트 내 수동 정렬 순서 (기본 0)
+- `recurrence_type`: `"none"` | `"daily"` | `"weekly"` | `"monthly"`
+- `color`: 바 색상 키 (default, blue, green, yellow 등 9종)
+- `project_id`, `client_id`: nullable FK (SET NULL)
+
 ### 투두 타임블록 (todo_time_blocks)
 
 - `start_slot`: 0~47 (30분 단위, 0=00:00, 47=23:30)
@@ -129,7 +136,7 @@ user ─────┬── todos (1:N, CASCADE)
 
 ## 마이그레이션 관리
 
-현재 스쿼시 완료 — 단일 `0000_initial.sql`.
+마이그레이션 파일: `0000_initial.sql` (스쿼시) + `0003_lively_mariko_yashida.sql` (schedules.sort_order 추가).
 
 ### 스키마 변경 절차
 

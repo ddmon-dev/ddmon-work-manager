@@ -122,11 +122,12 @@ requireAuth → requireSuperAdmin (선택적)
 
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | `/schedules` | 목록 (페이지네이션) |
+| GET | `/schedules` | 목록 (페이지네이션, `?projectId=` 시 sortOrder 정렬) |
 | POST | `/schedules` | 생성 |
 | GET | `/schedules/:id` | 상세 |
 | PATCH | `/schedules/:id` | 수정 |
 | DELETE | `/schedules/:id` | **하드 삭제** |
+| PUT | `/schedules/reorder` | 순서 변경 (`{ items: [{ id, sortOrder }] }`) |
 | GET | `/schedules/monthly` | 월간 일정 (`?year=&month=`, 비페이지네이션) |
 
 ### Todos (`/api/todos`)
