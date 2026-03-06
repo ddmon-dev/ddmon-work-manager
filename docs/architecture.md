@@ -97,13 +97,13 @@ features/manage-modules/{module}/
 | 컴포넌트 | 역할 |
 |---------|------|
 | `ManageContainer` | 모듈 래퍼 (ManageSheetProvider 포함) |
-| `ManageSheet` | Context 기반 시트 (view / modify / create / clone 모드) |
+| `ManageSheet` | Context 기반 시트 (view / modify / create / duplicate 모드) |
 | `ManageList` | DataList 래퍼 (행 클릭 → 시트 열기, 벌크 액션) |
 | `ManageFormSubmit` | 폼 제출 버튼 |
 | `RowActions` / `RowActionMenu` | 행 액션 (buttons / menu 타입) |
 | `MemoSection` | 메모 폼 + 히스토리 (clients, projects 공유) |
 | `ClientSelect` | 클라이언트 선택 컴포넌트 |
-| `DeleteButton` / `CloneButton` / `ModifyButton` / `ViewButton` | 상세뷰 액션 버튼 |
+| `DeleteButton` / `DuplicateButton` / `ModifyButton` / `ViewButton` | 상세뷰 액션 버튼 |
 | `ExportDataButton` | 엑셀 내보내기 |
 | `DetailSectionTitle` / `DetailInfoRow` | 상세뷰 레이아웃 |
 
@@ -111,7 +111,7 @@ features/manage-modules/{module}/
 
 ```
 useManageSheet() → { open, close, closeWithGuard, setMode, setModeWithGuard, setCloseGuard }
-모드: "view" | "modify" | "create" | "clone"
+모드: "view" | "modify" | "create" | "duplicate"
 ```
 
 - `useFormGuard(form)` 훅으로 RHF isDirty 감지 → 닫기/모드 변경 시 확인 다이얼로그
