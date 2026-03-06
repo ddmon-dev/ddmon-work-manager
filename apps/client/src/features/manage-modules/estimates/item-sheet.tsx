@@ -68,7 +68,20 @@ export function ItemSheet() {
       return <WriteForm id={id} prevValues={prevValues} />;
     }
     if (mode === "duplicate" && prevValues) {
-      return <WriteForm id={undefined} prevValues={prevValues} />;
+      const versionOf = manageSheet.data?.meta?.versionOf;
+      const cleaned = {
+        ...prevValues,
+        versionLabel: versionOf ? "" : "초안",
+        ...(!versionOf && {
+          estimateNumber: undefined,
+          version: undefined,
+          clientId: "",
+          client: undefined,
+          title: "",
+          memo: null,
+        }),
+      } as EstimateWithDetails;
+      return <WriteForm id={undefined} prevValues={cleaned} />;
     }
     if (mode === "view" && prevValues) {
       return <DetailView data={prevValues} refetch={refetch} />;

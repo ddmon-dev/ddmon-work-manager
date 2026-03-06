@@ -127,16 +127,9 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
     if (prevValues) {
       const values = toFormValues(prevValues);
       if (isDuplicate) {
-        values.versionLabel = isNewVersion ? "" : "초안";
         const now = new Date();
         values.issuedDate = now;
         values.validUntil = addMonths(now, 1);
-        if (!isNewVersion) {
-          values.clientId = "";
-          values.clientName = "";
-          values.title = "";
-          values.memo = "";
-        }
       }
       form.reset(values);
     } else {
