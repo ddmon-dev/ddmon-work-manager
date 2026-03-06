@@ -11,6 +11,7 @@ interface ActionConfig {
   label?: string;
   onClick?: (() => void) | null;
   deleteFn?: () => Promise<unknown>;
+  meta?: Record<string, unknown>;
 }
 
 type ActionItemConfig = ActionName | ActionConfig;
@@ -28,7 +29,7 @@ const DEFAULTS: Record<
 > = {
   view: { label: "상세보기", icon: <Eye /> },
   modify: { label: "수정", icon: <SquarePen /> },
-  clone: { label: "새 버전", icon: <SquarePen /> },
+  duplicate: { label: "복사", icon: <SquarePen /> },
   delete: { label: "삭제", icon: <Trash2 />, variant: "destructive" },
 };
 
@@ -49,7 +50,7 @@ export function RowActions({ type, id, actions, onDelete }: RowActionsProps) {
               // 부모에서 onDelete prop으로 전달받아 사용
               onDelete?.();
             }
-          : () => manageSheet.open({ id, mode: config.action as Exclude<ActionName, "delete"> });
+          : () => manageSheet.open({ id, mode: config.action as Exclude<ActionName, "delete">, meta: config.meta });
 
     return {
       label: config.label ?? defaults.label,

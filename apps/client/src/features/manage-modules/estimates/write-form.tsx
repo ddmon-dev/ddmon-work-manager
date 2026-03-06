@@ -53,7 +53,7 @@ const formDefaultValues: FormValues = {
   clientName: "",
   title: "",
   description: "",
-  versionLabel: "",
+  versionLabel: "초안",
   issuedDate: new Date(),
   validUntil: addMonths(new Date(), 1),
   taxType: "vat",
@@ -108,7 +108,9 @@ interface WriteFormProps {
 export function WriteForm({ id, prevValues }: WriteFormProps) {
   const sheet = useManageSheet();
   const { refetch } = useManageSheetData();
-  const isClone = sheet.data?.mode === "clone";
+  const isDuplicate = sheet.data?.mode === "duplicate";
+  const versionOf = sheet.data?.meta?.versionOf as string | undefined;
+  const isNewVersion = isDuplicate && !!versionOf;
 
   const createEstimate = useCreateEstimate();
   const updateEstimate = useUpdateEstimate();
@@ -124,10 +126,17 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
   useEffect(() => {
     if (prevValues) {
       const values = toFormValues(prevValues);
-      if (isClone) {
+      if (isDuplicate) {
+        values.versionLabel = isNewVersion ? "" : "초안";
         const now = new Date();
         values.issuedDate = now;
         values.validUntil = addMonths(now, 1);
+        if (!isNewVersion) {
+          values.clientId = "";
+          values.clientName = "";
+          values.title = "";
+          values.memo = "";
+        }
       }
       form.reset(values);
     } else {
@@ -169,11 +178,11 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
           sortOrder: gi,
           items: g.items.map((item, ii) => ({ ...item, sortOrder: ii })),
         })),
-        ...(isClone && prevValues ? { estimateNumber: prevValues.estimateNumber } : {}),
+        ...(isNewVersion ? { estimateNumber: versionOf } : {}),
       };
 
       let createdId: string;
-      if (id && !isClone) {
+      if (id && !isDuplicate) {
         const result = await updateEstimate.mutateAsync({ id, data: submitData });
         createdId = (result as { id: string }).id ?? id;
       } else {
@@ -181,11 +190,11 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
         createdId = (result as { id: string }).id;
       }
 
-      toast.success(id && !isClone ? SUCCESS_MESSAGES.UPDATE_SUCCESS("견적서") : SUCCESS_MESSAGES.CREATE_SUCCESS("견적서"));
+      toast.success(id && !isDuplicate ? SUCCESS_MESSAGES.UPDATE_SUCCESS("견적서") : SUCCESS_MESSAGES.CREATE_SUCCESS("견적서"));
       sheet.open({ id: createdId, mode: "view" });
-      if (id && !isClone) refetch();
+      if (id && !isDuplicate) refetch();
     } catch {
-      toast.error(id && !isClone ? CRUD_ERRORS.UPDATE_FAILED("견적서") : CRUD_ERRORS.CREATE_FAILED("견적서"));
+      toast.error(id && !isDuplicate ? CRUD_ERRORS.UPDATE_FAILED("견적서") : CRUD_ERRORS.CREATE_FAILED("견적서"));
     }
   }
 
@@ -200,7 +209,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
               <div className="px-6 py-5 2xl:overflow-y-auto hide-scrollbar">
                 <FieldGroup>
                   <ClientSelect
-                    disabled={!!id && !isClone}
+                    disabled={!!id && !isDuplicate}
                     onValueChange={(_, label) => form.setValue("clientName", label)}
                   />
                   <FormTextInput
@@ -317,7 +326,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
 
           <SheetFooter>
             <ManageSheetClose />
-            {(id || isClone) && <ManageSheetModeChange mode="view" />}
+            {(id || isDuplicate) && <ManageSheetModeChange mode="view" />}
             <ManageFormSubmit isLoading={form.formState.isSubmitting} />
           </SheetFooter>
         </form>

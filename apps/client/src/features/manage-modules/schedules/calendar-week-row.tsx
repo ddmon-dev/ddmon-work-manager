@@ -58,7 +58,7 @@ export function CalendarWeekRow({
   ) {
     e.stopPropagation();
     const scheduleId = schedule.sourceId ?? schedule.id;
-    const mode = e.metaKey ? "clone" : "view";
+    const mode = e.metaKey ? "duplicate" : "view";
     sheet.open({ mode, id: scheduleId });
   }
 
@@ -161,7 +161,7 @@ export function CalendarWeekRow({
                               onClick={(e) => {
                                 const scheduleId =
                                   schedule.sourceId ?? schedule.id;
-                                const mode = e.metaKey ? "clone" : "view";
+                                const mode = e.metaKey ? "duplicate" : "view";
                                 sheet.open({ mode, id: scheduleId });
                               }}
                             >

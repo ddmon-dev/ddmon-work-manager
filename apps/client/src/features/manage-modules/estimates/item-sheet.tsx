@@ -67,7 +67,7 @@ export function ItemSheet() {
     if (mode === "modify" && prevValues) {
       return <WriteForm id={id} prevValues={prevValues} />;
     }
-    if (mode === "clone" && prevValues) {
+    if (mode === "duplicate" && prevValues) {
       return <WriteForm id={undefined} prevValues={prevValues} />;
     }
     if (mode === "view" && prevValues) {
@@ -87,15 +87,15 @@ export function ItemSheet() {
       >
         <ManageSheetDataContext.Provider value={dataContextValue}>
           {!error && mode && (
-            <SheetHeader className={mode === "create" ? undefined : "sr-only"}>
+            <SheetHeader className={mode === "create" || (mode === "duplicate" && !manageSheet.data?.meta?.versionOf) ? undefined : "sr-only"}>
               <SheetTitle className="text-lg">
                 {CONFIG.moduleName}{" "}
                 {mode === "create"
                   ? "생성하기"
                   : mode === "modify"
                   ? "수정하기"
-                  : mode === "clone"
-                  ? "새 버전 작성하기"
+                  : mode === "duplicate"
+                  ? (manageSheet.data?.meta?.versionOf ? "새 버전 작성하기" : "복사하기")
                   : "상세 보기"}
               </SheetTitle>
               <SheetDescription className="text-sm">
@@ -103,13 +103,13 @@ export function ItemSheet() {
                   ? "내용 입력 후 저장 버튼을 클릭하세요."
                   : mode === "modify"
                   ? "수정 후 저장 버튼을 클릭하세요."
-                  : mode === "clone"
-                  ? "새 버전 내용을 확인하고 저장하세요."
+                  : mode === "duplicate"
+                  ? (manageSheet.data?.meta?.versionOf ? "새 버전 내용을 확인하고 저장하세요." : "복사한 내용을 확인하고 저장하세요.")
                   : "해당 데이터의 상세 내용입니다."}
               </SheetDescription>
             </SheetHeader>
           )}
-          {(mode === "modify" || mode === "clone") && prevValues && (() => {
+          {(mode === "modify" || (mode === "duplicate" && !!manageSheet.data?.meta?.versionOf)) && prevValues && (() => {
             const versions = prevValues.versions ?? [];
             const currentVersion = versions.find((v) => v.id === id);
             return (

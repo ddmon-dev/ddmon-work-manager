@@ -1,4 +1,4 @@
-export type ManageAction = "view" | "modify" | "create" | "delete" | "clone";
+export type ManageAction = "view" | "modify" | "create" | "delete" | "duplicate";
 export type ManageSheetMode = Exclude<ManageAction, "delete">;
 
 export interface MemoItem {

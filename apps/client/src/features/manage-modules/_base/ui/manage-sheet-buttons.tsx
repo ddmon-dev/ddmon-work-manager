@@ -53,7 +53,7 @@ const MODE_CHANGE_LABELS: Record<ManageSheetMode, string> = {
   view: "상세 보기",
   modify: "수정하기",
   create: "생성하기",
-  clone: "새 버전 작성하기",
+  duplicate: "복사하기",
 };
 
 const MODE_CHANGE_VARIANTS: Record<
@@ -63,7 +63,7 @@ const MODE_CHANGE_VARIANTS: Record<
   view: "outline",
   modify: "black",
   create: "black",
-  clone: "black",
+  duplicate: "black",
 };
 
 interface ManageSheetModeChangeProps {

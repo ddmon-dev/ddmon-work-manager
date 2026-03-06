@@ -13,7 +13,7 @@ export { MemoSection } from "./memo";
 export { CreateButton } from "./create-button";
 export { ClientSelect } from "./client-select";
 export { BulkActionBar } from "./bulk-action-bar";
-export { CloneButton } from "./clone-button";
+export { DuplicateButton } from "./duplicate-button";
 export { ExportDataButton } from "./export-data-button";
 export type { ExcelColumn } from "./export-data-button";
 export { ManageSheetError } from "./manage-sheet-error";

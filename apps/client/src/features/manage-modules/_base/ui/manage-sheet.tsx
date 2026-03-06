@@ -169,9 +169,9 @@ const VARIANTS = {
     title: (moduleName?: string) => `${moduleName ?? "데이터"} 상세 보기`,
     description: "해당 데이터의 상세 내용입니다.",
   },
-  clone: {
-    title: (moduleName?: string) => `${moduleName ?? "데이터"} 새 버전 작성`,
-    description: "새 버전 내용을 확인하고 저장하세요.",
+  duplicate: {
+    title: (moduleName?: string) => `${moduleName ?? "데이터"} 복사하기`,
+    description: "복사한 내용을 확인하고 저장하세요.",
   },
 };
 

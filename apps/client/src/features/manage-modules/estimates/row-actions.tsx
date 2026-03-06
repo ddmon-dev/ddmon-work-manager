@@ -19,7 +19,8 @@ export function EstimateRowActions({
       actions={[
         "view",
         "modify",
-        { action: "clone", label: "새 버전" },
+        { action: "duplicate", label: "새 버전", meta: { versionOf: estimateNumber } },
+        "duplicate",
         {
           action: "delete",
           onClick: () =>

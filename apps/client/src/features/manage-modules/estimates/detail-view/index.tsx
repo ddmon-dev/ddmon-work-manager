@@ -74,7 +74,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
                 variant="black"
                 size="xs"
                 rounded="full"
-                onClick={() => sheet.open({ id: currentId!, mode: "clone" })}
+                onClick={() => sheet.open({ id: currentId!, mode: "duplicate", meta: { versionOf: estimateNumber } })}
               >
                 <CopyPlus className="size-3.5" />
                 새 버전
