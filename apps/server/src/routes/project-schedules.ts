@@ -18,7 +18,7 @@ app.get("/overview", async (c) => {
   const statusFilter =
     status === "completed"
       ? eq(projects.status, "completed")
-      : inArray(projects.status, ["active", "settling"]);
+      : inArray(projects.status, ["pending", "active", "settling"]);
 
   const projectList = await db
     .select({
@@ -29,11 +29,12 @@ app.get("/overview", async (c) => {
       deliveredDate: projects.deliveredDate,
       completedDate: projects.completedDate,
       companyName: clients.companyName,
+      sortOrder: projects.sortOrder,
     })
     .from(projects)
     .innerJoin(clients, eq(projects.clientId, clients.id))
     .where(and(statusFilter, eq(projects.deleted, false)))
-    .orderBy(asc(projects.contractDate));
+    .orderBy(asc(projects.sortOrder));
 
   const projectIds = projectList.map((p) => p.id);
 

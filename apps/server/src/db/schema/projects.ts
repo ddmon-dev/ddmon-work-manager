@@ -6,6 +6,7 @@ import {
   timestamp,
   date,
   numeric,
+  integer,
 } from "drizzle-orm/pg-core";
 import { clients } from "./clients";
 import { estimateSeries } from "./estimates";
@@ -26,6 +27,7 @@ export const projects = pgTable("projects", {
   status: text("status").notNull().default("pending"), // pending, active, settling, completed, discarded
   workPhase: text("work_phase").notNull().default("preparing"), // preparing, working, reviewing, delivered
   contractDate: date("contract_date").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
   completedDate: date("completed_date"),
   deliveredDate: date("delivered_date"),
   description: text("description"),

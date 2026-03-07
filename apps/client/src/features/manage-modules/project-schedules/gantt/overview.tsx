@@ -1,5 +1,5 @@
 import { useRef, useEffect, useMemo, useState, useCallback } from "react";
-import { ChevronRightIcon } from "lucide-react";
+import { ChevronRightIcon, ChevronsUpDownIcon } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { Container } from "@/shared/ui/container";
 import { Separator } from "@/shared/ui/separator";
@@ -12,6 +12,7 @@ import {
   useCreateProjectSchedule,
   useUpdateProjectSchedule,
   useReorderProjectSchedules,
+  useReorderProjects,
 } from "../api";
 import { TASK_CATEGORY_CONFIG, getCategoryConfig } from "../constants";
 import type { ProjectScheduleDTO, OverviewProject } from "../types";
@@ -79,7 +80,7 @@ export function ProjectScheduleOverview() {
           {status === "active" ? "진행중인 프로젝트가 없습니다." : "완료된 프로젝트가 없습니다."}
         </div>
       ) : (
-        <OverviewGantt projects={projects} />
+        <OverviewGantt key={status} projects={projects} defaultExpanded={status === "active"} />
       )}
     </div>
   );
@@ -94,13 +95,18 @@ type OverviewRow =
   | { type: "schedule"; project: OverviewProject; schedule: ProjectScheduleDTO; localIndex: number; globalRow: number }
   | { type: "empty"; project: OverviewProject; globalRow: number };
 
-function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
+const CLICK_THRESHOLD = 4;
+
+function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProject[]; defaultExpanded?: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
+    () => defaultExpanded ? new Set(projects.map((p) => p.id)) : new Set()
+  );
 
   const createSchedule = useCreateProjectSchedule();
   const updateSchedule = useUpdateProjectSchedule();
   const reorderSchedules = useReorderProjectSchedules();
+  const reorderProjects = useReorderProjects();
 
   const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
   const [popover, setPopover] = useState<{ schedule: ProjectScheduleDTO; rect: DOMRect } | null>(null);
@@ -112,6 +118,16 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
     insertIndex: number;
     anchorRect: DOMRect;
   } | null>(null);
+  const [projectDrag, setProjectDrag] = useState<{
+    projectId: string;
+    startY: number;
+    currentY: number;
+    fromIndex: number;
+    moved: boolean;
+  } | null>(null);
+  const projectDragRef = useRef(projectDrag);
+  projectDragRef.current = projectDrag;
+
   const [dragReorder, setDragReorder] = useState<{
     projectId: string;
     fromLocal: number;
@@ -144,6 +160,31 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
   }, [projects, expandedProjects]);
 
   const totalRows = rows.length;
+
+  // 프로젝트 행 인덱스 (드래그 드롭 계산용)
+  const projectRowIndices = useMemo(() =>
+    rows
+      .map((r, i) => (r.type === "project" ? { index: i, globalRow: r.globalRow, projectIndex: -1 } : null))
+      .filter(Boolean) as { index: number; globalRow: number; projectIndex: number }[],
+    [rows]
+  );
+  // projectIndex 채우기 (projects 배열 내 인덱스)
+  useMemo(() => {
+    projectRowIndices.forEach((item, i) => { item.projectIndex = i; });
+  }, [projectRowIndices]);
+
+  const dropIndex = useMemo(() => {
+    if (!projectDrag?.moved) return -1;
+    const fromGlobalRow = projectRowIndices[projectDrag.fromIndex]?.globalRow ?? 0;
+    const targetGlobalRow = fromGlobalRow + Math.round((projectDrag.currentY - projectDrag.startY) / ROW_HEIGHT);
+    let closest = projectDrag.fromIndex;
+    let minDist = Infinity;
+    for (let i = 0; i < projectRowIndices.length; i++) {
+      const dist = Math.abs(projectRowIndices[i].globalRow - targetGlobalRow);
+      if (dist < minDist) { minDist = dist; closest = i; }
+    }
+    return closest;
+  }, [projectDrag, projectRowIndices]);
 
   // 프로젝트별 일정 행 범위 계산
   const projectScheduleRange = useMemo(() => {
@@ -299,6 +340,62 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
     setDragReorder(null);
   }, []);
 
+  // 프로젝트 리오더
+  const handleProjectReorder = useCallback((fromIndex: number, toIndex: number) => {
+    const reordered = [...projects];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    reorderProjects.mutate(reordered.map((p, i) => ({ id: p.id, sortOrder: i })));
+  }, [projects, reorderProjects]);
+
+  // 프로젝트 행 포인터 이벤트
+  const handleProjectPointerDown = useCallback((e: React.PointerEvent, projectId: string, fromIndex: number) => {
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setProjectDrag({ projectId, startY: e.clientY, currentY: e.clientY, fromIndex, moved: false });
+  }, []);
+
+  useEffect(() => {
+    if (!projectDrag) return;
+
+    const handleMove = (e: PointerEvent) => {
+      setProjectDrag((prev) => {
+        if (!prev) return null;
+        const moved = prev.moved || Math.abs(e.clientY - prev.startY) > CLICK_THRESHOLD;
+        return { ...prev, currentY: e.clientY, moved };
+      });
+    };
+
+    const handleUp = () => {
+      const prev = projectDragRef.current;
+      if (!prev) return;
+
+      if (prev.moved) {
+        const fromGlobalRow = projectRowIndices[prev.fromIndex]?.globalRow ?? 0;
+        const targetGlobalRow = fromGlobalRow + Math.round((prev.currentY - prev.startY) / ROW_HEIGHT);
+        let closest = prev.fromIndex;
+        let minDist = Infinity;
+        for (let i = 0; i < projectRowIndices.length; i++) {
+          const dist = Math.abs(projectRowIndices[i].globalRow - targetGlobalRow);
+          if (dist < minDist) { minDist = dist; closest = i; }
+        }
+        if (closest !== prev.fromIndex) {
+          handleProjectReorder(prev.fromIndex, closest);
+        }
+      } else {
+        toggleProject(prev.projectId);
+      }
+
+      setProjectDrag(null);
+    };
+
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [projectDrag, projectRowIndices, handleProjectReorder]);
+
   const handleCreateSubmit = useCallback((title: string, category: TaskCategory) => {
     if (!createState) return;
     const project = projects.find((p) => p.id === createState.projectId);
@@ -338,35 +435,58 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
           style={{ width: LEFT_PANEL_WIDTH }}
         >
           {/* 헤더 — 가로+세로 모두 고정 */}
-          <div className="sticky top-0 z-30 h-12 border-b border-border flex items-center px-3 bg-background">
+          <div className="sticky top-0 z-30 h-12 border-b border-border flex items-center justify-between px-3 bg-background">
             <span className="text-xs font-medium text-muted-foreground">프로젝트</span>
+            <button
+              type="button"
+              className="p-1 rounded hover:bg-accent text-muted-foreground"
+              onClick={() => {
+                const allExpanded = projects.every((p) => expandedProjects.has(p.id));
+                setExpandedProjects(allExpanded ? new Set() : new Set(projects.map((p) => p.id)));
+              }}
+              title={projects.every((p) => expandedProjects.has(p.id)) ? "모두 닫기" : "모두 열기"}
+            >
+              <ChevronsUpDownIcon className="size-3.5" />
+            </button>
           </div>
 
           {/* 행 목록 */}
           <div style={{ height: contentHeight }}>
-            {rows.map((row) => {
+            {rows.map((row, rowIdx) => {
               if (row.type === "project") {
                 const isExpanded = expandedProjects.has(row.project.id);
+                const projectIdx = projectRowIndices.findIndex((p) => p.globalRow === row.globalRow);
+                const isDragging = projectDrag?.moved && projectDrag.fromIndex === projectIdx;
+                const showDropBefore = projectDrag?.moved && dropIndex === projectIdx && dropIndex < projectDrag.fromIndex;
+                const showDropAfter = projectDrag?.moved && dropIndex === projectIdx && dropIndex > projectDrag.fromIndex;
                 return (
-                  <div
-                    key={`p-${row.project.id}`}
-                    className={cn(
-                      "sticky z-10 flex items-center gap-1 px-2 border-b border-border/30 cursor-pointer hover:bg-accent bg-background",
-                      hoverCell?.row === row.globalRow && "bg-accent/50"
+                  <div key={`p-${row.project.id}`}>
+                    {showDropBefore && (
+                      <div className="h-0.5 bg-primary" style={{ marginTop: -1 }} />
                     )}
-                    style={{ height: ROW_HEIGHT, top: HEADER_HEIGHT }}
-                    onClick={() => toggleProject(row.project.id)}
-                  >
-                    <ChevronRightIcon
+                    <div
                       className={cn(
-                        "size-3.5 shrink-0 transition-transform",
-                        isExpanded && "rotate-90"
+                        "sticky z-10 flex items-center gap-1 px-2 border-b border-border/30 cursor-pointer hover:bg-accent bg-background select-none",
+                        hoverCell?.row === row.globalRow && "bg-accent/50",
+                        isDragging && "opacity-50"
                       )}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">{row.project.name}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{row.project.companyName}</p>
+                      style={{ height: ROW_HEIGHT, top: HEADER_HEIGHT }}
+                      onPointerDown={(e) => handleProjectPointerDown(e, row.project.id, projectIdx)}
+                    >
+                      <ChevronRightIcon
+                        className={cn(
+                          "size-3.5 shrink-0 transition-transform",
+                          isExpanded && "rotate-90"
+                        )}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{row.project.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{row.project.companyName}</p>
+                      </div>
                     </div>
+                    {showDropAfter && (
+                      <div className="h-0.5 bg-primary" style={{ marginTop: -1 }} />
+                    )}
                   </div>
                 );
               }

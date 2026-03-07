@@ -204,6 +204,43 @@ export function useReorderProjectSchedules() {
   });
 }
 
+// ── 프로젝트 순서 변경 ───────────────────────────────────────────
+
+export function useReorderProjects() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (items: { id: string; sortOrder: number }[]) =>
+      api.put<{ updated: number }>("/projects/reorder", { items }),
+    onMutate: async (reorderedItems) => {
+      await queryClient.cancelQueries({ queryKey: ["project-schedules", "overview"] });
+      const orderMap = new Map(reorderedItems.map((item) => [item.id, item.sortOrder]));
+
+      const overviewQueries = queryClient.getQueriesData<OverviewResponse>({
+        queryKey: ["project-schedules", "overview"],
+      });
+      for (const [key, old] of overviewQueries) {
+        if (!old) continue;
+        queryClient.setQueryData(key, {
+          ...old,
+          items: [...old.items]
+            .map((p) => ({ ...p, sortOrder: orderMap.get(p.id) ?? p.sortOrder }))
+            .sort((a, b) => a.sortOrder - b.sortOrder),
+        });
+      }
+
+      return { overviewQueries };
+    },
+    onError: (error, _, ctx) => {
+      if (ctx?.overviewQueries) rollbackQueries(ctx.overviewQueries, queryClient);
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("프로젝트 순서"));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-schedules", "overview"] });
+    },
+  });
+}
+
 // ── 삭제 ────────────────────────────────────────────────────
 
 export function useDeleteProjectSchedule() {

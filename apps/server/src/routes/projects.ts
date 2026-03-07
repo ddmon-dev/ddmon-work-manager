@@ -51,6 +51,27 @@ app.get("/", async (c) => {
   return successResponse(c, { items, total: countRows[0].total, page, pageSize });
 });
 
+// PUT /projects/reorder — 프로젝트 순서 일괄 변경
+const projectReorderSchema = z.object({
+  items: z.array(z.object({ id: z.string().uuid(), sortOrder: z.number().int() })),
+});
+
+app.put("/reorder", async (c) => {
+  const parsed = projectReorderSchema.safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  const user = c.get("user");
+  await Promise.all(
+    parsed.data.items.map(({ id, sortOrder }) =>
+      db.update(projects)
+        .set({ sortOrder, updatedBy: user.id, updatedAt: new Date() })
+        .where(eq(projects.id, id))
+    )
+  );
+
+  return successResponse(c, { updated: parsed.data.items.length });
+});
+
 // 서브 리소스 직접 라우트 — /:id 전에 등록
 
 // PATCH /projects/payments/:id — 수금 수정

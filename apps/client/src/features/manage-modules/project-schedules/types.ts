@@ -27,6 +27,7 @@ export interface OverviewProject {
   deliveredDate: string | null;
   completedDate: string | null;
   companyName: string;
+  sortOrder: number;
   schedules: ProjectScheduleDTO[];
 }
 
