@@ -18,7 +18,7 @@ export const DAY_WIDTH = 36;
 export const ROW_HEIGHT = 36;
 export const HEADER_HEIGHT = 48;
 export const BAR_HEIGHT = 26;
-export const BAR_Y_OFFSET = (ROW_HEIGHT - BAR_HEIGHT) / 2;
+export const BAR_Y_OFFSET = Math.floor((ROW_HEIGHT - 1 - BAR_HEIGHT) / 2);
 
 // ── 타임라인 범위 계산 ───────────────────────────────────────
 
@@ -98,7 +98,7 @@ export function dateToX(date: Date, rangeStart: Date): number {
 }
 
 export function xToDate(x: number, rangeStart: Date): Date {
-  const days = Math.round(x / DAY_WIDTH);
+  const days = Math.floor(x / DAY_WIDTH);
   return addDays(rangeStart, days);
 }
 

@@ -189,6 +189,7 @@ export function useUpdateProjectStatus() {
     onSettled: (_data, _err, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      queryClient.invalidateQueries({ queryKey: ["project-schedules", "overview"] });
     },
   });
 }
