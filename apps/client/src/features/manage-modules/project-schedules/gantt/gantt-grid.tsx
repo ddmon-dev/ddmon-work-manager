@@ -8,6 +8,7 @@ import {
   getDaysInRange,
   dateToX,
   xToDate,
+  differenceInCalendarDays,
   isWeekend,
   startOfDay,
 } from "./utils";
@@ -17,8 +18,8 @@ interface GanttGridProps {
   rangeEnd: Date;
   totalWidth: number;
   rowCount: number;
-  onEmptyClick: (date: Date, rowIndex: number) => void;
-  onDragCreate?: (startDate: Date, endDate: Date, rowIndex: number) => void;
+  onEmptyClick: (date: Date, rowIndex: number, anchorRect: DOMRect) => void;
+  onDragCreate?: (startDate: Date, endDate: Date, rowIndex: number, anchorRect: DOMRect) => void;
   children: React.ReactNode;
 }
 
@@ -66,13 +67,32 @@ export function GanttGrid({
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragState) return;
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    const gridRect = e.currentTarget.getBoundingClientRect();
 
     if (dragState.active && onDragCreate) {
       const x1 = Math.min(dragState.startX, dragState.currentX);
       const x2 = Math.max(dragState.startX, dragState.currentX);
-      onDragCreate(xToDate(x1, rangeStart), xToDate(x2, rangeStart), dragState.rowIndex);
+      const start = xToDate(x1, rangeStart);
+      const end = xToDate(x2, rangeStart);
+
+      const barLeft = dateToX(start, rangeStart);
+      const days = differenceInCalendarDays(end, start) + 1;
+      const barWidth = Math.max(days * DAY_WIDTH, DAY_WIDTH);
+      const barTop = dragState.rowIndex * ROW_HEIGHT + BAR_Y_OFFSET;
+
+      const anchorRect = new DOMRect(
+        gridRect.left + barLeft, gridRect.top + barTop, barWidth, BAR_HEIGHT,
+      );
+      onDragCreate(start, end, dragState.rowIndex, anchorRect);
     } else if (!dragState.active) {
-      onEmptyClick(xToDate(dragState.startX, rangeStart), dragState.rowIndex);
+      const date = xToDate(dragState.startX, rangeStart);
+      const barLeft = dateToX(date, rangeStart);
+      const barTop = dragState.rowIndex * ROW_HEIGHT + BAR_Y_OFFSET;
+
+      const anchorRect = new DOMRect(
+        gridRect.left + barLeft, gridRect.top + barTop, DAY_WIDTH, BAR_HEIGHT,
+      );
+      onEmptyClick(date, dragState.rowIndex, anchorRect);
     }
 
     setDragState(null);

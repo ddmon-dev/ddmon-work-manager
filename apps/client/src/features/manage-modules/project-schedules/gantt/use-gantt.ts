@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo } from "react";
-import { computeTimelineRange, getTotalWidth, format } from "./utils";
+import { useMemo } from "react";
+import { computeTimelineRange, getTotalWidth } from "./utils";
 import type { ProjectScheduleDTO } from "../types";
 
 interface UseGanttParams {
@@ -7,12 +7,6 @@ interface UseGanttParams {
   contractDate?: string | null;
   deliveredDate?: string | null;
   completedDate?: string | null;
-}
-
-interface InlineCreateState {
-  active: boolean;
-  date: string; // yyyy-MM-dd
-  endDate?: string;
 }
 
 export function useGantt({ schedules, contractDate, deliveredDate, completedDate }: UseGanttParams) {
@@ -23,26 +17,5 @@ export function useGantt({ schedules, contractDate, deliveredDate, completedDate
 
   const totalWidth = useMemo(() => getTotalWidth(range.start, range.end), [range]);
 
-  // 인라인 생성 상태
-  const [inlineCreate, setInlineCreate] = useState<InlineCreateState | null>(null);
-
-  const startInlineCreate = useCallback((date: Date, endDate?: Date) => {
-    setInlineCreate({
-      active: true,
-      date: format(date, "yyyy-MM-dd"),
-      endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined,
-    });
-  }, []);
-
-  const cancelInlineCreate = useCallback(() => {
-    setInlineCreate(null);
-  }, []);
-
-  return {
-    range,
-    totalWidth,
-    inlineCreate,
-    startInlineCreate,
-    cancelInlineCreate,
-  };
+  return { range, totalWidth };
 }
