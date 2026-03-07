@@ -79,7 +79,8 @@ const LEFT_PANEL_WIDTH = 220;
 
 type OverviewRow =
   | { type: "project"; project: OverviewProject; globalRow: number }
-  | { type: "schedule"; project: OverviewProject; schedule: ProjectScheduleDTO; localIndex: number; globalRow: number };
+  | { type: "schedule"; project: OverviewProject; schedule: ProjectScheduleDTO; localIndex: number; globalRow: number }
+  | { type: "empty"; project: OverviewProject; globalRow: number };
 
 function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -89,6 +90,7 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
   const updateSchedule = useUpdateProjectSchedule();
   const reorderSchedules = useReorderProjectSchedules();
 
+  const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
   const [popover, setPopover] = useState<{ schedule: ProjectScheduleDTO; rect: DOMRect } | null>(null);
   const [createState, setCreateState] = useState<{
     projectId: string;
@@ -115,9 +117,14 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
       result.push({ type: "project", project: p, globalRow: row });
       row++;
       if (expandedProjects.has(p.id)) {
-        for (let i = 0; i < p.schedules.length; i++) {
-          result.push({ type: "schedule", project: p, schedule: p.schedules[i], localIndex: i, globalRow: row });
+        if (p.schedules.length === 0) {
+          result.push({ type: "empty", project: p, globalRow: row });
           row++;
+        } else {
+          for (let i = 0; i < p.schedules.length; i++) {
+            result.push({ type: "schedule", project: p, schedule: p.schedules[i], localIndex: i, globalRow: row });
+            row++;
+          }
         }
       }
     }
@@ -183,51 +190,47 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
     });
   };
 
+  const canDragRow = useCallback((rowIndex: number) => {
+    if (rowIndex < 0 || rowIndex >= rows.length) return false;
+    return rows[rowIndex].type !== "project";
+  }, [rows]);
+
   const handleEmptyClick = useCallback((date: Date, rowIndex: number, anchorRect: DOMRect) => {
     if (rowIndex < 0 || rowIndex >= rows.length) return;
     const row = rows[rowIndex];
 
-    // project 행: 접혀있으면 펼침만
-    if (row.type === "project" && !expandedProjects.has(row.project.id)) {
+    if (row.type === "project") {
       toggleProject(row.project.id);
       return;
     }
 
-    const targetProjectId = row.type === "project" ? row.project.id : row.project.id;
     const insertIndex = row.type === "schedule" ? row.localIndex + 1 : 0;
-
     setPopover(null);
     setCreateState({
-      projectId: targetProjectId,
+      projectId: row.project.id,
       startDate: format(date, "yyyy-MM-dd"),
       rowIndex,
       insertIndex,
       anchorRect,
     });
-  }, [rows, expandedProjects]);
+  }, [rows]);
 
   const handleDragCreate = useCallback((startDate: Date, endDate: Date, rowIndex: number, anchorRect: DOMRect) => {
     if (rowIndex < 0 || rowIndex >= rows.length) return;
     const row = rows[rowIndex];
+    if (row.type === "project") return;
 
-    if (row.type === "project" && !expandedProjects.has(row.project.id)) {
-      toggleProject(row.project.id);
-      return;
-    }
-
-    const targetProjectId = row.type === "project" ? row.project.id : row.project.id;
     const insertIndex = row.type === "schedule" ? row.localIndex + 1 : 0;
-
     setPopover(null);
     setCreateState({
-      projectId: targetProjectId,
+      projectId: row.project.id,
       startDate: format(startDate, "yyyy-MM-dd"),
       endDate: format(endDate, "yyyy-MM-dd"),
       rowIndex,
       insertIndex,
       anchorRect,
     });
-  }, [rows, expandedProjects]);
+  }, [rows]);
 
   const handleBarClick = useCallback((schedule: ProjectScheduleDTO, rect: DOMRect) => {
     setCreateState(null);
@@ -331,25 +334,38 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
               return (
                 <div
                   key={`p-${row.project.id}`}
-                  className="flex items-center gap-1 px-2 border-b border-border/30 group"
+                  className={cn(
+                    "flex items-center gap-1 px-2 border-b border-border/30 cursor-pointer hover:bg-accent/50",
+                    hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
+                  )}
                   style={{ height: ROW_HEIGHT }}
+                  onClick={() => toggleProject(row.project.id)}
                 >
-                  <button
-                    type="button"
-                    onClick={() => toggleProject(row.project.id)}
-                    className="shrink-0 size-5 flex items-center justify-center rounded hover:bg-accent cursor-pointer"
-                  >
-                    <ChevronRightIcon
-                      className={cn(
-                        "size-3.5 transition-transform",
-                        isExpanded && "rotate-90"
-                      )}
-                    />
-                  </button>
+                  <ChevronRightIcon
+                    className={cn(
+                      "size-3.5 shrink-0 transition-transform",
+                      isExpanded && "rotate-90"
+                    )}
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate">{row.project.name}</p>
                     <p className="text-[10px] text-muted-foreground truncate">{row.project.companyName}</p>
                   </div>
+                </div>
+              );
+            }
+
+            if (row.type === "empty") {
+              return (
+                <div
+                  key={`empty-${row.project.id}`}
+                  className={cn(
+                    "flex items-center pl-7 pr-2 border-b border-border/30",
+                    hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
+                  )}
+                  style={{ height: ROW_HEIGHT }}
+                >
+                  <span className="text-[10px] text-muted-foreground/50">일정 없음</span>
                 </div>
               );
             }
@@ -359,7 +375,10 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
             return (
               <div
                 key={`s-${row.schedule!.id}`}
-                className="flex items-center gap-1.5 pl-7 pr-2 border-b border-border/30"
+                className={cn(
+                  "flex items-center gap-1.5 pl-7 pr-2 border-b border-border/30",
+                  hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
+                )}
                 style={{ height: ROW_HEIGHT }}
               >
                 <span className={cn("size-2 rounded-full shrink-0", config.dot)} />
@@ -380,6 +399,7 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
             rangeStart={range.start}
             rangeEnd={range.end}
             totalWidth={totalWidth}
+            hoverCol={hoverCell?.col}
           />
           <GanttGrid
             rangeStart={range.start}
@@ -388,6 +408,8 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
             rowCount={totalRows}
             onEmptyClick={handleEmptyClick}
             onDragCreate={handleDragCreate}
+            canDragRow={canDragRow}
+            onHoverCell={setHoverCell}
           >
             {rows.map((row) => {
               if (row.type === "project") {
@@ -402,6 +424,8 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
                   />
                 );
               }
+
+              if (row.type === "empty") return null;
 
               // schedule bar
               const schedule = row.schedule!;

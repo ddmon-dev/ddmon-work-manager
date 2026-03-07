@@ -13,9 +13,10 @@ interface TimelineHeaderProps {
   rangeStart: Date;
   rangeEnd: Date;
   totalWidth: number;
+  hoverCol?: number | null;
 }
 
-export function TimelineHeader({ rangeStart, rangeEnd, totalWidth }: TimelineHeaderProps) {
+export function TimelineHeader({ rangeStart, rangeEnd, totalWidth, hoverCol }: TimelineHeaderProps) {
   const today = startOfDay(new Date());
   const months = getMonthsInRange(rangeStart, rangeEnd);
   const days = getDaysInRange(rangeStart, rangeEnd);
@@ -55,7 +56,8 @@ export function TimelineHeader({ rangeStart, rangeEnd, totalWidth }: TimelineHea
                 "flex items-center justify-center text-[10px] tabular-nums shrink-0",
                 weekend && "text-destructive",
                 isToday && "text-primary font-bold",
-                isLastOfMonth && "border-r border-border"
+                isLastOfMonth && "border-r border-border",
+                hoverCol === i && "bg-foreground/[0.04] font-semibold"
               )}
               style={{ width: DAY_WIDTH }}
             >

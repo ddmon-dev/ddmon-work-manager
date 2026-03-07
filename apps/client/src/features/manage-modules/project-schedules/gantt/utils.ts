@@ -14,7 +14,7 @@ import {
 
 // ── 상수 ──────────────────────────────────────────────────────
 
-export const DAY_WIDTH = 40;
+export const DAY_WIDTH = 36;
 export const ROW_HEIGHT = 36;
 export const HEADER_HEIGHT = 48;
 export const BAR_HEIGHT = 26;

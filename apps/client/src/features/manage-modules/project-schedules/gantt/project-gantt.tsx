@@ -55,6 +55,7 @@ export function ProjectGantt({
     completedDate,
   });
 
+  const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
   const [popover, setPopover] = useState<{ schedule: ProjectScheduleDTO; rect: DOMRect } | null>(null);
   const [createState, setCreateState] = useState<{
     startDate: string;
@@ -177,6 +178,7 @@ export function ProjectGantt({
               rangeStart={range.start}
               rangeEnd={range.end}
               totalWidth={totalWidth}
+              hoverCol={hoverCell?.col}
             />
             <GanttGrid
               rangeStart={range.start}
@@ -185,6 +187,7 @@ export function ProjectGantt({
               rowCount={rowCount}
               onEmptyClick={handleEmptyClick}
               onDragCreate={handleDragCreate}
+              onHoverCell={setHoverCell}
             >
               {items.map((schedule, i) => (
                 <GanttBar

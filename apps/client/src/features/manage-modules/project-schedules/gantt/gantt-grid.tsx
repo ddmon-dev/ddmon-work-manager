@@ -20,6 +20,8 @@ interface GanttGridProps {
   rowCount: number;
   onEmptyClick: (date: Date, rowIndex: number, anchorRect: DOMRect) => void;
   onDragCreate?: (startDate: Date, endDate: Date, rowIndex: number, anchorRect: DOMRect) => void;
+  canDragRow?: (rowIndex: number) => boolean;
+  onHoverCell?: (cell: { col: number; row: number } | null) => void;
   children: React.ReactNode;
 }
 
@@ -32,6 +34,8 @@ export function GanttGrid({
   rowCount,
   onEmptyClick,
   onDragCreate,
+  canDragRow,
+  onHoverCell,
   children,
 }: GanttGridProps) {
   const today = startOfDay(new Date());
@@ -47,6 +51,22 @@ export function GanttGrid({
     active: boolean;
   } | null>(null);
 
+  const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left + e.currentTarget.scrollLeft;
+    const y = e.clientY - rect.top;
+    const col = Math.floor(x / DAY_WIDTH);
+    const row = Math.floor(y / ROW_HEIGHT);
+    setHoverCell((prev) => {
+      if (prev?.col === col && prev?.row === row) return prev;
+      const next = { col, row };
+      onHoverCell?.(next);
+      return next;
+    });
+  };
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest("[data-gantt-bar]")) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -61,7 +81,8 @@ export function GanttGrid({
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left + e.currentTarget.scrollLeft;
     const moved = Math.abs(x - dragState.startX) > CLICK_THRESHOLD;
-    setDragState((prev) => (prev ? { ...prev, currentX: x, active: moved || prev.active } : null));
+    const canDrag = !canDragRow || canDragRow(dragState.rowIndex);
+    setDragState((prev) => (prev ? { ...prev, currentX: x, active: (moved || prev.active) && canDrag } : null));
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -100,11 +121,17 @@ export function GanttGrid({
 
   return (
     <div
-      className="relative cursor-crosshair"
-      style={{ width: totalWidth, minHeight: contentHeight }}
+      className="relative"
+      style={{
+        width: totalWidth,
+        minHeight: contentHeight,
+        cursor: hoverCell && canDragRow && !canDragRow(hoverCell.row) ? "pointer" : "crosshair",
+      }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => { setHoverCell(null); onHoverCell?.(null); }}
     >
       {/* 세로 그리드 줄 + 주말 배경 */}
       {days.map((day, i) => {
@@ -116,13 +143,36 @@ export function GanttGrid({
             key={i}
             className={cn(
               "absolute top-0 bottom-0 border-r border-border/50",
-              weekend && "bg-muted/50",
+              weekend && "bg-destructive/4",
               isLastOfMonth && "border-r-border"
             )}
             style={{ left: i * DAY_WIDTH, width: DAY_WIDTH }}
           />
         );
       })}
+
+      {/* 가로 그리드 줄 */}
+      {Array.from({ length: rowCount - 1 }, (_, i) => (
+        <div
+          key={`row-${i}`}
+          className="absolute left-0 right-0 border-b border-border/30"
+          style={{ top: (i + 1) * ROW_HEIGHT - 1 }}
+        />
+      ))}
+
+      {/* 호버 크로스헤어 */}
+      {hoverCell && !dragState?.active && (
+        <>
+          <div
+            className="absolute top-0 bottom-0 bg-foreground/[0.02] pointer-events-none z-[2]"
+            style={{ left: hoverCell.col * DAY_WIDTH, width: DAY_WIDTH }}
+          />
+          <div
+            className="absolute left-0 right-0 bg-foreground/[0.02] pointer-events-none z-[2]"
+            style={{ top: hoverCell.row * ROW_HEIGHT, height: ROW_HEIGHT }}
+          />
+        </>
+      )}
 
       {/* 오늘 표시선 */}
       {showTodayLine && (
