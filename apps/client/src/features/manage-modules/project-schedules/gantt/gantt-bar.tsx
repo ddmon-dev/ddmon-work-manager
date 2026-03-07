@@ -12,24 +12,25 @@ import {
   addDays,
   differenceInCalendarDays,
 } from "./utils";
-import { getColorConfig } from "../../schedules/constants";
-import type { ScheduleDTO } from "../../schedules/types";
+import { getCategoryConfig } from "../constants";
+import type { ProjectScheduleDTO } from "../types";
 
 interface GanttBarProps {
-  schedule: ScheduleDTO;
+  schedule: ProjectScheduleDTO;
   rowIndex: number;
   rangeStart: Date;
   totalRows: number;
   onDateChange: (id: string, newStartDate: string, newEndDate: string | null) => void;
   onRowChange: (fromIndex: number, toIndex: number) => void;
-  onBarClick: (schedule: ScheduleDTO, rect: DOMRect) => void;
+  onBarClick: (schedule: ProjectScheduleDTO, rect: DOMRect) => void;
   onDragRow?: (targetRow: number) => void;
   onDragEnd?: () => void;
+  disableReorder?: boolean;
 }
 
 type DragMode = "move" | "resize-left" | "resize-right" | null;
 
-const CLICK_THRESHOLD = 4; // 이 이하 이동은 클릭으로 판정
+const CLICK_THRESHOLD = 4;
 
 export function GanttBar({
   schedule,
@@ -41,12 +42,12 @@ export function GanttBar({
   onBarClick,
   onDragRow,
   onDragEnd,
+  disableReorder,
 }: GanttBarProps) {
   const barRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLSpanElement>(null);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const [dragMode, setDragMode] = useState<DragMode>(null);
-  // 드래그 중에는 픽셀 단위 (부드럽게), 놓을 때 스냅
   const [preview, setPreview] = useState({ left: 0, width: 0, top: 0 });
   const dragStart = useRef({ x: 0, y: 0, originalLeft: 0, originalWidth: 0, moved: false });
 
@@ -57,7 +58,7 @@ export function GanttBar({
   const left = dateToX(startDate, rangeStart);
   const width = span * DAY_WIDTH;
   const top = rowIndex * ROW_HEIGHT + BAR_Y_OFFSET;
-  const color = getColorConfig(schedule.color);
+  const color = getCategoryConfig(schedule.category);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent, mode: DragMode) => {
@@ -77,17 +78,19 @@ export function GanttBar({
       const deltaX = e.clientX - dragStart.current.x;
       const deltaY = e.clientY - dragStart.current.y;
 
-      // 움직임 감지
       if (Math.abs(deltaX) > CLICK_THRESHOLD || Math.abs(deltaY) > CLICK_THRESHOLD) {
         dragStart.current.moved = true;
       }
 
       if (dragMode === "move") {
-        // 행 클램핑
-        const targetRow = Math.max(0, Math.min(totalRows - 1, rowIndex + Math.round(deltaY / ROW_HEIGHT)));
-        const clampedRowDelta = (targetRow - rowIndex) * ROW_HEIGHT;
-        setPreview({ left: deltaX, width: 0, top: clampedRowDelta });
-        onDragRow?.(targetRow);
+        if (disableReorder) {
+          setPreview({ left: deltaX, width: 0, top: 0 });
+        } else {
+          const targetRow = Math.max(0, Math.min(totalRows - 1, rowIndex + Math.round(deltaY / ROW_HEIGHT)));
+          const clampedRowDelta = (targetRow - rowIndex) * ROW_HEIGHT;
+          setPreview({ left: deltaX, width: 0, top: clampedRowDelta });
+          onDragRow?.(targetRow);
+        }
       } else if (dragMode === "resize-left") {
         const maxShrink = dragStart.current.originalWidth - DAY_WIDTH;
         const clamped = Math.min(deltaX, maxShrink);
@@ -99,7 +102,7 @@ export function GanttBar({
         }
       }
     },
-    [dragMode, rowIndex, totalRows, onDragRow]
+    [dragMode, rowIndex, totalRows, onDragRow, disableReorder]
   );
 
   const handlePointerUp = useCallback(
@@ -109,7 +112,6 @@ export function GanttBar({
       const wasDragged = dragStart.current.moved;
 
       if (!wasDragged) {
-        // 클릭 → Popover 열기
         setDragMode(null);
         setPreview({ left: 0, width: 0, top: 0 });
         onDragEnd?.();
@@ -119,19 +121,18 @@ export function GanttBar({
         return;
       }
 
-      // 스냅 계산
       const snappedLeft = Math.round(preview.left / DAY_WIDTH) * DAY_WIDTH;
       const snappedWidth = Math.round(preview.width / DAY_WIDTH) * DAY_WIDTH;
       const snappedTop = Math.round(preview.top / ROW_HEIGHT) * ROW_HEIGHT;
 
       if (dragMode === "move") {
-        // 행 변경
-        const newRow = rowIndex + Math.round(snappedTop / ROW_HEIGHT);
-        if (newRow !== rowIndex) {
-          onRowChange(rowIndex, newRow);
+        if (!disableReorder) {
+          const newRow = rowIndex + Math.round(snappedTop / ROW_HEIGHT);
+          if (newRow !== rowIndex) {
+            onRowChange(rowIndex, newRow);
+          }
         }
 
-        // 날짜 변경
         const finalLeft = left + snappedLeft;
         const newStart = xToDate(finalLeft, rangeStart);
         const newStartStr = format(newStart, "yyyy-MM-dd");
@@ -143,7 +144,6 @@ export function GanttBar({
           onDateChange(schedule.id, newStartStr, newEndStr);
         }
       } else {
-        // 리사이즈 → 스냅 후 날짜 계산
         const finalLeft = left + snappedLeft;
         const finalWidth = width + snappedWidth;
         const newStart = xToDate(finalLeft, rangeStart);
@@ -161,7 +161,7 @@ export function GanttBar({
       onDragEnd?.();
       setPreview({ left: 0, width: 0, top: 0 });
     },
-    [dragMode, preview, left, width, rangeStart, schedule, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick, onDragEnd]
+    [dragMode, preview, left, width, rangeStart, schedule, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick, onDragEnd, disableReorder]
   );
 
   const displayLeft = left + preview.left;
@@ -195,7 +195,7 @@ export function GanttBar({
         onPointerDown={(e) => handlePointerDown(e, "resize-left")}
       />
 
-      {/* 바 본체 (드래그 이동) */}
+      {/* 바 본체 */}
       <div
         className="flex items-center gap-1.5 flex-1 min-w-0 cursor-grab active:cursor-grabbing"
         onPointerDown={(e) => handlePointerDown(e, "move")}

@@ -8,6 +8,7 @@ import { DashboardPage } from "@/pages/dashboard";
 import { ClientsPage } from "@/pages/clients";
 import { EstimatesPage } from "@/pages/estimates";
 import { ProjectsPage } from "@/pages/projects";
+import { ProjectSchedulesPage } from "@/pages/project-schedules";
 import { SchedulesPage } from "@/pages/schedules";
 import { RevenuePage } from "@/pages/revenue";
 import { AdminsPage } from "@/pages/admins";
@@ -33,6 +34,7 @@ export const router = createBrowserRouter([
               { path: "/clients", element: <ClientsPage /> },
               { path: "/estimates", element: <EstimatesPage /> },
               { path: "/projects", element: <ProjectsPage /> },
+              { path: "/project-schedules", element: <ProjectSchedulesPage /> },
               { path: "/schedules", element: <SchedulesPage /> },
               { path: "/revenue", element: <RevenuePage /> },
               { path: "/admins", element: <AdminsPage /> },

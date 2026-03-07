@@ -25,7 +25,7 @@ export function TimelineHeader({ rangeStart, rangeEnd, totalWidth }: TimelineHea
       className="sticky top-0 z-10 border-b border-border bg-background"
       style={{ width: totalWidth, height: HEADER_HEIGHT }}
     >
-      {/* 월 레이블 - flex 레이아웃으로 sticky 가능 */}
+      {/* 월 레이블 */}
       <div className="flex h-6 border-b border-border">
         {months.map((month, i) => (
           <div
@@ -45,8 +45,6 @@ export function TimelineHeader({ rangeStart, rangeEnd, totalWidth }: TimelineHea
         {days.map((day, i) => {
           const isToday = isSameDay(day, today);
           const weekend = isWeekend(day);
-          const isFirstOfMonth = day.getDate() === 1 && i > 0;
-
           const isLastOfMonth =
             i < days.length - 1 && days[i + 1].getDate() === 1;
 

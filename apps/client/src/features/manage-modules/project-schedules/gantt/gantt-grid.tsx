@@ -6,7 +6,6 @@ import {
   dateToX,
   xToDate,
   isWeekend,
-  isSameDay,
   startOfDay,
 } from "./utils";
 
@@ -34,7 +33,6 @@ export function GanttGrid({
   const contentHeight = Math.max(rowCount, 1) * ROW_HEIGHT;
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // 바 클릭이면 무시
     if ((e.target as HTMLElement).closest("[data-gantt-bar]")) return;
 
     const rect = e.currentTarget.getBoundingClientRect();

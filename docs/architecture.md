@@ -12,7 +12,7 @@ src/
 ├── pages/              # 라우팅 페이지 (컴포넌트만 배치, 로직 최소화)
 ├── layouts/            # 레이아웃 (RootLayout, AuthLayout, ProtectedLayout)
 ├── features/           # 기능 모듈
-│   ├── manage-modules/ # CRUD 시스템 (_base + 5개 모듈)
+│   ├── manage-modules/ # CRUD 시스템 (_base + 5개 모듈 + project-schedules)
 │   ├── auth/           # 인증
 │   ├── dashboard/      # 대시보드
 │   ├── revenue/        # 매출 현황
@@ -41,8 +41,9 @@ RootLayout (Toaster, ThemeContext)
     ├── /              → DashboardPage
     ├── /clients       → ClientsPage
     ├── /estimates     → EstimatesPage
-    ├── /projects      → ProjectsPage
-    ├── /schedules     → SchedulesPage
+    ├── /projects            → ProjectsPage
+    ├── /project-schedules   → ProjectSchedulesPage
+    ├── /schedules           → SchedulesPage
     ├── /revenue       → RevenuePage
     ├── /admins        → AdminsPage
     ├── /unauthorized  → UnauthorizedPage
@@ -55,26 +56,32 @@ ProtectedLayout 자식에 별도 `errorElement` 배치 — 에러 시에도 사�
 
 `_base/` 인프라 + 5개 모듈 (clients, estimates, projects, schedules, admins).
 
-#### 프로젝트 간트 차트 (`projects/gantt-chart/`)
+#### 프로젝트 일정 모듈 (`project-schedules/`)
 
-프로젝트 상세 페이지의 일정 섹션. 타임라인/간트 차트 뷰로 일정을 시각화하고 인라인 편집.
+프로젝트별 태스크 관리. 독립 `project_schedules` 테이블 사용 (기존 schedules와 분리).
+
+카테고리 기반 태스크: 기획/디자인/개발/수정/납품 5개 카테고리 → 색상 자동 배정.
 
 ```
-gantt-chart/
-├── index.tsx              # 메인 컴포넌트 (데이터 조회 + 조합)
-├── timeline-header.tsx    # 날짜 축 (월/일 레이블, 월 sticky)
-├── gantt-grid.tsx         # 배경 그리드 (날짜 세로줄, 주말 배경, 오늘선)
-├── gantt-bar.tsx          # 개별 바 (드래그 이동 + 좌우 리사이즈 + 행 순서 변경)
-├── bar-popover.tsx        # 바 클릭 팝오버 (제목 편집, 색상 변경, 삭제)
-├── inline-create-row.tsx  # 빈 영역 클릭 시 인라인 제목 입력
-├── use-gantt.ts           # 범위 계산, 인라인 생성 상태 관리
-└── utils.ts               # dateToX, xToDate, computeTimelineRange 등
+project-schedules/
+├── config.ts, types.ts, api.ts, constants.ts
+├── index.tsx              # 모듈 엔트리 (오버뷰 렌더링)
+└── gantt/
+    ├── project-gantt.tsx      # 단일 프로젝트 간트 (프로젝트 상세용)
+    ├── overview.tsx           # 멀티 프로젝트 오버뷰 (진행중/완료 탭)
+    ├── timeline-header.tsx    # 날짜 축 (월/일 레이블, 월 sticky)
+    ├── gantt-grid.tsx         # 배경 그리드 (날짜 세로줄, 주말 배경, 오늘선)
+    ├── gantt-bar.tsx          # 개별 바 (드래그 이동 + 좌우 리사이즈)
+    ├── bar-popover.tsx        # 바 클릭 팝오버 (제목 편집, 카테고리 변경, 삭제)
+    ├── inline-create-row.tsx  # 빈 영역 클릭 시 카테고리 선택 + 제목 입력
+    ├── use-gantt.ts           # 범위 계산, 인라인 생성 상태 관리
+    └── utils.ts               # dateToX, xToDate, computeTimelineRange 등
 ```
 
 - DAY_WIDTH=40px, ROW_HEIGHT=36px, absolute 포지셔닝 기반
 - Pointer Events API로 드래그 (픽셀 단위 이동, 놓을 때 스냅)
 - 클릭 vs 드래그 판별 (4px threshold)
-- `useScheduleList`, `useUpdateSchedule`, `useReorderSchedules` 재사용
+- 오버뷰: 프로젝트별 접기/펼치기, 접힌 상태에서 요약 바 표시
 
 #### 모듈 파일 구성
 
@@ -206,7 +213,7 @@ src/
 ├── middleware/auth.ts     # requireAuth, requireSuperAdmin
 ├── routes/               # API 라우트 (모듈별 1파일)
 │   ├── index.ts          # 라우트 조합
-│   ├── clients.ts, estimates.ts, projects.ts, schedules.ts
+│   ├── clients.ts, estimates.ts, projects.ts, project-schedules.ts, schedules.ts
 │   ├── todos.ts, mindnotes.ts, admins.ts, dashboard.ts, revenue.ts
 │   └── business-info.ts
 ├── lib/                  # 유틸리티
@@ -241,7 +248,7 @@ src/
 
 모듈별 Zod 스키마. 클라이언트 폼 검증과 서버 입력 검증에 동시 사용.
 
-파일: `admins.ts`, `clients.ts`, `estimates.ts`, `mindnotes.ts`, `projects.ts`, `schedules.ts`, `todos.ts`
+파일: `admins.ts`, `clients.ts`, `estimates.ts`, `mindnotes.ts`, `projects.ts`, `project-schedules.ts`, `schedules.ts`, `todos.ts`
 
 ### types (`@packages/types`)
 

@@ -59,6 +59,38 @@ export function computeTimelineRange({
   };
 }
 
+// ── 오버뷰용 범위 계산 ───────────────────────────────────────
+
+interface OverviewProject {
+  contractDate: string;
+  deliveredDate: string | null;
+  completedDate: string | null;
+  schedules: { startDate: string; endDate: string | null }[];
+}
+
+export function computeOverviewRange(projects: OverviewProject[]): { start: Date; end: Date } {
+  const dates: Date[] = [startOfDay(new Date())];
+
+  for (const p of projects) {
+    dates.push(parseISO(p.contractDate));
+    if (p.deliveredDate) dates.push(parseISO(p.deliveredDate));
+    if (p.completedDate) dates.push(parseISO(p.completedDate));
+    for (const s of p.schedules) {
+      dates.push(parseISO(s.startDate));
+      if (s.endDate) dates.push(parseISO(s.endDate));
+    }
+  }
+
+  const timestamps = dates.map((d) => d.getTime());
+  const min = new Date(Math.min(...timestamps));
+  const max = new Date(Math.max(...timestamps));
+
+  return {
+    start: subDays(startOfDay(min), 7),
+    end: addDays(startOfDay(max), 14),
+  };
+}
+
 // ── 좌표 변환 ─────────────────────────────────────────────────
 
 export function dateToX(date: Date, rangeStart: Date): number {

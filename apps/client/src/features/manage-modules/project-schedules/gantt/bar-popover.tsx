@@ -3,14 +3,15 @@ import { Trash2Icon } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { Button } from "@/shared/ui/button";
 import { useDialog } from "@/shared/ui/app-dialog";
-import { SCHEDULE_COLORS } from "../../schedules/constants";
-import { useUpdateSchedule, useDeleteSchedule } from "../../schedules/api";
-import type { ScheduleDTO } from "../../schedules/types";
+import { TASK_CATEGORIES } from "@packages/schemas";
+import { TASK_CATEGORY_CONFIG, getCategoryConfig } from "../constants";
+import { useUpdateProjectSchedule, useDeleteProjectSchedule } from "../api";
+import type { ProjectScheduleDTO } from "../types";
 
 const POPOVER_WIDTH = 280;
 
 interface BarPopoverProps {
-  schedule: ScheduleDTO;
+  schedule: ProjectScheduleDTO;
   anchorRect: DOMRect;
   containerRef: React.RefObject<HTMLDivElement | null>;
   onClose: () => void;
@@ -18,44 +19,47 @@ interface BarPopoverProps {
 
 export function BarPopover({ schedule, anchorRect, containerRef, onClose }: BarPopoverProps) {
   const [title, setTitle] = useState(schedule.title);
+  const [category, setCategory] = useState(schedule.category);
   const inputRef = useRef<HTMLInputElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  const updateSchedule = useUpdateSchedule();
-  const deleteSchedule = useDeleteSchedule();
+  const updateSchedule = useUpdateProjectSchedule();
+  const deleteSchedule = useDeleteProjectSchedule();
   const dialog = useDialog();
 
-  // 포커스
   useEffect(() => {
     inputRef.current?.select();
   }, []);
 
-  // 외부 클릭 닫기
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
         handleSave();
       }
     };
-    // 한 틱 뒤에 등록 (클릭 이벤트 버블링 방지)
     const timer = setTimeout(() => document.addEventListener("mousedown", handleClickOutside), 0);
     return () => {
       clearTimeout(timer);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [title, schedule]);
+  }, [title, category, schedule]);
 
   const handleSave = () => {
     const trimmed = title.trim();
-    if (trimmed && trimmed !== schedule.title) {
-      updateSchedule.mutate({ id: schedule.id, data: { title: trimmed } });
+    const changes: Record<string, string> = {};
+    if (trimmed && trimmed !== schedule.title) changes.title = trimmed;
+    if (category !== schedule.category) changes.category = category;
+
+    if (Object.keys(changes).length > 0) {
+      updateSchedule.mutate({ id: schedule.id, data: changes });
     }
     onClose();
   };
 
-  const handleColorChange = (colorKey: string) => {
-    if (colorKey !== schedule.color) {
-      updateSchedule.mutate({ id: schedule.id, data: { color: colorKey } });
+  const handleCategoryChange = (cat: typeof category) => {
+    setCategory(cat);
+    if (cat !== schedule.category) {
+      updateSchedule.mutate({ id: schedule.id, data: { category: cat } });
     }
   };
 
@@ -81,7 +85,6 @@ export function BarPopover({ schedule, anchorRect, containerRef, onClose }: BarP
     }
   };
 
-  // 위치 계산: 바 아래, 컨테이너 좌우 경계 내
   const containerRect = containerRef.current?.getBoundingClientRect();
   const minLeft = containerRect?.left ?? 0;
   const maxRight = containerRect?.right ?? window.innerWidth;
@@ -105,21 +108,27 @@ export function BarPopover({ schedule, anchorRect, containerRef, onClose }: BarP
           className="w-full text-sm px-2 py-1.5 rounded-md border border-border bg-background outline-none focus:ring-1 focus:ring-primary/30"
         />
 
-        {/* 색상 선택 */}
+        {/* 카테고리 선택 */}
         <div className="flex flex-wrap gap-1.5">
-          {SCHEDULE_COLORS.map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              className={cn(
-                "size-5 rounded-full transition-transform cursor-pointer",
-                c.dot,
-                schedule.color === c.key && "ring-2 ring-offset-2 ring-offset-popover ring-primary scale-110"
-              )}
-              onClick={() => handleColorChange(c.key)}
-              title={c.label}
-            />
-          ))}
+          {TASK_CATEGORIES.map((cat) => {
+            const config = getCategoryConfig(cat);
+            return (
+              <button
+                key={cat}
+                type="button"
+                className={cn(
+                  "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-colors cursor-pointer",
+                  category === cat
+                    ? "bg-accent ring-1 ring-primary/30 font-medium"
+                    : "hover:bg-accent/50"
+                )}
+                onClick={() => handleCategoryChange(cat)}
+              >
+                <span className={cn("size-2.5 rounded-full shrink-0", config.dot)} />
+                {config.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* 삭제 */}

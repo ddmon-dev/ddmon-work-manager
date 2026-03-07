@@ -1,15 +1,15 @@
 import { useRef, useEffect, useCallback, useState } from "react";
-
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { DetailSectionTitle } from "../../_base/ui";
+import type { TaskCategory } from "@packages/schemas";
 import {
-  useScheduleList,
-  useCreateSchedule,
-  useUpdateSchedule,
-  useReorderSchedules,
-} from "../../schedules/api";
-import type { ScheduleDTO } from "../../schedules/types";
+  useProjectScheduleList,
+  useCreateProjectSchedule,
+  useUpdateProjectSchedule,
+  useReorderProjectSchedules,
+} from "../api";
+import type { ProjectScheduleDTO } from "../types";
 import { useGantt } from "./use-gantt";
 import { TimelineHeader } from "./timeline-header";
 import { GanttGrid } from "./gantt-grid";
@@ -18,7 +18,7 @@ import { BarPopover } from "./bar-popover";
 import { InlineCreateRow } from "./inline-create-row";
 import { dateToX, startOfDay } from "./utils";
 
-interface GanttChartProps {
+interface ProjectGanttProps {
   projectId: string;
   clientId: string;
   contractDate?: string | null;
@@ -26,20 +26,20 @@ interface GanttChartProps {
   completedDate?: string | null;
 }
 
-export function GanttChart({
+export function ProjectGantt({
   projectId,
   clientId,
   contractDate,
   deliveredDate,
   completedDate,
-}: GanttChartProps) {
+}: ProjectGanttProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { data } = useScheduleList({ projectId, pageSize: 50 });
+  const { data } = useProjectScheduleList(projectId);
   const items = data?.items ?? [];
 
-  const createSchedule = useCreateSchedule();
-  const updateSchedule = useUpdateSchedule();
-  const reorderSchedules = useReorderSchedules();
+  const createSchedule = useCreateProjectSchedule();
+  const updateSchedule = useUpdateProjectSchedule();
+  const reorderSchedules = useReorderProjectSchedules();
 
   const {
     range,
@@ -54,10 +54,7 @@ export function GanttChart({
     completedDate,
   });
 
-  // Popover 상태
-  const [popover, setPopover] = useState<{ schedule: ScheduleDTO; rect: DOMRect } | null>(null);
-
-  // 드래그 중 실시간 순서 프리뷰
+  const [popover, setPopover] = useState<{ schedule: ProjectScheduleDTO; rect: DOMRect } | null>(null);
   const [dragReorder, setDragReorder] = useState<{ fromIndex: number; toIndex: number } | null>(null);
 
   const getVisualIndex = useCallback(
@@ -74,7 +71,6 @@ export function GanttChart({
     [dragReorder]
   );
 
-  // 초기 스크롤: 오늘이 보이도록 (마운트 시 1회)
   const didScroll = useRef(false);
   useEffect(() => {
     if (didScroll.current || !scrollRef.current) return;
@@ -89,14 +85,12 @@ export function GanttChart({
     startInlineCreate(date);
   };
 
-  const handleInlineSubmit = (title: string, startDate: string) => {
+  const handleInlineSubmit = (title: string, startDate: string, category: TaskCategory) => {
     createSchedule.mutate({
       title,
       startDate,
       projectId,
-      clientId,
-      color: "default",
-      recurrenceType: "none",
+      category,
       sortOrder: items.length,
     });
   };
@@ -122,7 +116,7 @@ export function GanttChart({
     [items, reorderSchedules]
   );
 
-  const handleBarClick = useCallback((schedule: ScheduleDTO, rect: DOMRect) => {
+  const handleBarClick = useCallback((schedule: ProjectScheduleDTO, rect: DOMRect) => {
     setPopover({ schedule, rect });
   }, []);
 

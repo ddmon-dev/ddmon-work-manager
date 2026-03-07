@@ -29,6 +29,12 @@ export const queryKeys = {
     detail: (id: string) => ["todos", "detail", id] as const,
     byDate: (date: string) => ["todos", "by-date", date] as const,
   },
+  projectSchedules: {
+    all: ["project-schedules"] as const,
+    list: (params: Params) => ["project-schedules", "list", params] as const,
+    detail: (id: string) => ["project-schedules", "detail", id] as const,
+    overview: (status: string) => ["project-schedules", "overview", status] as const,
+  },
   admins: {
     all: ["admins"] as const,
     list: (params: Params) => ["admins", "list", params] as const,

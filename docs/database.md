@@ -30,6 +30,7 @@ Admins = Better Auth user 테이블 (별도 admins 테이블 없음).
 | `projects` | 프로젝트 | uuid | 소프트 |
 | `project_payments` | 입금 내역 | uuid | 소프트 |
 | `project_memos` | 프로젝트 메모 | uuid | 소프트 |
+| `project_schedules` | 프로젝트 일정 (카테고리 기반 태스크) | uuid | **하드** |
 | `schedules` | 일정 (sortOrder로 프로젝트 내 수동 정렬) | uuid | **하드** |
 | `todos` | 투두 | uuid | **하드** |
 | `todo_time_blocks` | 타임블록 (30분 단위) | uuid | **하드** |
@@ -50,6 +51,7 @@ estimate_series ─── estimates (1:N)
 
 projects ─────┬── project_payments (1:N, CASCADE)
               ├── project_memos (1:N, CASCADE)
+              ├── project_schedules (1:N, CASCADE)
               └── schedules (1:N, SET NULL)
 
 user ─────┬── todos (1:N, CASCADE)
@@ -96,7 +98,7 @@ user ─────┬── todos (1:N, CASCADE)
 
 ### 하드 삭제
 
-대상: schedules, todos, todo_time_blocks, mindnotes
+대상: project_schedules, schedules, todos, todo_time_blocks, mindnotes
 
 - schedules: 마이그레이션 스쿼시 시 deleted 컬럼 제거
 - todos/todo_time_blocks: 사용자 소유 데이터, 복원 불필요
@@ -120,6 +122,12 @@ user ─────┬── todos (1:N, CASCADE)
 - `contract_amount`: 공급가액 (`numeric(15,2)`). 견적서와 독립
 - `tax_type`: nullable. 신규 기본값 `"vat"`, 기존 withholding 유지
 - `estimate_number`: nullable. 견적서 없이도 프로젝트 생성 가능
+
+### 프로젝트 일정 (project_schedules)
+
+- `project_id`: NOT NULL FK → projects(id) ON DELETE CASCADE
+- `category`: `"planning"` | `"design"` | `"development"` | `"revision"` | `"delivery"` — 태스크 카테고리 (색상은 클라이언트 상수에서 결정)
+- `sort_order`: integer — 간트 차트 내 수동 정렬 순서 (기본 0)
 
 ### 일정 (schedules)
 

@@ -19,7 +19,15 @@ export const navigationConfig: MenuConfig = {
       items: [
         { title: "클라이언트 관리", url: "/clients", icon: Briefcase },
         { title: "견적서 관리", url: "/estimates", icon: FileSpreadsheet },
-        { title: "프로젝트 관리", url: "/projects", icon: FolderKanban },
+        {
+          title: "프로젝트 관리",
+          url: "/projects",
+          icon: FolderKanban,
+          items: [
+            { title: "프로젝트 관리", url: "/projects" },
+            { title: "프로젝트 일정", url: "/project-schedules" },
+          ],
+        },
         { title: "일정 관리", url: "/schedules", icon: CalendarDays },
         { title: "매출/수금 통계", url: "/revenue", icon: BarChart3 },
       ],

@@ -1,9 +1,9 @@
 import { useState, useCallback, useMemo } from "react";
 import { computeTimelineRange, getTotalWidth, format } from "./utils";
-import type { ScheduleDTO } from "../../schedules/types";
+import type { ProjectScheduleDTO } from "../types";
 
 interface UseGanttParams {
-  schedules: ScheduleDTO[];
+  schedules: ProjectScheduleDTO[];
   contractDate?: string | null;
   deliveredDate?: string | null;
   completedDate?: string | null;
@@ -12,12 +12,6 @@ interface UseGanttParams {
 interface InlineCreateState {
   active: boolean;
   date: string; // yyyy-MM-dd
-}
-
-interface DragState {
-  scheduleId: string;
-  startDate: string;
-  endDate: string | null;
 }
 
 export function useGantt({ schedules, contractDate, deliveredDate, completedDate }: UseGanttParams) {
@@ -39,16 +33,11 @@ export function useGantt({ schedules, contractDate, deliveredDate, completedDate
     setInlineCreate(null);
   }, []);
 
-  // 드래그 프리뷰 상태
-  const [dragPreview, setDragPreview] = useState<DragState | null>(null);
-
   return {
     range,
     totalWidth,
     inlineCreate,
     startInlineCreate,
     cancelInlineCreate,
-    dragPreview,
-    setDragPreview,
   };
 }

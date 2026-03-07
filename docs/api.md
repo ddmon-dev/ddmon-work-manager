@@ -118,6 +118,20 @@ requireAuth → requireSuperAdmin (선택적)
 | PATCH | `/projects/memos/:id` | 메모 수정 |
 | DELETE | `/projects/memos/:id` | 메모 소프트 삭제 |
 
+### Project Schedules (`/api/project-schedules`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/project-schedules` | 목록 (`?projectId=`, sortOrder 정렬, 비페이지네이션) |
+| POST | `/project-schedules` | 생성 |
+| GET | `/project-schedules/:id` | 상세 |
+| PATCH | `/project-schedules/:id` | 수정 |
+| DELETE | `/project-schedules/:id` | **하드 삭제** |
+| PUT | `/project-schedules/reorder` | 순서 변경 (`{ items: [{ id, sortOrder }] }`) |
+| GET | `/project-schedules/overview` | 멀티 프로젝트 오버뷰 (`?status=active\|completed`) |
+
+카테고리: `planning` (기획), `design` (디자인), `development` (개발), `revision` (수정), `delivery` (납품)
+
 ### Schedules (`/api/schedules`)
 
 | Method | Path | 설명 |

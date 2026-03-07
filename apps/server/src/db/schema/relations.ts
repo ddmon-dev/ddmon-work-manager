@@ -7,6 +7,7 @@ import {
   estimateItems,
 } from "./estimates";
 import { projects, projectPayments, projectMemos } from "./projects";
+import { projectSchedules } from "./project-schedules";
 import { schedules } from "./schedules";
 import { todos, todoTimeBlocks } from "./todos";
 import { mindnotes } from "./mindnotes";
@@ -82,6 +83,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   payments: many(projectPayments),
   memos: many(projectMemos),
   schedules: many(schedules),
+  projectSchedules: many(projectSchedules),
 }));
 
 export const projectPaymentsRelations = relations(
@@ -124,5 +126,12 @@ export const todoTimeBlocksRelations = relations(todoTimeBlocks, ({ one }) => ({
 }));
 
 export const mindnotesRelations = relations(mindnotes, () => ({}));
+
+export const projectSchedulesRelations = relations(projectSchedules, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectSchedules.projectId],
+    references: [projects.id],
+  }),
+}));
 
 export const memosRelations = relations(memos, () => ({}));

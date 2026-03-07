@@ -51,7 +51,7 @@ import {
 } from "../estimates/api";
 import { EstimatePdfPreview } from "../estimates/pdf/estimate-pdf-preview";
 import type { EstimateWithDetails } from "../estimates/types";
-import { GanttChart } from "./gantt-chart";
+import { ProjectGantt } from "../project-schedules/gantt/project-gantt";
 import { StatusBadge } from "./status-badge";
 import { WorkPhaseIndicator } from "./work-phase-indicator";
 import type { ProjectWithDetails, PaymentDTO } from "./types";
@@ -672,7 +672,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
             </SheetContainer>
           )}
           <SheetContainer>
-            <GanttChart
+            <ProjectGantt
               projectId={data.id}
               clientId={data.clientId}
               contractDate={data.contractDate}
