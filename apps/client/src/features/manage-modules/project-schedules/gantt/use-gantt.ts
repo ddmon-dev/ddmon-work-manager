@@ -12,6 +12,7 @@ interface UseGanttParams {
 interface InlineCreateState {
   active: boolean;
   date: string; // yyyy-MM-dd
+  endDate?: string;
 }
 
 export function useGantt({ schedules, contractDate, deliveredDate, completedDate }: UseGanttParams) {
@@ -25,8 +26,12 @@ export function useGantt({ schedules, contractDate, deliveredDate, completedDate
   // 인라인 생성 상태
   const [inlineCreate, setInlineCreate] = useState<InlineCreateState | null>(null);
 
-  const startInlineCreate = useCallback((date: Date) => {
-    setInlineCreate({ active: true, date: format(date, "yyyy-MM-dd") });
+  const startInlineCreate = useCallback((date: Date, endDate?: Date) => {
+    setInlineCreate({
+      active: true,
+      date: format(date, "yyyy-MM-dd"),
+      endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined,
+    });
   }, []);
 
   const cancelInlineCreate = useCallback(() => {

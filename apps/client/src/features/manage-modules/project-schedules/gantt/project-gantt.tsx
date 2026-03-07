@@ -16,7 +16,7 @@ import { GanttGrid } from "./gantt-grid";
 import { GanttBar } from "./gantt-bar";
 import { BarPopover } from "./bar-popover";
 import { InlineCreateRow } from "./inline-create-row";
-import { dateToX, startOfDay } from "./utils";
+import { dateToX, startOfDay, parseISO, ROW_HEIGHT } from "./utils";
 
 interface ProjectGanttProps {
   projectId: string;
@@ -80,15 +80,32 @@ export function ProjectGantt({
     scrollRef.current.scrollLeft = Math.max(0, todayX - containerWidth / 3);
   }, [range.start]);
 
-  const handleEmptyClick = (date: Date) => {
+  // 인라인 생성 시 자동 스크롤
+  useEffect(() => {
+    if (!inlineCreate || !scrollRef.current) return;
+    const targetX = dateToX(parseISO(inlineCreate.date), range.start);
+    const el = scrollRef.current;
+    const viewLeft = el.scrollLeft;
+    const viewRight = viewLeft + el.clientWidth;
+    if (targetX >= viewLeft + 40 && targetX <= viewRight - 200) return;
+    el.scrollTo({ left: Math.max(0, targetX - el.clientWidth / 3), behavior: "smooth" });
+  }, [inlineCreate, range.start]);
+
+  const handleEmptyClick = (date: Date, _rowIndex: number) => {
     setPopover(null);
     startInlineCreate(date);
+  };
+
+  const handleDragCreate = (startDate: Date, endDate: Date, _rowIndex: number) => {
+    setPopover(null);
+    startInlineCreate(startDate, endDate);
   };
 
   const handleInlineSubmit = (title: string, startDate: string, category: TaskCategory) => {
     createSchedule.mutate({
       title,
       startDate,
+      endDate: inlineCreate?.endDate,
       projectId,
       category,
       sortOrder: items.length,
@@ -124,7 +141,9 @@ export function ProjectGantt({
     startInlineCreate(new Date());
   };
 
-  const rowCount = items.length + (inlineCreate ? 1 : 0);
+  // items + (add-schedule 또는 inline-create) 행
+  const hasAddRow = !inlineCreate;
+  const rowCount = items.length + (inlineCreate ? 1 : hasAddRow ? 1 : 0);
 
   return (
     <div>
@@ -144,48 +163,66 @@ export function ProjectGantt({
           클릭하여 일정을 추가하세요
         </button>
       ) : (
-        <div
-          ref={scrollRef}
-          className="overflow-x-auto hide-scrollbar rounded-lg border border-border"
-        >
-          <div style={{ width: totalWidth }}>
-            <TimelineHeader
-              rangeStart={range.start}
-              rangeEnd={range.end}
-              totalWidth={totalWidth}
-            />
-            <GanttGrid
-              rangeStart={range.start}
-              rangeEnd={range.end}
-              totalWidth={totalWidth}
-              rowCount={rowCount}
-              onEmptyClick={handleEmptyClick}
-            >
-              {items.map((schedule, i) => (
-                <GanttBar
-                  key={schedule.id}
-                  schedule={schedule}
-                  rowIndex={getVisualIndex(i)}
-                  rangeStart={range.start}
-                  totalRows={items.length}
-                  onDateChange={handleDateChange}
-                  onRowChange={handleRowChange}
-                  onBarClick={handleBarClick}
-                  onDragRow={(toIndex) => setDragReorder({ fromIndex: i, toIndex })}
-                  onDragEnd={() => setDragReorder(null)}
-                />
-              ))}
+        <div className="rounded-lg border border-border overflow-hidden">
+          {/* 좌측 일정 목록 + 간트 레이아웃은 단일 컬럼이므로 add-schedule 행은 간트 아래 */}
+          <div
+            ref={scrollRef}
+            className="overflow-x-auto hide-scrollbar"
+          >
+            <div style={{ width: totalWidth }}>
+              <TimelineHeader
+                rangeStart={range.start}
+                rangeEnd={range.end}
+                totalWidth={totalWidth}
+              />
+              <GanttGrid
+                rangeStart={range.start}
+                rangeEnd={range.end}
+                totalWidth={totalWidth}
+                rowCount={rowCount}
+                onEmptyClick={handleEmptyClick}
+                onDragCreate={handleDragCreate}
+              >
+                {items.map((schedule, i) => (
+                  <GanttBar
+                    key={schedule.id}
+                    schedule={schedule}
+                    rowIndex={getVisualIndex(i)}
+                    rangeStart={range.start}
+                    totalRows={items.length}
+                    onDateChange={handleDateChange}
+                    onRowChange={handleRowChange}
+                    onBarClick={handleBarClick}
+                    onDragRow={(toIndex) => setDragReorder({ fromIndex: i, toIndex })}
+                    onDragEnd={() => setDragReorder(null)}
+                  />
+                ))}
 
-              {inlineCreate && (
-                <InlineCreateRow
-                  dateStr={inlineCreate.date}
-                  rowIndex={items.length}
-                  rangeStart={range.start}
-                  onSubmit={handleInlineSubmit}
-                  onCancel={cancelInlineCreate}
-                />
-              )}
-            </GanttGrid>
+                {inlineCreate ? (
+                  <InlineCreateRow
+                    dateStr={inlineCreate.date}
+                    rowIndex={items.length}
+                    rangeStart={range.start}
+                    onSubmit={handleInlineSubmit}
+                    onCancel={cancelInlineCreate}
+                  />
+                ) : (
+                  <div
+                    className="absolute left-0 right-0"
+                    style={{ top: items.length * ROW_HEIGHT, height: ROW_HEIGHT }}
+                  >
+                    <button
+                      type="button"
+                      onClick={handleAddClick}
+                      className="flex items-center gap-1 h-full pl-3 text-xs text-muted-foreground/60 hover:text-muted-foreground cursor-pointer"
+                    >
+                      <PlusIcon className="size-3" />
+                      새 일정
+                    </button>
+                  </div>
+                )}
+              </GanttGrid>
+            </div>
           </div>
         </div>
       )}

@@ -3,6 +3,7 @@ import { ChevronRightIcon, PlusIcon } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { Button } from "@/shared/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { TASK_CATEGORIES } from "@packages/schemas";
 import type { TaskCategory } from "@packages/schemas";
 import {
   useProjectScheduleOverview,
@@ -10,7 +11,7 @@ import {
   useUpdateProjectSchedule,
   useReorderProjectSchedules,
 } from "../api";
-import { getCategoryConfig } from "../constants";
+import { TASK_CATEGORY_CONFIG, getCategoryConfig } from "../constants";
 import type { ProjectScheduleDTO, OverviewProject } from "../types";
 import {
   computeOverviewRange,
@@ -19,6 +20,7 @@ import {
   startOfDay,
   parseISO,
   differenceInCalendarDays,
+  format,
   DAY_WIDTH,
   ROW_HEIGHT,
   BAR_HEIGHT,
@@ -38,13 +40,28 @@ export function ProjectScheduleOverview() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold tracking-tight">프로젝트 일정</h1>
-        <Tabs value={status} onValueChange={setStatus}>
-          <TabsList>
-            <TabsTrigger value="active">진행중</TabsTrigger>
-            <TabsTrigger value="completed">완료</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-semibold tracking-tight">프로젝트 일정</h1>
+          <Tabs value={status} onValueChange={setStatus}>
+            <TabsList>
+              <TabsTrigger value="active">진행중</TabsTrigger>
+              <TabsTrigger value="completed">완료</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* 카테고리 범례 */}
+        <div className="flex items-center gap-3">
+          {TASK_CATEGORIES.map((cat) => {
+            const config = TASK_CATEGORY_CONFIG[cat];
+            return (
+              <div key={cat} className="flex items-center gap-1.5">
+                <span className={cn("size-2.5 rounded-full", config.dot)} />
+                <span className="text-xs text-muted-foreground">{config.label}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {projects.length === 0 ? (
@@ -62,6 +79,11 @@ export function ProjectScheduleOverview() {
 
 const LEFT_PANEL_WIDTH = 220;
 
+type OverviewRow =
+  | { type: "project"; project: OverviewProject; globalRow: number }
+  | { type: "schedule"; project: OverviewProject; schedule: ProjectScheduleDTO; localIndex: number; globalRow: number }
+  | { type: "add-schedule"; projectId: string; globalRow: number };
+
 function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
@@ -71,33 +93,75 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
   const reorderSchedules = useReorderProjectSchedules();
 
   const [popover, setPopover] = useState<{ schedule: ProjectScheduleDTO; rect: DOMRect } | null>(null);
-  const [inlineCreate, setInlineCreate] = useState<{ projectId: string; date: string } | null>(null);
+  const [inlineCreate, setInlineCreate] = useState<{ projectId: string; date: string; endDate?: string } | null>(null);
+  const [dragReorder, setDragReorder] = useState<{
+    projectId: string;
+    fromLocal: number;
+    toLocal: number;
+  } | null>(null);
 
   const range = useMemo(() => computeOverviewRange(projects), [projects]);
   const totalWidth = useMemo(() => getTotalWidth(range.start, range.end), [range]);
 
   // 행 구조 계산
   const rows = useMemo(() => {
-    const result: { type: "project" | "schedule"; project: OverviewProject; schedule?: ProjectScheduleDTO; globalRow: number }[] = [];
+    const result: OverviewRow[] = [];
     let row = 0;
     for (const p of projects) {
       result.push({ type: "project", project: p, globalRow: row });
       row++;
       if (expandedProjects.has(p.id)) {
-        for (const s of p.schedules) {
-          result.push({ type: "schedule", project: p, schedule: s, globalRow: row });
+        for (let i = 0; i < p.schedules.length; i++) {
+          result.push({ type: "schedule", project: p, schedule: p.schedules[i], localIndex: i, globalRow: row });
           row++;
         }
-        // 인라인 생성 행
-        if (inlineCreate?.projectId === p.id) {
-          row++;
-        }
+        // add-schedule 행은 항상 유지 (인라인 생성 시 같은 행에서 폼으로 변환)
+        result.push({ type: "add-schedule", projectId: p.id, globalRow: row });
+        row++;
       }
     }
     return result;
   }, [projects, expandedProjects, inlineCreate]);
 
-  const totalRows = rows.length + (inlineCreate ? 1 : 0);
+  const totalRows = rows.length;
+
+  // 프로젝트별 일정 행 범위 계산
+  const projectScheduleRange = useMemo(() => {
+    const rangeMap = new Map<string, { startRow: number; count: number }>();
+    for (const row of rows) {
+      if (row.type !== "schedule") continue;
+      const existing = rangeMap.get(row.project.id);
+      if (!existing) {
+        rangeMap.set(row.project.id, { startRow: row.globalRow, count: 1 });
+      } else {
+        existing.count++;
+      }
+    }
+    return rangeMap;
+  }, [rows]);
+
+  // 리오더 시 시각적 행 위치 계산
+  const getVisualRow = useCallback(
+    (projectId: string, localIndex: number, globalRow: number): number => {
+      if (!dragReorder || dragReorder.projectId !== projectId) return globalRow;
+
+      const range = projectScheduleRange.get(projectId);
+      if (!range) return globalRow;
+
+      const { fromLocal, toLocal } = dragReorder;
+      if (localIndex === fromLocal) return globalRow; // 드래그 중인 항목은 preview.top이 처리
+
+      let visualLocal = localIndex;
+      if (fromLocal < toLocal) {
+        if (localIndex > fromLocal && localIndex <= toLocal) visualLocal = localIndex - 1;
+      } else {
+        if (localIndex >= toLocal && localIndex < fromLocal) visualLocal = localIndex + 1;
+      }
+
+      return range.startRow + visualLocal;
+    },
+    [dragReorder, projectScheduleRange]
+  );
 
   // 초기 스크롤
   const didScroll = useRef(false);
@@ -109,6 +173,17 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
     scrollRef.current.scrollLeft = Math.max(0, todayX - containerWidth / 3);
   }, [range.start]);
 
+  // 인라인 생성 시 자동 스크롤
+  useEffect(() => {
+    if (!inlineCreate || !scrollRef.current) return;
+    const targetX = dateToX(parseISO(inlineCreate.date), range.start);
+    const el = scrollRef.current;
+    const viewLeft = el.scrollLeft;
+    const viewRight = viewLeft + el.clientWidth;
+    if (targetX >= viewLeft + 40 && targetX <= viewRight - 200) return;
+    el.scrollTo({ left: Math.max(0, targetX - el.clientWidth / 3), behavior: "smooth" });
+  }, [inlineCreate, range.start]);
+
   const toggleProject = (id: string) => {
     setExpandedProjects((prev) => {
       const next = new Set(prev);
@@ -118,9 +193,31 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
     });
   };
 
-  const handleEmptyClick = useCallback((_date: Date) => {
-    // 오버뷰에서 빈 영역 클릭은 무시
-  }, []);
+  const handleEmptyClick = useCallback((date: Date, rowIndex: number) => {
+    if (rowIndex < 0 || rowIndex >= rows.length) return;
+    const row = rows[rowIndex];
+    const targetProjectId = row.type === "add-schedule" ? row.projectId : row.type === "project" ? row.project.id : row.project.id;
+
+    if (!expandedProjects.has(targetProjectId)) {
+      setExpandedProjects((prev) => new Set(prev).add(targetProjectId));
+    }
+    setInlineCreate({ projectId: targetProjectId, date: format(date, "yyyy-MM-dd") });
+  }, [rows, expandedProjects]);
+
+  const handleDragCreate = useCallback((startDate: Date, endDate: Date, rowIndex: number) => {
+    if (rowIndex < 0 || rowIndex >= rows.length) return;
+    const row = rows[rowIndex];
+    const targetProjectId = row.type === "add-schedule" ? row.projectId : row.type === "project" ? row.project.id : row.project.id;
+
+    if (!expandedProjects.has(targetProjectId)) {
+      setExpandedProjects((prev) => new Set(prev).add(targetProjectId));
+    }
+    setInlineCreate({
+      projectId: targetProjectId,
+      date: format(startDate, "yyyy-MM-dd"),
+      endDate: format(endDate, "yyyy-MM-dd"),
+    });
+  }, [rows, expandedProjects]);
 
   const handleBarClick = useCallback((schedule: ProjectScheduleDTO, rect: DOMRect) => {
     setPopover({ schedule, rect });
@@ -131,13 +228,54 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
   };
 
   const handleRowChange = useCallback(
-    (fromIndex: number, toIndex: number) => {
-      // 오버뷰에서는 행 순서 변경 비활성화
+    (fromGlobalRow: number, toGlobalRow: number) => {
+      // fromGlobalRow로 프로젝트와 로컬 인덱스 찾기
+      for (const [projectId, range] of projectScheduleRange) {
+        const fromLocal = fromGlobalRow - range.startRow;
+        if (fromLocal < 0 || fromLocal >= range.count) continue;
+
+        const toLocal = Math.max(0, Math.min(range.count - 1, toGlobalRow - range.startRow));
+        if (fromLocal === toLocal) return;
+
+        const project = projects.find((p) => p.id === projectId);
+        if (!project) return;
+
+        const reordered = [...project.schedules];
+        const [moved] = reordered.splice(fromLocal, 1);
+        reordered.splice(toLocal, 0, moved);
+
+        reorderSchedules.mutate(
+          reordered.map((item, i) => ({ id: item.id, sortOrder: i }))
+        );
+        return;
+      }
     },
-    []
+    [projectScheduleRange, projects, reorderSchedules]
   );
 
-  const handleAddClick = (projectId: string) => {
+  const handleDragRow = useCallback(
+    (scheduleId: string, targetGlobalRow: number) => {
+      // scheduleId로 프로젝트 찾기
+      const scheduleRow = rows.find(
+        (r) => r.type === "schedule" && r.schedule!.id === scheduleId
+      ) as Extract<OverviewRow, { type: "schedule" }> | undefined;
+      if (!scheduleRow) return;
+
+      const projectId = scheduleRow.project.id;
+      const range = projectScheduleRange.get(projectId);
+      if (!range) return;
+
+      const toLocal = Math.max(0, Math.min(range.count - 1, targetGlobalRow - range.startRow));
+      setDragReorder({ projectId, fromLocal: scheduleRow.localIndex, toLocal });
+    },
+    [rows, projectScheduleRange]
+  );
+
+  const handleDragEnd = useCallback(() => {
+    setDragReorder(null);
+  }, []);
+
+  const startInlineCreate = (projectId: string) => {
     if (!expandedProjects.has(projectId)) {
       setExpandedProjects((prev) => new Set(prev).add(projectId));
     }
@@ -154,6 +292,7 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
     createSchedule.mutate({
       title,
       startDate,
+      endDate: inlineCreate.endDate,
       projectId: inlineCreate.projectId,
       category,
       sortOrder: project?.schedules.length ?? 0,
@@ -178,7 +317,7 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
 
         {/* 행 목록 */}
         <div style={{ height: contentHeight }}>
-          {rows.map((row, i) => {
+          {rows.map((row) => {
             if (row.type === "project") {
               const isExpanded = expandedProjects.has(row.project.id);
               return (
@@ -207,10 +346,34 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
                     variant="ghost"
                     size="icon-xs"
                     className="opacity-0 group-hover:opacity-100 shrink-0"
-                    onClick={() => handleAddClick(row.project.id)}
+                    onClick={() => startInlineCreate(row.project.id)}
                   >
                     <PlusIcon className="size-3" />
                   </Button>
+                </div>
+              );
+            }
+
+            if (row.type === "add-schedule") {
+              const isInline = inlineCreate?.projectId === row.projectId;
+              return (
+                <div
+                  key={`add-${row.projectId}`}
+                  className="flex items-center border-b border-border/30"
+                  style={{ height: ROW_HEIGHT }}
+                >
+                  {isInline ? (
+                    <span className="pl-7 text-xs text-muted-foreground/60">새 일정...</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => startInlineCreate(row.projectId)}
+                      className="flex items-center gap-1 pl-7 text-xs text-muted-foreground/60 hover:text-muted-foreground cursor-pointer"
+                    >
+                      <PlusIcon className="size-3" />
+                      새 일정
+                    </button>
+                  )}
                 </div>
               );
             }
@@ -229,15 +392,6 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
             );
           })}
 
-          {/* 인라인 생성 행 - 좌측 패널 부분 */}
-          {inlineCreate && expandedProjects.has(inlineCreate.projectId) && (
-            <div
-              className="flex items-center pl-7 pr-2 border-b border-border/30"
-              style={{ height: ROW_HEIGHT }}
-            >
-              <span className="text-xs text-muted-foreground/60">새 일정...</span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -258,6 +412,7 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
             totalWidth={totalWidth}
             rowCount={totalRows}
             onEmptyClick={handleEmptyClick}
+            onDragCreate={handleDragCreate}
           >
             {rows.map((row) => {
               if (row.type === "project") {
@@ -277,43 +432,45 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
                 );
               }
 
+              if (row.type === "add-schedule") {
+                if (inlineCreate?.projectId === row.projectId) {
+                  return (
+                    <InlineCreateRow
+                      key={`inline-${row.projectId}`}
+                      dateStr={inlineCreate.date}
+                      rowIndex={row.globalRow}
+                      rangeStart={range.start}
+                      onSubmit={handleInlineSubmit}
+                      onCancel={handleInlineCancel}
+                    />
+                  );
+                }
+                return null; // 간트 영역에서는 빈 행
+              }
+
               // schedule bar
               const schedule = row.schedule!;
+              const projectRange = projectScheduleRange.get(row.project.id);
+              const visualRow = getVisualRow(row.project.id, row.localIndex, row.globalRow);
+
               return (
                 <GanttBar
                   key={schedule.id}
                   schedule={schedule}
-                  rowIndex={row.globalRow}
+                  rowIndex={visualRow}
                   rangeStart={range.start}
                   totalRows={totalRows}
                   onDateChange={handleDateChange}
                   onRowChange={handleRowChange}
                   onBarClick={handleBarClick}
-                  disableReorder
+                  onDragRow={(targetRow) => handleDragRow(schedule.id, targetRow)}
+                  onDragEnd={handleDragEnd}
+                  minRow={projectRange?.startRow}
+                  maxRow={projectRange ? projectRange.startRow + projectRange.count - 1 : undefined}
                 />
               );
             })}
 
-            {/* 인라인 생성 */}
-            {inlineCreate && expandedProjects.has(inlineCreate.projectId) && (() => {
-              const project = projects.find((p) => p.id === inlineCreate.projectId);
-              if (!project) return null;
-              // 인라인 행은 해당 프로젝트의 마지막 schedule 행 다음
-              const projectRow = rows.find((r) => r.type === "project" && r.project.id === inlineCreate.projectId);
-              if (!projectRow) return null;
-              const scheduleCount = project.schedules.length;
-              const inlineRowIndex = projectRow.globalRow + 1 + scheduleCount;
-
-              return (
-                <InlineCreateRow
-                  dateStr={inlineCreate.date}
-                  rowIndex={inlineRowIndex}
-                  rangeStart={range.start}
-                  onSubmit={handleInlineSubmit}
-                  onCancel={handleInlineCancel}
-                />
-              );
-            })()}
           </GanttGrid>
         </div>
       </div>

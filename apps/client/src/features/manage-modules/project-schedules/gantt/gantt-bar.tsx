@@ -26,6 +26,8 @@ interface GanttBarProps {
   onDragRow?: (targetRow: number) => void;
   onDragEnd?: () => void;
   disableReorder?: boolean;
+  minRow?: number;
+  maxRow?: number;
 }
 
 type DragMode = "move" | "resize-left" | "resize-right" | null;
@@ -43,6 +45,8 @@ export function GanttBar({
   onDragRow,
   onDragEnd,
   disableReorder,
+  minRow,
+  maxRow,
 }: GanttBarProps) {
   const barRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLSpanElement>(null);
@@ -86,7 +90,9 @@ export function GanttBar({
         if (disableReorder) {
           setPreview({ left: deltaX, width: 0, top: 0 });
         } else {
-          const targetRow = Math.max(0, Math.min(totalRows - 1, rowIndex + Math.round(deltaY / ROW_HEIGHT)));
+          const lo = minRow ?? 0;
+          const hi = maxRow ?? (totalRows - 1);
+          const targetRow = Math.max(lo, Math.min(hi, rowIndex + Math.round(deltaY / ROW_HEIGHT)));
           const clampedRowDelta = (targetRow - rowIndex) * ROW_HEIGHT;
           setPreview({ left: deltaX, width: 0, top: clampedRowDelta });
           onDragRow?.(targetRow);
@@ -102,7 +108,7 @@ export function GanttBar({
         }
       }
     },
-    [dragMode, rowIndex, totalRows, onDragRow, disableReorder]
+    [dragMode, rowIndex, totalRows, onDragRow, disableReorder, minRow, maxRow]
   );
 
   const handlePointerUp = useCallback(
