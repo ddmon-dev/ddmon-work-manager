@@ -29,6 +29,7 @@ export function InlineCreateRow({
 }: InlineCreateRowProps) {
   const [value, setValue] = useState("");
   const [category, setCategory] = useState<TaskCategory>("development");
+  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const date = parseISO(dateStr);
@@ -50,6 +51,12 @@ export function InlineCreateRow({
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
+  const handleBlur = (e: React.FocusEvent) => {
+    // 포커스가 컨테이너 내 다른 요소(select 등)로 이동하면 무시
+    if (containerRef.current?.contains(e.relatedTarget as Node)) return;
+    handleSubmit();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.nativeEvent.isComposing) return;
     if (e.key === "Enter") {
@@ -62,6 +69,7 @@ export function InlineCreateRow({
 
   return (
     <div
+      ref={containerRef}
       data-gantt-bar
       className="absolute z-20 flex items-center gap-1"
       style={{ left, top, height: BAR_HEIGHT }}
@@ -69,6 +77,7 @@ export function InlineCreateRow({
       <select
         value={category}
         onChange={(e) => setCategory(e.target.value as TaskCategory)}
+        onBlur={handleBlur}
         className={cn(
           "h-full px-1.5 text-xs rounded-md border border-primary/50 bg-primary/5",
           "outline-none focus:ring-1 focus:ring-primary/30 cursor-pointer"
@@ -86,7 +95,7 @@ export function InlineCreateRow({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        onBlur={handleSubmit}
+        onBlur={handleBlur}
         placeholder="일정 제목 입력 후 Enter"
         className={cn(
           "h-full px-2 text-xs rounded-md border border-primary/50 bg-primary/5",
