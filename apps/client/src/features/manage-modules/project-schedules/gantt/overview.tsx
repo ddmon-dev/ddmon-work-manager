@@ -1,6 +1,9 @@
 import { useRef, useEffect, useMemo, useState, useCallback } from "react";
 import { ChevronRightIcon } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
+import { Container } from "@/shared/ui/container";
+import { Separator } from "@/shared/ui/separator";
+import { SidebarTrigger } from "@/shared/ui/sidebar";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { TASK_CATEGORIES } from "@packages/schemas";
 import type { TaskCategory } from "@packages/schemas";
@@ -22,6 +25,7 @@ import {
   format,
   DAY_WIDTH,
   ROW_HEIGHT,
+  HEADER_HEIGHT,
   BAR_HEIGHT,
   BAR_Y_OFFSET,
 } from "./utils";
@@ -36,31 +40,39 @@ export function ProjectScheduleOverview() {
   const projects = data?.items ?? [];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-semibold tracking-tight">프로젝트 일정</h1>
-          <Tabs value={status} onValueChange={setStatus}>
-            <TabsList>
-              <TabsTrigger value="active">진행중</TabsTrigger>
-              <TabsTrigger value="completed">완료</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+    <div className="flex flex-col h-dvh">
+      <header className="border-b bg-background rounded-t-xl py-1.5 md:py-4">
+        <Container className="grid gap-3 px-1.5 md:px-4">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger />
+            <Separator orientation="vertical" className="data-[orientation=vertical]:h-4 mx-2 hidden md:block" />
+            <h1 className="text-xl font-semibold hidden md:block">프로젝트 일정</h1>
 
-        {/* 카테고리 범례 */}
-        <div className="flex items-center gap-3">
-          {TASK_CATEGORIES.map((cat) => {
-            const config = TASK_CATEGORY_CONFIG[cat];
-            return (
-              <div key={cat} className="flex items-center gap-1.5">
-                <span className={cn("size-2.5 rounded-full", config.dot)} />
-                <span className="text-xs text-muted-foreground">{config.label}</span>
+            <div className="flex items-center gap-2 ml-auto">
+              <Tabs value={status} onValueChange={setStatus}>
+                <TabsList>
+                  <TabsTrigger value="active">진행중</TabsTrigger>
+                  <TabsTrigger value="completed">완료</TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              {/* 카테고리 범례 */}
+              <Separator orientation="vertical" className="data-[orientation=vertical]:h-4 mx-1 hidden md:block" />
+              <div className="hidden md:flex items-center gap-3">
+                {TASK_CATEGORIES.map((cat) => {
+                  const config = TASK_CATEGORY_CONFIG[cat];
+                  return (
+                    <div key={cat} className="flex items-center gap-1.5">
+                      <span className={cn("size-2.5 rounded-full", config.dot)} />
+                      <span className="text-xs text-muted-foreground">{config.label}</span>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-      </div>
+            </div>
+          </div>
+        </Container>
+      </header>
 
       {projects.length === 0 ? (
         <div className="py-16 text-center text-sm text-muted-foreground">
@@ -318,88 +330,89 @@ function OverviewGantt({ projects }: { projects: OverviewProject[] }) {
   const contentHeight = Math.max(totalRows, 1) * ROW_HEIGHT;
 
   return (
-    <div className="flex rounded-lg border border-border overflow-hidden">
-      {/* 좌측 고정 패널 */}
-      <div className="shrink-0 border-r border-border bg-background" style={{ width: LEFT_PANEL_WIDTH }}>
-        {/* 헤더 영역 */}
-        <div className="h-12 border-b border-border flex items-center px-3">
-          <span className="text-xs font-medium text-muted-foreground">프로젝트</span>
-        </div>
+    <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto border-b border-border">
+      <div className="flex" style={{ width: LEFT_PANEL_WIDTH + totalWidth }}>
+        {/* 좌측 고정 패널 */}
+        <div
+          className="sticky left-0 z-20 shrink-0 border-r border-border bg-background"
+          style={{ width: LEFT_PANEL_WIDTH }}
+        >
+          {/* 헤더 — 가로+세로 모두 고정 */}
+          <div className="sticky top-0 z-30 h-12 border-b border-border flex items-center px-3 bg-background">
+            <span className="text-xs font-medium text-muted-foreground">프로젝트</span>
+          </div>
 
-        {/* 행 목록 */}
-        <div style={{ height: contentHeight }}>
-          {rows.map((row) => {
-            if (row.type === "project") {
-              const isExpanded = expandedProjects.has(row.project.id);
-              return (
-                <div
-                  key={`p-${row.project.id}`}
-                  className={cn(
-                    "flex items-center gap-1 px-2 border-b border-border/30 cursor-pointer hover:bg-accent/50",
-                    hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
-                  )}
-                  style={{ height: ROW_HEIGHT }}
-                  onClick={() => toggleProject(row.project.id)}
-                >
-                  <ChevronRightIcon
+          {/* 행 목록 */}
+          <div style={{ height: contentHeight }}>
+            {rows.map((row) => {
+              if (row.type === "project") {
+                const isExpanded = expandedProjects.has(row.project.id);
+                return (
+                  <div
+                    key={`p-${row.project.id}`}
                     className={cn(
-                      "size-3.5 shrink-0 transition-transform",
-                      isExpanded && "rotate-90"
+                      "sticky z-10 flex items-center gap-1 px-2 border-b border-border/30 cursor-pointer hover:bg-accent bg-background",
+                      hoverCell?.row === row.globalRow && "bg-accent/50"
                     )}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">{row.project.name}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{row.project.companyName}</p>
+                    style={{ height: ROW_HEIGHT, top: HEADER_HEIGHT }}
+                    onClick={() => toggleProject(row.project.id)}
+                  >
+                    <ChevronRightIcon
+                      className={cn(
+                        "size-3.5 shrink-0 transition-transform",
+                        isExpanded && "rotate-90"
+                      )}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">{row.project.name}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{row.project.companyName}</p>
+                    </div>
                   </div>
-                </div>
-              );
-            }
+                );
+              }
 
-            if (row.type === "empty") {
+              if (row.type === "empty") {
+                return (
+                  <div
+                    key={`empty-${row.project.id}`}
+                    className={cn(
+                      "flex items-center pl-7 pr-2 border-b border-border/30",
+                      hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
+                    )}
+                    style={{ height: ROW_HEIGHT }}
+                  >
+                    <span className="text-[10px] text-muted-foreground/50">일정 없음</span>
+                  </div>
+                );
+              }
+
+              // schedule row
+              const config = getCategoryConfig(row.schedule!.category);
               return (
                 <div
-                  key={`empty-${row.project.id}`}
+                  key={`s-${row.schedule!.id}`}
                   className={cn(
-                    "flex items-center pl-7 pr-2 border-b border-border/30",
+                    "flex items-center gap-1.5 pl-7 pr-2 border-b border-border/30",
                     hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
                   )}
                   style={{ height: ROW_HEIGHT }}
                 >
-                  <span className="text-[10px] text-muted-foreground/50">일정 없음</span>
+                  <span className={cn("size-2 rounded-full shrink-0", config.dot)} />
+                  <span className="text-xs truncate text-muted-foreground">{row.schedule!.title}</span>
                 </div>
               );
-            }
-
-            // schedule row
-            const config = getCategoryConfig(row.schedule!.category);
-            return (
-              <div
-                key={`s-${row.schedule!.id}`}
-                className={cn(
-                  "flex items-center gap-1.5 pl-7 pr-2 border-b border-border/30",
-                  hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
-                )}
-                style={{ height: ROW_HEIGHT }}
-              >
-                <span className={cn("size-2 rounded-full shrink-0", config.dot)} />
-                <span className="text-xs truncate text-muted-foreground">{row.schedule!.title}</span>
-              </div>
-            );
-          })}
+            })}
+          </div>
         </div>
-      </div>
 
-      {/* 우측 스크롤 간트 */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-x-auto hide-scrollbar"
-      >
+        {/* 우측 간트 */}
         <div style={{ width: totalWidth }}>
           <TimelineHeader
             rangeStart={range.start}
             rangeEnd={range.end}
             totalWidth={totalWidth}
             hoverCol={hoverCell?.col}
+            stickyLeft={LEFT_PANEL_WIDTH}
           />
           <GanttGrid
             rangeStart={range.start}

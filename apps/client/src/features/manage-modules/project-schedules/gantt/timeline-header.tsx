@@ -14,9 +14,10 @@ interface TimelineHeaderProps {
   rangeEnd: Date;
   totalWidth: number;
   hoverCol?: number | null;
+  stickyLeft?: number;
 }
 
-export function TimelineHeader({ rangeStart, rangeEnd, totalWidth, hoverCol }: TimelineHeaderProps) {
+export function TimelineHeader({ rangeStart, rangeEnd, totalWidth, hoverCol, stickyLeft = 0 }: TimelineHeaderProps) {
   const today = startOfDay(new Date());
   const months = getMonthsInRange(rangeStart, rangeEnd);
   const days = getDaysInRange(rangeStart, rangeEnd);
@@ -34,7 +35,7 @@ export function TimelineHeader({ rangeStart, rangeEnd, totalWidth, hoverCol }: T
             className={cn("shrink-0", i < months.length - 1 && "border-r border-border")}
             style={{ width: month.width }}
           >
-            <div className="sticky left-0 w-fit text-xs font-medium text-muted-foreground flex items-center h-full px-2">
+            <div className="sticky w-fit text-xs font-medium text-muted-foreground flex items-center h-full px-2" style={{ left: stickyLeft }}>
               {month.label}
             </div>
           </div>
