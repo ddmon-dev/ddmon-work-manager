@@ -30,6 +30,7 @@ Admins = Better Auth user 테이블 (별도 admins 테이블 없음).
 | `projects` | 프로젝트 | uuid | 소프트 |
 | `project_payments` | 입금 내역 | uuid | 소프트 |
 | `project_memos` | 프로젝트 메모 | uuid | 소프트 |
+| `project_schedule_lanes` | 프로젝트 일정 레인 | uuid | **하드** (CASCADE) |
 | `project_schedules` | 프로젝트 일정 (카테고리 기반 태스크) | uuid | **하드** |
 | `schedules` | 일정 (sortOrder로 프로젝트 내 수동 정렬) | uuid | **하드** |
 | `todos` | 투두 | uuid | **하드** |
@@ -51,7 +52,8 @@ estimate_series ─── estimates (1:N)
 
 projects ─────┬── project_payments (1:N, CASCADE)
               ├── project_memos (1:N, CASCADE)
-              ├── project_schedules (1:N, CASCADE)
+              ├── project_schedule_lanes (1:N, CASCADE)
+              │    └── project_schedules (1:N, CASCADE)
               └── schedules (1:N, SET NULL)
 
 user ─────┬── todos (1:N, CASCADE)
@@ -123,11 +125,19 @@ user ─────┬── todos (1:N, CASCADE)
 - `tax_type`: nullable. 신규 기본값 `"vat"`, 기존 withholding 유지
 - `estimate_number`: nullable. 견적서 없이도 프로젝트 생성 가능
 
+### 프로젝트 일정 레인 (project_schedule_lanes)
+
+- `project_id`: NOT NULL FK → projects(id) ON DELETE CASCADE
+- `title`: text — 레인 제목 (기본 빈 문자열)
+- `sort_order`: integer — 간트 차트 내 레인 정렬 순서 (기본 0)
+- 프로젝트 생성 시 기본 레인 1개 자동 생성
+
 ### 프로젝트 일정 (project_schedules)
 
 - `project_id`: NOT NULL FK → projects(id) ON DELETE CASCADE
-- `group_id`: nullable uuid — 분할된 일정이 같은 그룹 공유 (분할 시 자동 부여)
-- `category`: `"planning"` | `"design"` | `"development"` | `"revision"` | `"delivery"` — 태스크 카테고리 (색상은 클라이언트 상수에서 결정)
+- `lane_id`: NOT NULL FK → project_schedule_lanes(id) ON DELETE CASCADE — 소속 레인
+- `category`: string — 프리셋 카테고리(`planning`/`design`/`development`/`revision`/`delivery`) 또는 커스텀 카테고리명
+- `category_color`: nullable text — 커스텀 카테고리 색상 (프리셋이면 null)
 - `sort_order`: integer — 간트 차트 내 수동 정렬 순서 (기본 0)
 
 ### 일정 (schedules)

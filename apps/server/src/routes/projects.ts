@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { projects, projectPayments, projectMemos, user } from "../db/schema";
+import { projects, projectPayments, projectMemos, projectScheduleLanes, user } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { projectWriteSchema } from "@packages/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
@@ -190,6 +190,11 @@ app.post("/", async (c) => {
         author: user.id,
       })
       .returning();
+    await tx.insert(projectScheduleLanes).values({
+      projectId: created.id,
+      title: "",
+      sortOrder: 0,
+    });
     return created;
   });
 

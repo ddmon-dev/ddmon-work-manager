@@ -4,14 +4,20 @@ import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
-import type { ProjectScheduleWriteInput, ProjectScheduleSplitInput } from "@packages/schemas";
-import type { ProjectScheduleDTO, ProjectScheduleListResponse, OverviewResponse } from "./types";
+import type { ProjectScheduleWriteInput } from "@packages/schemas";
+import type {
+  ProjectScheduleDTO,
+  ProjectScheduleListResponse,
+  ProjectScheduleLaneDTO,
+  LaneWithSchedules,
+  OverviewResponse,
+} from "./types";
 
 // ── 오버뷰 캐시 업데이트 헬퍼 ─────────────────────────────────────
 
 function updateOverviewCache(
   queryClient: QueryClient,
-  updater: (schedules: ProjectScheduleDTO[]) => ProjectScheduleDTO[],
+  updater: (lanes: LaneWithSchedules[]) => LaneWithSchedules[],
   projectId?: string,
 ) {
   const overviewQueries = queryClient.getQueriesData<OverviewResponse>({
@@ -24,7 +30,7 @@ function updateOverviewCache(
       items: old.items.map((project) =>
         projectId && project.id !== projectId
           ? project
-          : { ...project, schedules: updater(project.schedules) }
+          : { ...project, lanes: updater(project.lanes) }
       ),
     });
   }
@@ -37,16 +43,6 @@ function rollbackQueries<T>(queries: [readonly unknown[], T | undefined][], quer
   }
 }
 
-// ── 목록 조회 ────────────────────────────────────────────────
-
-export function useProjectScheduleList(projectId: string) {
-  return useQuery({
-    queryKey: queryKeys.projectSchedules.list({ projectId }),
-    queryFn: () =>
-      api.get<ProjectScheduleListResponse>("/project-schedules", { projectId }),
-  });
-}
-
 // ── 오버뷰 조회 ──────────────────────────────────────────────
 
 export function useProjectScheduleOverview(status: string) {
@@ -57,7 +53,88 @@ export function useProjectScheduleOverview(status: string) {
   });
 }
 
-// ── 생성 ────────────────────────────────────────────────────
+// ── 목록 조회 ────────────────────────────────────────────────
+
+export function useProjectScheduleList(projectId: string) {
+  return useQuery({
+    queryKey: queryKeys.projectSchedules.list({ projectId }),
+    queryFn: () =>
+      api.get<ProjectScheduleListResponse>("/project-schedules", { projectId }),
+  });
+}
+
+// ── 레인 CRUD ────────────────────────────────────────────────
+
+export function useLaneList(projectId: string) {
+  return useQuery({
+    queryKey: queryKeys.projectSchedules.lanes({ projectId }),
+    queryFn: () =>
+      api.get<{ items: ProjectScheduleLaneDTO[] }>("/project-schedules/lanes", { projectId }),
+  });
+}
+
+export function useCreateLane() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { projectId: string; title?: string; sortOrder?: number }) =>
+      api.post<ProjectScheduleLaneDTO>("/project-schedules/lanes", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.all });
+    },
+    onError: (error) => {
+      toast.error(error.message || "행 생성에 실패했습니다.");
+    },
+  });
+}
+
+export function useUpdateLane() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { title?: string; sortOrder?: number } }) =>
+      api.patch<ProjectScheduleLaneDTO>(`/project-schedules/lanes/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.all });
+    },
+    onError: (error) => {
+      toast.error(error.message || "행 수정에 실패했습니다.");
+    },
+  });
+}
+
+export function useDeleteLane() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.delete<{ id: string }>(`/project-schedules/lanes/${id}`),
+    onSuccess: () => {
+      toast.success("행이 삭제되었습니다.");
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.all });
+    },
+    onError: (error) => {
+      toast.error(error.message || "행 삭제에 실패했습니다.");
+    },
+  });
+}
+
+export function useReorderLanes() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (items: { id: string; sortOrder: number }[]) =>
+      api.put<{ updated: number }>("/project-schedules/lanes/reorder", { items }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.all });
+    },
+    onError: (error) => {
+      toast.error(error.message || "행 순서 변경에 실패했습니다.");
+    },
+  });
+}
+
+// ── 일정 생성 ────────────────────────────────────────────────
 
 export function useCreateProjectSchedule() {
   const queryClient = useQueryClient();
@@ -71,8 +148,9 @@ export function useCreateProjectSchedule() {
       const tempItem: ProjectScheduleDTO = {
         id: crypto.randomUUID(),
         projectId: data.projectId,
-        groupId: null,
+        laneId: data.laneId,
         category: data.category ?? "development",
+        categoryColor: data.categoryColor ?? null,
         title: data.title,
         description: data.description ?? null,
         startDate: data.startDate,
@@ -97,7 +175,11 @@ export function useCreateProjectSchedule() {
 
       const overviewQueries = updateOverviewCache(
         queryClient,
-        (schedules) => [...schedules, tempItem].sort((a, b) => a.sortOrder - b.sortOrder),
+        (lanes) => lanes.map((lane) =>
+          lane.id === data.laneId
+            ? { ...lane, schedules: [...lane.schedules, tempItem].sort((a, b) => a.sortOrder - b.sortOrder) }
+            : lane
+        ),
         data.projectId,
       );
 
@@ -117,7 +199,7 @@ export function useCreateProjectSchedule() {
   });
 }
 
-// ── 수정 ────────────────────────────────────────────────────
+// ── 일정 수정 ────────────────────────────────────────────────
 
 export function useUpdateProjectSchedule() {
   const queryClient = useQueryClient();
@@ -143,7 +225,24 @@ export function useUpdateProjectSchedule() {
 
       const overviewQueries = updateOverviewCache(
         queryClient,
-        (schedules) => schedules.map((s) => s.id === id ? { ...s, ...data } : s),
+        (lanes) => {
+          // laneId가 변경되면 레인 간 이동
+          if (data.laneId) {
+            const schedule = lanes.flatMap((l) => l.schedules).find((s) => s.id === id);
+            if (schedule) {
+              return lanes.map((lane) => ({
+                ...lane,
+                schedules: lane.id === data.laneId
+                  ? [...lane.schedules.filter((s) => s.id !== id), { ...schedule, ...data }]
+                  : lane.schedules.filter((s) => s.id !== id),
+              }));
+            }
+          }
+          return lanes.map((lane) => ({
+            ...lane,
+            schedules: lane.schedules.map((s) => s.id === id ? { ...s, ...data } : s),
+          }));
+        },
       );
 
       return { listQueries, overviewQueries };
@@ -159,7 +258,7 @@ export function useUpdateProjectSchedule() {
   });
 }
 
-// ── 순서 변경 ─────────────────────────────────────────────────
+// ── 일정 순서 변경 ─────────────────────────────────────────────
 
 export function useReorderProjectSchedules() {
   const queryClient = useQueryClient();
@@ -187,9 +286,12 @@ export function useReorderProjectSchedules() {
 
       const overviewQueries = updateOverviewCache(
         queryClient,
-        (schedules) => schedules
-          .map((s) => ({ ...s, sortOrder: orderMap.get(s.id) ?? s.sortOrder }))
-          .sort((a, b) => a.sortOrder - b.sortOrder),
+        (lanes) => lanes.map((lane) => ({
+          ...lane,
+          schedules: lane.schedules
+            .map((s) => ({ ...s, sortOrder: orderMap.get(s.id) ?? s.sortOrder }))
+            .sort((a, b) => a.sortOrder - b.sortOrder),
+        })),
       );
 
       return { listQueries, overviewQueries };
@@ -242,64 +344,7 @@ export function useReorderProjects() {
   });
 }
 
-// ── 분할 ────────────────────────────────────────────────────
-
-export function useSplitProjectSchedule() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: ProjectScheduleSplitInput }) =>
-      api.post<{ updated: ProjectScheduleDTO; created: ProjectScheduleDTO }>(
-        `/project-schedules/${id}/split`,
-        data,
-      ),
-    onSuccess: () => {
-      toast.success("일정이 분할되었습니다.");
-      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.all });
-    },
-    onError: (error) => {
-      toast.error(error.message || "일정 분할에 실패했습니다.");
-    },
-  });
-}
-
-// ── 병합 ────────────────────────────────────────────────────
-
-export function useMergeProjectSchedule() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ sourceId, targetId }: { sourceId: string; targetId: string }) =>
-      api.post<ProjectScheduleDTO>(`/project-schedules/${sourceId}/merge`, { targetId }),
-    onSuccess: () => {
-      toast.success("일정이 병합되었습니다.");
-      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.all });
-    },
-    onError: (error) => {
-      toast.error(error.message || "일정 병합에 실패했습니다.");
-    },
-  });
-}
-
-// ── 복제 ────────────────────────────────────────────────────
-
-export function useDuplicateProjectSchedule() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { startDate: string; endDate: string | null } }) =>
-      api.post<ProjectScheduleDTO>(`/project-schedules/${id}/duplicate`, data),
-    onSuccess: () => {
-      toast.success("일정이 복제되었습니다.");
-      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.all });
-    },
-    onError: (error) => {
-      toast.error(error.message || "일정 복제에 실패했습니다.");
-    },
-  });
-}
-
-// ── 삭제 ────────────────────────────────────────────────────
+// ── 일정 삭제 ────────────────────────────────────────────────
 
 export function useDeleteProjectSchedule() {
   const queryClient = useQueryClient();
@@ -323,7 +368,10 @@ export function useDeleteProjectSchedule() {
 
       const overviewQueries = updateOverviewCache(
         queryClient,
-        (schedules) => schedules.filter((s) => s.id !== id),
+        (lanes) => lanes.map((lane) => ({
+          ...lane,
+          schedules: lane.schedules.filter((s) => s.id !== id),
+        })),
       );
 
       return { listQueries, overviewQueries };

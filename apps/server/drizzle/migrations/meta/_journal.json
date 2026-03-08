@@ -50,6 +50,13 @@
       "when": 1772897164719,
       "tag": "0006_productive_loa",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1772976720536,
+      "tag": "0007_nosy_katie_power",
+      "breakpoints": true
     }
   ]
 }

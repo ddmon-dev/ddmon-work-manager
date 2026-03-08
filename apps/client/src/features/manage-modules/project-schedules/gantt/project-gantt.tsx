@@ -1,16 +1,20 @@
 import { useRef, useEffect, useCallback, useState, useMemo } from "react";
+import { GripVerticalIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { cn } from "@/shared/utils/classnames";
+import { useDialog } from "@/shared/ui/app-dialog";
 import { DetailSectionTitle } from "../../_base/ui";
-import type { TaskCategory } from "@packages/schemas";
 import {
   useProjectScheduleList,
+  useLaneList,
   useCreateProjectSchedule,
   useUpdateProjectSchedule,
   useReorderProjectSchedules,
-  useSplitProjectSchedule,
-  useMergeProjectSchedule,
-  useDuplicateProjectSchedule,
+  useCreateLane,
+  useUpdateLane,
+  useDeleteLane,
+  useReorderLanes,
 } from "../api";
-import type { ProjectScheduleDTO } from "../types";
+import type { ProjectScheduleDTO, ProjectScheduleLaneDTO } from "../types";
 import { useGantt } from "./use-gantt";
 import { TimelineHeader } from "./timeline-header";
 import { GanttGrid } from "./gantt-grid";
@@ -28,22 +32,8 @@ import {
   BAR_Y_OFFSET,
 } from "./utils";
 
-function groupSchedules(schedules: ProjectScheduleDTO[]): ProjectScheduleDTO[][] {
-  const groups: ProjectScheduleDTO[][] = [];
-  const seen = new Set<string>();
-  for (const s of schedules) {
-    if (seen.has(s.id)) continue;
-    if (s.groupId) {
-      const group = schedules.filter((x) => x.groupId === s.groupId);
-      group.forEach((x) => seen.add(x.id));
-      groups.push(group);
-    } else {
-      seen.add(s.id);
-      groups.push([s]);
-    }
-  }
-  return groups;
-}
+const LEFT_PANEL_WIDTH = 220;
+const CLICK_THRESHOLD = 4;
 
 interface ProjectGanttProps {
   projectId: string;
@@ -61,16 +51,33 @@ export function ProjectGantt({
   completedDate,
 }: ProjectGanttProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { data } = useProjectScheduleList(projectId);
-  const items = data?.items ?? [];
-  const groups = useMemo(() => groupSchedules(items), [items]);
+  const { data: scheduleData } = useProjectScheduleList(projectId);
+  const { data: laneData } = useLaneList(projectId);
+  const items = scheduleData?.items ?? [];
+  const lanes = laneData?.items ?? [];
+
+  // 행별 일정 그룹핑
+  const laneSchedules = useMemo(() => {
+    const map = new Map<string, ProjectScheduleDTO[]>();
+    for (const lane of lanes) {
+      map.set(lane.id, []);
+    }
+    for (const s of items) {
+      const list = map.get(s.laneId) ?? [];
+      list.push(s);
+      map.set(s.laneId, list);
+    }
+    return map;
+  }, [lanes, items]);
 
   const createSchedule = useCreateProjectSchedule();
   const updateSchedule = useUpdateProjectSchedule();
   const reorderSchedules = useReorderProjectSchedules();
-  const splitSchedule = useSplitProjectSchedule();
-  const mergeSchedule = useMergeProjectSchedule();
-  const duplicateSchedule = useDuplicateProjectSchedule();
+  const createLane = useCreateLane();
+  const updateLane = useUpdateLane();
+  const deleteLane = useDeleteLane();
+  const reorderLanes = useReorderLanes();
+  const dialog = useDialog();
 
   const { range, totalWidth } = useGantt({
     schedules: items,
@@ -82,27 +89,31 @@ export function ProjectGantt({
   const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
   const [popover, setPopover] = useState<{ schedule: ProjectScheduleDTO; rect: DOMRect } | null>(null);
   const [createState, setCreateState] = useState<{
+    laneId: string;
     startDate: string;
     endDate?: string;
     rowIndex: number;
-    insertIndex: number;
     anchorRect: DOMRect;
   } | null>(null);
-  const [dragReorder, setDragReorder] = useState<{ fromIndex: number; toIndex: number; scheduleId: string } | null>(null);
+  const [editingLaneId, setEditingLaneId] = useState<string | null>(null);
+  const [editingLaneTitle, setEditingLaneTitle] = useState("");
 
-  const getVisualIndex = useCallback(
-    (i: number) => {
-      if (!dragReorder || i === dragReorder.fromIndex) return i;
-      const { fromIndex, toIndex } = dragReorder;
-      if (fromIndex < toIndex) {
-        if (i > fromIndex && i <= toIndex) return i - 1;
-      } else {
-        if (i >= toIndex && i < fromIndex) return i + 1;
-      }
-      return i;
-    },
-    [dragReorder]
-  );
+  // 행 드래그 리오더
+  const [laneDrag, setLaneDrag] = useState<{
+    laneId: string;
+    startY: number;
+    currentY: number;
+    fromLocal: number;
+    moved: boolean;
+  } | null>(null);
+  const laneDragRef = useRef(laneDrag);
+  laneDragRef.current = laneDrag;
+
+  const laneDropLocal = useMemo(() => {
+    if (!laneDrag?.moved) return -1;
+    const delta = Math.round((laneDrag.currentY - laneDrag.startY) / ROW_HEIGHT);
+    return Math.max(0, Math.min(lanes.length - 1, laneDrag.fromLocal + delta));
+  }, [laneDrag, lanes.length]);
 
   const didScroll = useRef(false);
   useEffect(() => {
@@ -114,33 +125,31 @@ export function ProjectGantt({
   }, [range.start]);
 
   const handleEmptyClick = (date: Date, rowIndex: number, anchorRect: DOMRect) => {
+    if (rowIndex < 0 || rowIndex >= lanes.length) return;
+    const lane = lanes[rowIndex];
     setPopover(null);
-    const insertIndex = rowIndex < groups.length
-      ? groups.slice(0, rowIndex + 1).flat().length
-      : items.length;
     setCreateState({
+      laneId: lane.id,
       startDate: format(date, "yyyy-MM-dd"),
       rowIndex,
-      insertIndex,
       anchorRect,
     });
   };
 
   const handleDragCreate = (startDate: Date, endDate: Date, rowIndex: number, anchorRect: DOMRect) => {
+    if (rowIndex < 0 || rowIndex >= lanes.length) return;
+    const lane = lanes[rowIndex];
     setPopover(null);
-    const insertIndex = rowIndex < groups.length
-      ? groups.slice(0, rowIndex + 1).flat().length
-      : items.length;
     setCreateState({
+      laneId: lane.id,
       startDate: format(startDate, "yyyy-MM-dd"),
       endDate: format(endDate, "yyyy-MM-dd"),
       rowIndex,
-      insertIndex,
       anchorRect,
     });
   };
 
-  const handleCreateSubmit = useCallback((title: string, category: TaskCategory) => {
+  const handleCreateSubmit = useCallback((title: string, category: string, categoryColor: string | null) => {
     if (!createState) return;
 
     createSchedule.mutate({
@@ -148,67 +157,126 @@ export function ProjectGantt({
       startDate: createState.startDate,
       endDate: createState.endDate,
       projectId,
+      laneId: createState.laneId,
       category,
-      sortOrder: createState.insertIndex,
-    }, {
-      onSuccess: () => {
-        const reorderItems = items
-          .filter((_, i) => i >= createState.insertIndex)
-          .map((item, i) => ({ id: item.id, sortOrder: createState.insertIndex + 1 + i }));
-        if (reorderItems.length > 0) {
-          reorderSchedules.mutate(reorderItems);
-        }
-      },
+      categoryColor,
     });
     setCreateState(null);
-  }, [createState, projectId, items, createSchedule, reorderSchedules]);
+  }, [createState, projectId, createSchedule]);
 
   const handleDateChange = useCallback((id: string, newStartDate: string, newEndDate: string | null) => {
-    const schedule = items.find((s) => s.id === id);
-    if (schedule?.groupId) {
-      const newEnd = newEndDate ?? newStartDate;
-      const sibling = items.find((s) =>
-        s.id !== id && s.groupId === schedule.groupId &&
-        newStartDate <= (s.endDate ?? s.startDate) && newEnd >= s.startDate
-      );
-      if (sibling) {
-        mergeSchedule.mutate({ sourceId: id, targetId: sibling.id });
-        return;
-      }
-    }
     updateSchedule.mutate({ id, data: { startDate: newStartDate, endDate: newEndDate } });
-  }, [items, updateSchedule, mergeSchedule]);
-
-  const handleRowChange = useCallback(
-    (fromIndex: number, toIndex: number) => {
-      if (fromIndex === toIndex) return;
-      const reordered = [...groups];
-      const [moved] = reordered.splice(fromIndex, 1);
-      reordered.splice(toIndex, 0, moved);
-
-      const flat = reordered.flat();
-      reorderSchedules.mutate(
-        flat.map((item, i) => ({ id: item.id, sortOrder: i }))
-      );
-    },
-    [groups, reorderSchedules]
-  );
+  }, [updateSchedule]);
 
   const handleBarClick = useCallback((schedule: ProjectScheduleDTO, rect: DOMRect) => {
     setCreateState(null);
     setPopover({ schedule, rect });
   }, []);
 
-  const handleSplit = useCallback((id: string, splitDate: string) => {
-    splitSchedule.mutate({ id, data: { splitDate } });
-  }, [splitSchedule]);
-
   const handleDuplicate = useCallback((schedule: ProjectScheduleDTO, newStartDate: string, newEndDate: string | null) => {
-    duplicateSchedule.mutate({ id: schedule.id, data: { startDate: newStartDate, endDate: newEndDate } });
-  }, [duplicateSchedule]);
+    createSchedule.mutate({
+      title: schedule.title,
+      startDate: newStartDate,
+      endDate: newEndDate,
+      projectId,
+      laneId: schedule.laneId,
+      category: schedule.category,
+      categoryColor: schedule.categoryColor,
+    });
+  }, [projectId, createSchedule]);
 
-  // groups + 하단 빈 행 (클릭 영역) — 최소 1행
-  const rowCount = Math.max(groups.length + 1, 1);
+  const handleLaneEdit = (lane: ProjectScheduleLaneDTO) => {
+    setEditingLaneId(lane.id);
+    setEditingLaneTitle(lane.title);
+  };
+
+  const handleLaneEditSave = (laneId: string) => {
+    const trimmed = editingLaneTitle.trim();
+    const lane = lanes.find((l) => l.id === laneId);
+    if (lane && trimmed !== lane.title) {
+      updateLane.mutate({ id: laneId, data: { title: trimmed } });
+    }
+    setEditingLaneId(null);
+  };
+
+  const handleLaneDelete = (lane: ProjectScheduleLaneDTO) => {
+    const schedules = laneSchedules.get(lane.id) ?? [];
+    if (schedules.length > 0) {
+      dialog.confirm({
+        title: "행 삭제",
+        description: `이 행에 ${schedules.length}개의 일정이 있습니다. 행과 함께 모든 일정이 삭제됩니다.`,
+        variant: "destructive",
+        confirmText: "삭제",
+        onConfirm: () => deleteLane.mutate(lane.id),
+      });
+    } else {
+      deleteLane.mutate(lane.id);
+    }
+  };
+
+  const handleAddLaneBelow = useCallback((afterIndex: number) => {
+    createLane.mutate({
+      projectId,
+      title: "",
+      sortOrder: afterIndex + 1,
+    }, {
+      onSuccess: () => {
+        const toReorder = lanes
+          .filter((_, i) => i > afterIndex)
+          .map((l, i) => ({ id: l.id, sortOrder: afterIndex + 2 + i }));
+        if (toReorder.length > 0) {
+          reorderLanes.mutate(toReorder);
+        }
+      },
+    });
+  }, [projectId, lanes, createLane, reorderLanes]);
+
+  // 행 드래그 리오더
+  const handleLanePointerDown = useCallback((e: React.PointerEvent, laneId: string, fromLocal: number) => {
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setLaneDrag({ laneId, startY: e.clientY, currentY: e.clientY, fromLocal, moved: false });
+  }, []);
+
+  useEffect(() => {
+    if (!laneDrag) return;
+
+    const handleMove = (e: PointerEvent) => {
+      setLaneDrag((prev) => {
+        if (!prev) return null;
+        const moved = prev.moved || Math.abs(e.clientY - prev.startY) > CLICK_THRESHOLD;
+        return { ...prev, currentY: e.clientY, moved };
+      });
+    };
+
+    const handleUp = () => {
+      const prev = laneDragRef.current;
+      if (!prev) return;
+
+      if (prev.moved) {
+        const delta = Math.round((prev.currentY - prev.startY) / ROW_HEIGHT);
+        const toLocal = Math.max(0, Math.min(lanes.length - 1, prev.fromLocal + delta));
+        if (toLocal !== prev.fromLocal) {
+          const reordered = [...lanes];
+          const [moved] = reordered.splice(prev.fromLocal, 1);
+          reordered.splice(toLocal, 0, moved);
+          reorderLanes.mutate(reordered.map((l, i) => ({ id: l.id, sortOrder: i })));
+        }
+      }
+
+      setLaneDrag(null);
+    };
+
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [laneDrag, lanes, reorderLanes]);
+
+  // lanes가 행 — 최소 1행 (빈 영역 포함)
+  const rowCount = Math.max(lanes.length, 1);
+  const contentHeight = rowCount * ROW_HEIGHT;
 
   return (
     <div>
@@ -217,77 +285,171 @@ export function ProjectGantt({
       <div className="rounded-lg border border-border overflow-hidden">
         <div
           ref={scrollRef}
-          className="overflow-x-auto hide-scrollbar"
+          className="overflow-auto hide-scrollbar"
         >
-          <div style={{ width: totalWidth }}>
-            <TimelineHeader
-              rangeStart={range.start}
-              rangeEnd={range.end}
-              totalWidth={totalWidth}
-              hoverCol={hoverCell?.col}
-            />
-            <GanttGrid
-              rangeStart={range.start}
-              rangeEnd={range.end}
-              totalWidth={totalWidth}
-              rowCount={rowCount}
-              onEmptyClick={handleEmptyClick}
-              onDragCreate={handleDragCreate}
-              onHoverCell={setHoverCell}
+          <div className="flex" style={{ width: LEFT_PANEL_WIDTH + totalWidth }}>
+            {/* 좌측 고정 패널 */}
+            <div
+              className="sticky left-0 z-20 shrink-0 border-r border-border bg-background"
+              style={{ width: LEFT_PANEL_WIDTH }}
             >
-              {groups.map((group, groupIdx) =>
-                group.map((schedule) => {
-                  const isSibling = dragReorder
-                    && groupIdx === dragReorder.fromIndex
-                    && schedule.id !== dragReorder.scheduleId;
+              {/* 헤더 */}
+              <div className="h-12 border-b border-border flex items-center px-3 bg-background">
+                <span className="text-xs font-medium text-muted-foreground">행</span>
+              </div>
+
+              {/* 행 목록 */}
+              <div style={{ height: contentHeight }}>
+                {lanes.map((lane, laneIdx) => {
+                  const isLaneDragging = laneDrag?.moved && laneDrag.laneId === lane.id;
+                  const showDropIndicator = laneDrag?.moved
+                    && laneDropLocal === laneIdx
+                    && laneDropLocal !== laneDrag!.fromLocal;
+
                   return (
+                    <div key={lane.id} className="relative">
+                      {showDropIndicator && laneDropLocal < laneDrag!.fromLocal && (
+                        <div className="absolute top-0 left-3 right-1 h-0.5 bg-primary z-10" />
+                      )}
+                      <div
+                        className={cn(
+                          "group flex items-center gap-1 px-1 pr-1 border-b border-border/30",
+                          hoverCell?.row === laneIdx && "bg-foreground/[0.02]",
+                          isLaneDragging && "opacity-50"
+                        )}
+                        style={{ height: ROW_HEIGHT }}
+                      >
+                        <div
+                          className="shrink-0 cursor-grab p-0.5 touch-none"
+                          onPointerDown={(e) => handleLanePointerDown(e, lane.id, laneIdx)}
+                        >
+                          <GripVerticalIcon className="size-3 text-muted-foreground" />
+                        </div>
+                        {editingLaneId === lane.id ? (
+                          <input
+                            autoFocus
+                            type="text"
+                            value={editingLaneTitle}
+                            onChange={(e) => setEditingLaneTitle(e.target.value)}
+                            onBlur={() => handleLaneEditSave(lane.id)}
+                            onKeyDown={(e) => {
+                              if (e.nativeEvent.isComposing) return;
+                              if (e.key === "Enter") handleLaneEditSave(lane.id);
+                              if (e.key === "Escape") setEditingLaneId(null);
+                            }}
+                            className="flex-1 min-w-0 text-xs px-1 py-0.5 rounded border border-border bg-background outline-none focus:ring-1 focus:ring-primary/30"
+                          />
+                        ) : (
+                          <span
+                            className="flex-1 min-w-0 text-xs truncate text-muted-foreground cursor-text hover:text-foreground"
+                            onClick={() => handleLaneEdit(lane)}
+                          >
+                            {lane.title || "제목 없음"}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 transition-opacity shrink-0"
+                          onClick={() => handleLaneDelete(lane)}
+                        >
+                          <Trash2Icon className="size-3 text-destructive" />
+                        </button>
+                        <button
+                          type="button"
+                          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-accent transition-opacity shrink-0"
+                          title="아래에 행 추가"
+                          onClick={() => handleAddLaneBelow(laneIdx)}
+                        >
+                          <PlusIcon className="size-3 text-muted-foreground" />
+                        </button>
+                      </div>
+                      {showDropIndicator && laneDropLocal > laneDrag!.fromLocal && (
+                        <div className="absolute bottom-0 left-3 right-1 h-0.5 bg-primary z-10" />
+                      )}
+                    </div>
+                  );
+                })}
+
+                {lanes.length === 0 && (
+                  <div className="flex items-center justify-center" style={{ height: ROW_HEIGHT }}>
+                    <span className="text-[10px] text-muted-foreground/50">행 없음</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 우측 간트 */}
+            <div style={{ width: totalWidth }}>
+              <TimelineHeader
+                rangeStart={range.start}
+                rangeEnd={range.end}
+                totalWidth={totalWidth}
+                hoverCol={hoverCell?.col}
+              />
+              <GanttGrid
+                rangeStart={range.start}
+                rangeEnd={range.end}
+                totalWidth={totalWidth}
+                rowCount={rowCount}
+                onEmptyClick={handleEmptyClick}
+                onDragCreate={handleDragCreate}
+                onHoverCell={setHoverCell}
+              >
+                {lanes.map((lane, laneIdx) => {
+                  const schedules = laneSchedules.get(lane.id) ?? [];
+                  return schedules.map((schedule) => (
                     <GanttBar
                       key={schedule.id}
                       schedule={schedule}
-                      rowIndex={isSibling ? dragReorder.toIndex : getVisualIndex(groupIdx)}
+                      rowIndex={laneIdx}
                       rangeStart={range.start}
-                      totalRows={groups.length}
+                      totalRows={lanes.length}
                       onDateChange={handleDateChange}
-                      onRowChange={handleRowChange}
+                      onRowChange={(fromRow, toRow) => {
+                        // Y축 드래그: 다른 행으로 이동
+                        if (fromRow !== toRow && toRow >= 0 && toRow < lanes.length) {
+                          updateSchedule.mutate({
+                            id: schedule.id,
+                            data: { laneId: lanes[toRow].id },
+                          });
+                        }
+                      }}
                       onBarClick={handleBarClick}
-                      onSplit={handleSplit}
                       onDuplicate={handleDuplicate}
-                      onDragRow={(toIndex) => setDragReorder({ fromIndex: groupIdx, toIndex, scheduleId: schedule.id })}
-                      onDragEnd={() => setDragReorder(null)}
+                    />
+                  ));
+                })}
+
+                {/* 빈 상태 안내 */}
+                {items.length === 0 && lanes.length > 0 && !createState && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                    style={{ height: ROW_HEIGHT }}
+                  >
+                    <span className="text-xs text-muted-foreground/60">
+                      간트 영역을 클릭하여 일정을 추가하세요
+                    </span>
+                  </div>
+                )}
+
+                {/* 고스트 바 */}
+                {createState && (() => {
+                  const ghostLeft = dateToX(parseISO(createState.startDate), range.start);
+                  const days = createState.endDate
+                    ? differenceInCalendarDays(parseISO(createState.endDate), parseISO(createState.startDate)) + 1
+                    : 1;
+                  const ghostWidth = Math.max(days * DAY_WIDTH, DAY_WIDTH);
+                  const ghostTop = createState.rowIndex * ROW_HEIGHT + BAR_Y_OFFSET;
+                  return (
+                    <div
+                      data-gantt-bar
+                      className="absolute rounded-md bg-primary/20 border border-primary/40 z-20"
+                      style={{ left: ghostLeft, width: ghostWidth, top: ghostTop, height: BAR_HEIGHT }}
                     />
                   );
-                })
-              )}
-
-              {/* 빈 상태 안내 */}
-              {items.length === 0 && !createState && (
-                <div
-                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                  style={{ height: ROW_HEIGHT }}
-                >
-                  <span className="text-xs text-muted-foreground/60">
-                    간트 영역을 클릭하여 일정을 추가하세요
-                  </span>
-                </div>
-              )}
-
-              {/* 고스트 바 */}
-              {createState && (() => {
-                const left = dateToX(parseISO(createState.startDate), range.start);
-                const days = createState.endDate
-                  ? differenceInCalendarDays(parseISO(createState.endDate), parseISO(createState.startDate)) + 1
-                  : 1;
-                const width = Math.max(days * DAY_WIDTH, DAY_WIDTH);
-                const top = createState.rowIndex * ROW_HEIGHT + BAR_Y_OFFSET;
-                return (
-                  <div
-                    data-gantt-bar
-                    className="absolute rounded-md bg-primary/20 border border-primary/40 z-20"
-                    style={{ left, width, top, height: BAR_HEIGHT }}
-                  />
-                );
-              })()}
-            </GanttGrid>
+                })()}
+              </GanttGrid>
+            </div>
           </div>
         </div>
 

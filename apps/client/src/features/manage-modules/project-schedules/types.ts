@@ -1,10 +1,18 @@
-import type { TaskCategory } from "@packages/schemas";
+export interface ProjectScheduleLaneDTO {
+  id: string;
+  projectId: string;
+  title: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface ProjectScheduleDTO {
   id: string;
   projectId: string;
-  groupId: string | null;
-  category: TaskCategory;
+  laneId: string;
+  category: string;
+  categoryColor: string | null;
   title: string;
   description: string | null;
   startDate: string;
@@ -20,6 +28,10 @@ export interface ProjectScheduleListResponse {
   items: ProjectScheduleDTO[];
 }
 
+export interface LaneWithSchedules extends ProjectScheduleLaneDTO {
+  schedules: ProjectScheduleDTO[];
+}
+
 export interface OverviewProject {
   id: string;
   name: string;
@@ -29,7 +41,7 @@ export interface OverviewProject {
   completedDate: string | null;
   companyName: string;
   sortOrder: number;
-  schedules: ProjectScheduleDTO[];
+  lanes: LaneWithSchedules[];
 }
 
 export interface OverviewResponse {

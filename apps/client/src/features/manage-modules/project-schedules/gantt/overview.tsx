@@ -1,24 +1,24 @@
 import { useRef, useEffect, useMemo, useState, useCallback } from "react";
-import { ChevronRightIcon, ChevronsUpDownIcon } from "lucide-react";
+import { ChevronRightIcon, ChevronsUpDownIcon, GripVerticalIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
+import { useDialog } from "@/shared/ui/app-dialog";
 import { Container } from "@/shared/ui/container";
 import { Separator } from "@/shared/ui/separator";
 import { SidebarTrigger } from "@/shared/ui/sidebar";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { TASK_CATEGORIES } from "@packages/schemas";
-import type { TaskCategory } from "@packages/schemas";
 import {
   useProjectScheduleOverview,
   useCreateProjectSchedule,
   useUpdateProjectSchedule,
-  useReorderProjectSchedules,
   useReorderProjects,
-  useSplitProjectSchedule,
-  useMergeProjectSchedule,
-  useDuplicateProjectSchedule,
+  useCreateLane,
+  useUpdateLane,
+  useDeleteLane,
+  useReorderLanes,
 } from "../api";
-import { TASK_CATEGORY_CONFIG, getCategoryConfig } from "../constants";
-import type { ProjectScheduleDTO, OverviewProject } from "../types";
+import { PRESET_COLORS, getCategoryConfig } from "../constants";
+import type { ProjectScheduleDTO, LaneWithSchedules, OverviewProject } from "../types";
 import {
   computeOverviewRange,
   getTotalWidth,
@@ -64,10 +64,13 @@ export function ProjectScheduleOverview() {
               <Separator orientation="vertical" className="data-[orientation=vertical]:h-4 mx-1 hidden md:block" />
               <div className="hidden md:flex items-center gap-3">
                 {TASK_CATEGORIES.map((cat) => {
-                  const config = TASK_CATEGORY_CONFIG[cat];
+                  const config = PRESET_COLORS[cat];
                   return (
                     <div key={cat} className="flex items-center gap-1.5">
-                      <span className={cn("size-2.5 rounded-full", config.dot)} />
+                      <span
+                        className="size-2.5 rounded-full"
+                        style={{ backgroundColor: config.color }}
+                      />
                       <span className="text-xs text-muted-foreground">{config.label}</span>
                     </div>
                   );
@@ -93,26 +96,9 @@ export function ProjectScheduleOverview() {
 
 const LEFT_PANEL_WIDTH = 220;
 
-function groupSchedules(schedules: ProjectScheduleDTO[]): ProjectScheduleDTO[][] {
-  const groups: ProjectScheduleDTO[][] = [];
-  const seen = new Set<string>();
-  for (const s of schedules) {
-    if (seen.has(s.id)) continue;
-    if (s.groupId) {
-      const group = schedules.filter((x) => x.groupId === s.groupId);
-      group.forEach((x) => seen.add(x.id));
-      groups.push(group);
-    } else {
-      seen.add(s.id);
-      groups.push([s]);
-    }
-  }
-  return groups;
-}
-
 type OverviewRow =
   | { type: "project"; project: OverviewProject; globalRow: number }
-  | { type: "schedule"; project: OverviewProject; schedules: ProjectScheduleDTO[]; localIndex: number; globalRow: number }
+  | { type: "lane"; project: OverviewProject; lane: LaneWithSchedules; localIndex: number; globalRow: number }
   | { type: "empty"; project: OverviewProject; globalRow: number };
 
 const CLICK_THRESHOLD = 4;
@@ -125,20 +111,21 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
 
   const createSchedule = useCreateProjectSchedule();
   const updateSchedule = useUpdateProjectSchedule();
-  const reorderSchedules = useReorderProjectSchedules();
   const reorderProjects = useReorderProjects();
-  const splitSchedule = useSplitProjectSchedule();
-  const mergeSchedule = useMergeProjectSchedule();
-  const duplicateSchedule = useDuplicateProjectSchedule();
+  const createLane = useCreateLane();
+  const updateLane = useUpdateLane();
+  const deleteLane = useDeleteLane();
+  const reorderLanes = useReorderLanes();
+  const dialog = useDialog();
 
   const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
   const [popover, setPopover] = useState<{ schedule: ProjectScheduleDTO; rect: DOMRect } | null>(null);
   const [createState, setCreateState] = useState<{
     projectId: string;
+    laneId: string;
     startDate: string;
     endDate?: string;
     rowIndex: number;
-    insertIndex: number;
     anchorRect: DOMRect;
   } | null>(null);
   const [projectDrag, setProjectDrag] = useState<{
@@ -151,14 +138,32 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   const projectDragRef = useRef(projectDrag);
   projectDragRef.current = projectDrag;
 
-  const [dragReorder, setDragReorder] = useState<{
-    projectId: string;
-    fromLocal: number;
-    toLocal: number;
-    scheduleId: string;
-  } | null>(null);
+  const [editingLaneId, setEditingLaneId] = useState<string | null>(null);
+  const [editingLaneTitle, setEditingLaneTitle] = useState("");
 
-  const range = useMemo(() => computeOverviewRange(projects), [projects]);
+  // 행 드래그 리오더
+  const [laneDrag, setLaneDrag] = useState<{
+    laneId: string;
+    projectId: string;
+    startY: number;
+    currentY: number;
+    fromLocal: number;
+    moved: boolean;
+  } | null>(null);
+  const laneDragRef = useRef(laneDrag);
+  laneDragRef.current = laneDrag;
+
+  const overviewProjects = useMemo(() =>
+    projects.map((p) => ({
+      contractDate: p.contractDate,
+      deliveredDate: p.deliveredDate,
+      completedDate: p.completedDate,
+      schedules: p.lanes.flatMap((l) => l.schedules),
+    })),
+    [projects]
+  );
+
+  const range = useMemo(() => computeOverviewRange(overviewProjects), [overviewProjects]);
   const totalWidth = useMemo(() => getTotalWidth(range.start, range.end), [range]);
 
   // 행 구조 계산
@@ -169,13 +174,12 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
       result.push({ type: "project", project: p, globalRow: row });
       row++;
       if (expandedProjects.has(p.id)) {
-        if (p.schedules.length === 0) {
+        if (p.lanes.length === 0) {
           result.push({ type: "empty", project: p, globalRow: row });
           row++;
         } else {
-          const groups = groupSchedules(p.schedules);
-          for (let i = 0; i < groups.length; i++) {
-            result.push({ type: "schedule", project: p, schedules: groups[i], localIndex: i, globalRow: row });
+          for (let i = 0; i < p.lanes.length; i++) {
+            result.push({ type: "lane", project: p, lane: p.lanes[i], localIndex: i, globalRow: row });
             row++;
           }
         }
@@ -186,14 +190,13 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
 
   const totalRows = rows.length;
 
-  // 프로젝트 행 인덱스 (드래그 드롭 계산용)
+  // 프로젝트 행 인덱스
   const projectRowIndices = useMemo(() =>
     rows
       .map((r, i) => (r.type === "project" ? { index: i, globalRow: r.globalRow, projectIndex: -1 } : null))
       .filter(Boolean) as { index: number; globalRow: number; projectIndex: number }[],
     [rows]
   );
-  // projectIndex 채우기 (projects 배열 내 인덱스)
   useMemo(() => {
     projectRowIndices.forEach((item, i) => { item.projectIndex = i; });
   }, [projectRowIndices]);
@@ -211,11 +214,11 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     return closest;
   }, [projectDrag, projectRowIndices]);
 
-  // 프로젝트별 일정 행 범위 계산
-  const projectScheduleRange = useMemo(() => {
+  // 프로젝트별 레인 행 범위
+  const projectLaneRange = useMemo(() => {
     const rangeMap = new Map<string, { startRow: number; count: number }>();
     for (const row of rows) {
-      if (row.type !== "schedule") continue;
+      if (row.type !== "lane") continue;
       const existing = rangeMap.get(row.project.id);
       if (!existing) {
         rangeMap.set(row.project.id, { startRow: row.globalRow, count: 1 });
@@ -226,28 +229,14 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     return rangeMap;
   }, [rows]);
 
-  // 리오더 시 시각적 행 위치 계산
-  const getVisualRow = useCallback(
-    (projectId: string, localIndex: number, globalRow: number): number => {
-      if (!dragReorder || dragReorder.projectId !== projectId) return globalRow;
-
-      const range = projectScheduleRange.get(projectId);
-      if (!range) return globalRow;
-
-      const { fromLocal, toLocal } = dragReorder;
-      if (localIndex === fromLocal) return globalRow;
-
-      let visualLocal = localIndex;
-      if (fromLocal < toLocal) {
-        if (localIndex > fromLocal && localIndex <= toLocal) visualLocal = localIndex - 1;
-      } else {
-        if (localIndex >= toLocal && localIndex < fromLocal) visualLocal = localIndex + 1;
-      }
-
-      return range.startRow + visualLocal;
-    },
-    [dragReorder, projectScheduleRange]
-  );
+  // 행 드래그 시 시각적 로컬 인덱스
+  const laneDropLocal = useMemo(() => {
+    if (!laneDrag?.moved) return -1;
+    const project = projects.find((p) => p.id === laneDrag.projectId);
+    if (!project) return -1;
+    const delta = Math.round((laneDrag.currentY - laneDrag.startY) / ROW_HEIGHT);
+    return Math.max(0, Math.min(project.lanes.length - 1, laneDrag.fromLocal + delta));
+  }, [laneDrag, projects]);
 
   // 초기 스크롤
   const didScroll = useRef(false);
@@ -270,7 +259,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
 
   const canDragRow = useCallback((rowIndex: number) => {
     if (rowIndex < 0 || rowIndex >= rows.length) return false;
-    return rows[rowIndex].type !== "project";
+    return rows[rowIndex].type === "lane";
   }, [rows]);
 
   const handleEmptyClick = useCallback((date: Date, rowIndex: number, anchorRect: DOMRect) => {
@@ -282,18 +271,14 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
       return;
     }
 
-    let insertIndex = 0;
-    if (row.type === "schedule") {
-      const last = row.schedules[row.schedules.length - 1];
-      const flatIdx = row.project.schedules.findIndex((s) => s.id === last.id);
-      insertIndex = flatIdx + 1;
-    }
+    if (row.type !== "lane") return;
+
     setPopover(null);
     setCreateState({
       projectId: row.project.id,
+      laneId: row.lane.id,
       startDate: format(date, "yyyy-MM-dd"),
       rowIndex,
-      insertIndex,
       anchorRect,
     });
   }, [rows]);
@@ -301,21 +286,15 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   const handleDragCreate = useCallback((startDate: Date, endDate: Date, rowIndex: number, anchorRect: DOMRect) => {
     if (rowIndex < 0 || rowIndex >= rows.length) return;
     const row = rows[rowIndex];
-    if (row.type === "project") return;
+    if (row.type !== "lane") return;
 
-    let insertIndex = 0;
-    if (row.type === "schedule") {
-      const last = row.schedules[row.schedules.length - 1];
-      const flatIdx = row.project.schedules.findIndex((s) => s.id === last.id);
-      insertIndex = flatIdx + 1;
-    }
     setPopover(null);
     setCreateState({
       projectId: row.project.id,
+      laneId: row.lane.id,
       startDate: format(startDate, "yyyy-MM-dd"),
       endDate: format(endDate, "yyyy-MM-dd"),
       rowIndex,
-      insertIndex,
       anchorRect,
     });
   }, [rows]);
@@ -325,82 +304,31 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     setPopover({ schedule, rect });
   }, []);
 
-  const handleSplit = useCallback((id: string, splitDate: string) => {
-    splitSchedule.mutate({ id, data: { splitDate } });
-  }, [splitSchedule]);
-
   const handleDuplicate = useCallback((schedule: ProjectScheduleDTO, newStartDate: string, newEndDate: string | null) => {
-    duplicateSchedule.mutate({ id: schedule.id, data: { startDate: newStartDate, endDate: newEndDate } });
-  }, [duplicateSchedule]);
+    createSchedule.mutate({
+      title: schedule.title,
+      startDate: newStartDate,
+      endDate: newEndDate,
+      projectId: schedule.projectId,
+      laneId: schedule.laneId,
+      category: schedule.category,
+      categoryColor: schedule.categoryColor,
+    });
+  }, [createSchedule]);
 
   const handleDateChange = useCallback((id: string, newStartDate: string, newEndDate: string | null) => {
-    let schedule: ProjectScheduleDTO | undefined;
-    for (const p of projects) {
-      schedule = p.schedules.find((s) => s.id === id);
-      if (schedule) break;
-    }
-    if (schedule?.groupId) {
-      const newEnd = newEndDate ?? newStartDate;
-      const project = projects.find((p) => p.schedules.some((s) => s.id === id));
-      const sibling = project?.schedules.find((s) =>
-        s.id !== id && s.groupId === schedule!.groupId &&
-        newStartDate <= (s.endDate ?? s.startDate) && newEnd >= s.startDate
-      );
-      if (sibling) {
-        mergeSchedule.mutate({ sourceId: id, targetId: sibling.id });
-        return;
-      }
-    }
     updateSchedule.mutate({ id, data: { startDate: newStartDate, endDate: newEndDate } });
-  }, [projects, updateSchedule, mergeSchedule]);
+  }, [updateSchedule]);
 
   const handleRowChange = useCallback(
     (fromGlobalRow: number, toGlobalRow: number) => {
-      for (const [projectId, range] of projectScheduleRange) {
-        const fromLocal = fromGlobalRow - range.startRow;
-        if (fromLocal < 0 || fromLocal >= range.count) continue;
-
-        const toLocal = Math.max(0, Math.min(range.count - 1, toGlobalRow - range.startRow));
-        if (fromLocal === toLocal) return;
-
-        const project = projects.find((p) => p.id === projectId);
-        if (!project) return;
-
-        const groups = groupSchedules(project.schedules);
-        const reordered = [...groups];
-        const [moved] = reordered.splice(fromLocal, 1);
-        reordered.splice(toLocal, 0, moved);
-
-        const flat = reordered.flat();
-        reorderSchedules.mutate(
-          flat.map((item, i) => ({ id: item.id, sortOrder: i }))
-        );
-        return;
-      }
+      const fromRow = rows[fromGlobalRow];
+      const toRow = rows[toGlobalRow];
+      if (!fromRow || !toRow) return;
+      if (fromRow.type !== "lane" || toRow.type !== "lane") return;
     },
-    [projectScheduleRange, projects, reorderSchedules]
+    [rows]
   );
-
-  const handleDragRow = useCallback(
-    (scheduleId: string, targetGlobalRow: number) => {
-      const scheduleRow = rows.find(
-        (r) => r.type === "schedule" && r.schedules.some((s) => s.id === scheduleId)
-      ) as Extract<OverviewRow, { type: "schedule" }> | undefined;
-      if (!scheduleRow) return;
-
-      const projectId = scheduleRow.project.id;
-      const range = projectScheduleRange.get(projectId);
-      if (!range) return;
-
-      const toLocal = Math.max(0, Math.min(range.count - 1, targetGlobalRow - range.startRow));
-      setDragReorder({ projectId, fromLocal: scheduleRow.localIndex, toLocal, scheduleId });
-    },
-    [rows, projectScheduleRange]
-  );
-
-  const handleDragEnd = useCallback(() => {
-    setDragReorder(null);
-  }, []);
 
   // 프로젝트 리오더
   const handleProjectReorder = useCallback((fromIndex: number, toIndex: number) => {
@@ -410,7 +338,6 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     reorderProjects.mutate(reordered.map((p, i) => ({ id: p.id, sortOrder: i })));
   }, [projects, reorderProjects]);
 
-  // 프로젝트 행 포인터 이벤트
   const handleProjectPointerDown = useCallback((e: React.PointerEvent, projectId: string, fromIndex: number) => {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setProjectDrag({ projectId, startY: e.clientY, currentY: e.clientY, fromIndex, moved: false });
@@ -458,32 +385,114 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     };
   }, [projectDrag, projectRowIndices, handleProjectReorder]);
 
-  const handleCreateSubmit = useCallback((title: string, category: TaskCategory) => {
+  // 행 드래그 리오더
+  const handleLanePointerDown = useCallback((e: React.PointerEvent, laneId: string, projectId: string, fromLocal: number) => {
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setLaneDrag({ laneId, projectId, startY: e.clientY, currentY: e.clientY, fromLocal, moved: false });
+  }, []);
+
+  useEffect(() => {
+    if (!laneDrag) return;
+
+    const handleMove = (e: PointerEvent) => {
+      setLaneDrag((prev) => {
+        if (!prev) return null;
+        const moved = prev.moved || Math.abs(e.clientY - prev.startY) > CLICK_THRESHOLD;
+        return { ...prev, currentY: e.clientY, moved };
+      });
+    };
+
+    const handleUp = () => {
+      const prev = laneDragRef.current;
+      if (!prev) return;
+
+      if (prev.moved) {
+        const project = projects.find((p) => p.id === prev.projectId);
+        if (project) {
+          const delta = Math.round((prev.currentY - prev.startY) / ROW_HEIGHT);
+          const toLocal = Math.max(0, Math.min(project.lanes.length - 1, prev.fromLocal + delta));
+          if (toLocal !== prev.fromLocal) {
+            const reordered = [...project.lanes];
+            const [moved] = reordered.splice(prev.fromLocal, 1);
+            reordered.splice(toLocal, 0, moved);
+            reorderLanes.mutate(reordered.map((l, i) => ({ id: l.id, sortOrder: i })));
+          }
+        }
+      }
+
+      setLaneDrag(null);
+    };
+
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [laneDrag, projects, reorderLanes]);
+
+  const handleCreateSubmit = useCallback((title: string, category: string, categoryColor: string | null) => {
     if (!createState) return;
-    const project = projects.find((p) => p.id === createState.projectId);
-    if (!project) return;
 
     createSchedule.mutate({
       title,
       startDate: createState.startDate,
       endDate: createState.endDate,
       projectId: createState.projectId,
+      laneId: createState.laneId,
       category,
-      sortOrder: createState.insertIndex,
+      categoryColor,
+    });
+    setCreateState(null);
+  }, [createState, createSchedule]);
+
+  const handleLaneEdit = (lane: LaneWithSchedules) => {
+    setEditingLaneId(lane.id);
+    setEditingLaneTitle(lane.title);
+  };
+
+  const handleLaneEditSave = (laneId: string) => {
+    const lane = projects.flatMap((p) => p.lanes).find((l) => l.id === laneId);
+    if (lane && editingLaneTitle.trim() !== lane.title) {
+      updateLane.mutate({ id: laneId, data: { title: editingLaneTitle.trim() } });
+    }
+    setEditingLaneId(null);
+  };
+
+  const handleAddLaneBelow = useCallback((projectId: string, afterIndex: number) => {
+    const project = projects.find((p) => p.id === projectId);
+    if (!project) return;
+    createLane.mutate({
+      projectId,
+      title: "",
+      sortOrder: afterIndex + 1,
     }, {
       onSuccess: () => {
-        const newList = [...project.schedules];
-        // insertIndex 이후의 기존 항목들 sortOrder 밀기
-        const reorderItems = newList
-          .filter((_, i) => i >= createState.insertIndex)
-          .map((item, i) => ({ id: item.id, sortOrder: createState.insertIndex + 1 + i }));
-        if (reorderItems.length > 0) {
-          reorderSchedules.mutate(reorderItems);
+        // 기존 행 sortOrder 밀기
+        const toReorder = project.lanes
+          .filter((_, i) => i > afterIndex)
+          .map((l, i) => ({ id: l.id, sortOrder: afterIndex + 2 + i }));
+        if (toReorder.length > 0) {
+          reorderLanes.mutate(toReorder);
         }
       },
     });
-    setCreateState(null);
-  }, [createState, projects, createSchedule, reorderSchedules]);
+  }, [projects, createLane, reorderLanes]);
+
+  const handleLaneDelete = useCallback((lane: LaneWithSchedules) => {
+    if (lane.schedules.length > 0) {
+      dialog.confirm({
+        title: "행 삭제",
+        description: `이 행에 ${lane.schedules.length}개의 일정이 있습니다. 행과 함께 모든 일정이 삭제됩니다.`,
+        variant: "destructive",
+        confirmText: "삭제",
+        onConfirm: () => deleteLane.mutate(lane.id),
+      });
+    } else {
+      deleteLane.mutate(lane.id);
+    }
+  }, [dialog, deleteLane]);
 
   // 좌측 패널 높이 동기화
   const contentHeight = Math.max(totalRows, 1) * ROW_HEIGHT;
@@ -496,7 +505,6 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
           className="sticky left-0 z-20 shrink-0 border-r border-border bg-background"
           style={{ width: LEFT_PANEL_WIDTH }}
         >
-          {/* 헤더 — 가로+세로 모두 고정 */}
           <div className="sticky top-0 z-30 h-12 border-b border-border flex items-center justify-between px-3 bg-background">
             <span className="text-xs font-medium text-muted-foreground">프로젝트</span>
             <button
@@ -512,9 +520,8 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
             </button>
           </div>
 
-          {/* 행 목록 */}
           <div style={{ height: contentHeight }}>
-            {rows.map((row, rowIdx) => {
+            {rows.map((row) => {
               if (row.type === "project") {
                 const isExpanded = expandedProjects.has(row.project.id);
                 const projectIdx = projectRowIndices.findIndex((p) => p.globalRow === row.globalRow);
@@ -558,29 +565,83 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                   <div
                     key={`empty-${row.project.id}`}
                     className={cn(
-                      "flex items-center pl-7 pr-2 border-b border-border/30",
+                      "flex items-center pl-6 pr-2 border-b border-border/30",
                       hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
                     )}
                     style={{ height: ROW_HEIGHT }}
                   >
-                    <span className="text-[10px] text-muted-foreground/50">일정 없음</span>
+                    <span className="text-[10px] text-muted-foreground/50">행 없음</span>
                   </div>
                 );
               }
 
-              // schedule row
-              const config = getCategoryConfig(row.schedules[0].category);
+              // lane row
+              const isLaneDragging = laneDrag?.moved && laneDrag.laneId === row.lane.id;
+              const showLaneDropIndicator = laneDrag?.moved
+                && laneDrag.projectId === row.project.id
+                && laneDropLocal === row.localIndex
+                && laneDropLocal !== laneDrag.fromLocal;
+
               return (
-                <div
-                  key={`s-${row.schedules[0].id}`}
-                  className={cn(
-                    "flex items-center gap-1.5 pl-7 pr-2 border-b border-border/30",
-                    hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
+                <div key={`l-${row.lane.id}`} className="relative">
+                  {showLaneDropIndicator && laneDropLocal < laneDrag!.fromLocal && (
+                    <div className="absolute top-0 left-2 right-1 h-0.5 bg-primary z-10" />
                   )}
-                  style={{ height: ROW_HEIGHT }}
-                >
-                  <span className={cn("size-2 rounded-full shrink-0", config.dot)} />
-                  <span className="text-xs truncate text-muted-foreground">{row.schedules[0].title}</span>
+                  <div
+                    className={cn(
+                      "group flex items-center gap-1 pl-2 pr-1 border-b border-border/30",
+                      hoverCell?.row === row.globalRow && "bg-foreground/[0.02]",
+                      isLaneDragging && "opacity-50"
+                    )}
+                    style={{ height: ROW_HEIGHT }}
+                  >
+                    <div
+                      className="shrink-0 cursor-grab p-0.5 touch-none"
+                      onPointerDown={(e) => handleLanePointerDown(e, row.lane.id, row.project.id, row.localIndex)}
+                    >
+                      <GripVerticalIcon className="size-3 text-muted-foreground" />
+                    </div>
+                    {editingLaneId === row.lane.id ? (
+                      <input
+                        autoFocus
+                        type="text"
+                        value={editingLaneTitle}
+                        onChange={(e) => setEditingLaneTitle(e.target.value)}
+                        onBlur={() => handleLaneEditSave(row.lane.id)}
+                        onKeyDown={(e) => {
+                          if (e.nativeEvent.isComposing) return;
+                          if (e.key === "Enter") handleLaneEditSave(row.lane.id);
+                          if (e.key === "Escape") setEditingLaneId(null);
+                        }}
+                        className="flex-1 min-w-0 text-xs px-1 py-0.5 rounded border border-border bg-background outline-none focus:ring-1 focus:ring-primary/30"
+                      />
+                    ) : (
+                      <span
+                        className="flex-1 min-w-0 text-xs truncate text-muted-foreground cursor-text hover:text-foreground"
+                        onClick={() => handleLaneEdit(row.lane)}
+                      >
+                        {row.lane.title || "제목 없음"}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 transition-opacity shrink-0"
+                      onClick={() => handleLaneDelete(row.lane)}
+                    >
+                      <Trash2Icon className="size-3 text-destructive" />
+                    </button>
+                    <button
+                      type="button"
+                      className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-accent transition-opacity shrink-0"
+                      title="아래에 행 추가"
+                      onClick={() => handleAddLaneBelow(row.project.id, row.localIndex)}
+                    >
+                      <PlusIcon className="size-3 text-muted-foreground" />
+                    </button>
+                  </div>
+                  {showLaneDropIndicator && laneDropLocal > laneDrag!.fromLocal && (
+                    <div className="absolute bottom-0 left-2 right-1 h-0.5 bg-primary z-10" />
+                  )}
                 </div>
               );
             })}
@@ -622,52 +683,48 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
 
               if (row.type === "empty") return null;
 
-              // schedule bar(s) — 같은 그룹은 같은 행에 렌더링
-              const projectRange = projectScheduleRange.get(row.project.id);
-              const visualRow = getVisualRow(row.project.id, row.localIndex, row.globalRow);
-
-              return row.schedules.map((schedule) => {
-                const isSibling = dragReorder
-                  && dragReorder.projectId === row.project.id
-                  && row.localIndex === dragReorder.fromLocal
-                  && schedule.id !== dragReorder.scheduleId;
-                const effectiveRow = isSibling && projectRange
-                  ? projectRange.startRow + dragReorder.toLocal
-                  : visualRow;
-                return (
-                  <GanttBar
-                    key={schedule.id}
-                    schedule={schedule}
-                    rowIndex={effectiveRow}
-                    rangeStart={range.start}
-                    totalRows={totalRows}
-                    onDateChange={handleDateChange}
-                    onRowChange={handleRowChange}
-                    onBarClick={handleBarClick}
-                    onSplit={handleSplit}
-                    onDuplicate={handleDuplicate}
-                    onDragRow={(targetRow) => handleDragRow(schedule.id, targetRow)}
-                    onDragEnd={handleDragEnd}
-                    minRow={projectRange?.startRow}
-                    maxRow={projectRange ? projectRange.startRow + projectRange.count - 1 : undefined}
-                  />
-                );
-              });
+              // lane row — 해당 레인의 모든 일정 렌더링
+              const laneRange = projectLaneRange.get(row.project.id);
+              return row.lane.schedules.map((schedule) => (
+                <GanttBar
+                  key={schedule.id}
+                  schedule={schedule}
+                  rowIndex={row.globalRow}
+                  rangeStart={range.start}
+                  totalRows={totalRows}
+                  onDateChange={handleDateChange}
+                  onRowChange={(fromRow, toRow) => {
+                    if (fromRow !== toRow) {
+                      const toRowData = rows[toRow];
+                      if (toRowData?.type === "lane") {
+                        updateSchedule.mutate({
+                          id: schedule.id,
+                          data: { laneId: toRowData.lane.id },
+                        });
+                      }
+                    }
+                  }}
+                  onBarClick={handleBarClick}
+                  onDuplicate={handleDuplicate}
+                  minRow={laneRange?.startRow}
+                  maxRow={laneRange ? laneRange.startRow + laneRange.count - 1 : undefined}
+                />
+              ));
             })}
 
             {/* 고스트 바 */}
             {createState && (() => {
-              const left = dateToX(parseISO(createState.startDate), range.start);
+              const ghostLeft = dateToX(parseISO(createState.startDate), range.start);
               const days = createState.endDate
                 ? differenceInCalendarDays(parseISO(createState.endDate), parseISO(createState.startDate)) + 1
                 : 1;
-              const width = Math.max(days * DAY_WIDTH, DAY_WIDTH);
-              const top = createState.rowIndex * ROW_HEIGHT + BAR_Y_OFFSET;
+              const ghostWidth = Math.max(days * DAY_WIDTH, DAY_WIDTH);
+              const ghostTop = createState.rowIndex * ROW_HEIGHT + BAR_Y_OFFSET;
               return (
                 <div
                   data-gantt-bar
                   className="absolute rounded-md bg-primary/20 border border-primary/40 z-20"
-                  style={{ left, width, top, height: BAR_HEIGHT }}
+                  style={{ left: ghostLeft, width: ghostWidth, top: ghostTop, height: BAR_HEIGHT }}
                 />
               );
             })()}
@@ -709,10 +766,11 @@ function SummaryBar({
   rowIndex: number;
   rangeStart: Date;
 }) {
-  if (project.schedules.length === 0) return null;
+  const allSchedules = project.lanes.flatMap((l) => l.schedules);
+  if (allSchedules.length === 0) return null;
 
   const dates: Date[] = [];
-  for (const s of project.schedules) {
+  for (const s of allSchedules) {
     dates.push(parseISO(s.startDate));
     if (s.endDate) dates.push(parseISO(s.endDate));
   }
@@ -732,7 +790,7 @@ function SummaryBar({
       style={{ left, width, top, height: BAR_HEIGHT }}
     >
       <span className="text-[10px] text-muted-foreground truncate">
-        {project.schedules.length}개 일정
+        {allSchedules.length}개 일정
       </span>
     </div>
   );

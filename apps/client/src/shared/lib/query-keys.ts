@@ -34,6 +34,7 @@ export const queryKeys = {
     list: (params: Params) => ["project-schedules", "list", params] as const,
     detail: (id: string) => ["project-schedules", "detail", id] as const,
     overview: (status: string) => ["project-schedules", "overview", status] as const,
+    lanes: (params: Params) => ["project-schedules", "lanes", params] as const,
   },
   admins: {
     all: ["admins"] as const,

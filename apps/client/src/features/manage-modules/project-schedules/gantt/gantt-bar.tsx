@@ -23,11 +23,9 @@ interface GanttBarProps {
   onDateChange: (id: string, newStartDate: string, newEndDate: string | null) => void;
   onRowChange: (fromIndex: number, toIndex: number) => void;
   onBarClick: (schedule: ProjectScheduleDTO, rect: DOMRect) => void;
-  onSplit?: (id: string, splitDate: string) => void;
   onDuplicate?: (schedule: ProjectScheduleDTO, newStartDate: string, newEndDate: string | null) => void;
   onDragRow?: (targetRow: number) => void;
   onDragEnd?: () => void;
-  disableReorder?: boolean;
   minRow?: number;
   maxRow?: number;
 }
@@ -44,11 +42,9 @@ export function GanttBar({
   onDateChange,
   onRowChange,
   onBarClick,
-  onSplit,
   onDuplicate,
   onDragRow,
   onDragEnd,
-  disableReorder,
   minRow,
   maxRow,
 }: GanttBarProps) {
@@ -57,7 +53,6 @@ export function GanttBar({
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const [dragMode, setDragMode] = useState<DragMode>(null);
   const [preview, setPreview] = useState({ left: 0, width: 0, top: 0 });
-  const [splitPreview, setSplitPreview] = useState<number | null>(null);
   const [duplicateOffset, setDuplicateOffset] = useState<number | null>(null);
   const dragStart = useRef({ x: 0, y: 0, originalLeft: 0, originalWidth: 0, moved: false });
   const dragAxis = useRef<"x" | "y" | null>(null);
@@ -69,7 +64,7 @@ export function GanttBar({
   const left = dateToX(startDate, rangeStart);
   const width = span * DAY_WIDTH;
   const top = rowIndex * ROW_HEIGHT + BAR_Y_OFFSET;
-  const color = getCategoryConfig(schedule.category);
+  const { color } = getCategoryConfig(schedule.category, schedule.categoryColor);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent, mode: DragMode) => {
@@ -98,7 +93,7 @@ export function GanttBar({
       }
 
       if (dragMode === "move") {
-        if (dragAxis.current === "y" && !disableReorder) {
+        if (dragAxis.current === "y") {
           const lo = minRow ?? 0;
           const hi = maxRow ?? (totalRows - 1);
           const targetRow = Math.max(lo, Math.min(hi, rowIndex + Math.round(deltaY / ROW_HEIGHT)));
@@ -123,7 +118,7 @@ export function GanttBar({
         }
       }
     },
-    [dragMode, rowIndex, totalRows, onDragRow, onDuplicate, disableReorder, minRow, maxRow]
+    [dragMode, rowIndex, totalRows, onDragRow, onDuplicate, minRow, maxRow]
   );
 
   const handlePointerUp = useCallback(
@@ -137,15 +132,6 @@ export function GanttBar({
         setPreview({ left: 0, width: 0, top: 0 });
         onDragEnd?.();
         if (dragMode === "move" && barRef.current) {
-          if ((e.metaKey || e.ctrlKey) && onSplit && endDate && span >= 2) {
-            const rect = barRef.current.getBoundingClientRect();
-            const boundary = Math.round((e.clientX - rect.left) / DAY_WIDTH);
-            if (boundary >= 1 && boundary <= span - 1) {
-              const splitDate = format(addDays(startDate, boundary), "yyyy-MM-dd");
-              onSplit(schedule.id, splitDate);
-              return;
-            }
-          }
           onBarClick(schedule, barRef.current.getBoundingClientRect());
         }
         return;
@@ -156,11 +142,9 @@ export function GanttBar({
       const snappedTop = Math.round(preview.top / ROW_HEIGHT) * ROW_HEIGHT;
 
       if (dragMode === "move") {
-        if (!disableReorder) {
-          const newRow = rowIndex + Math.round(snappedTop / ROW_HEIGHT);
-          if (newRow !== rowIndex) {
-            onRowChange(rowIndex, newRow);
-          }
+        const newRow = rowIndex + Math.round(snappedTop / ROW_HEIGHT);
+        if (newRow !== rowIndex) {
+          onRowChange(rowIndex, newRow);
         }
 
         const finalLeft = left + snappedLeft;
@@ -198,7 +182,7 @@ export function GanttBar({
       setPreview({ left: 0, width: 0, top: 0 });
       setDuplicateOffset(null);
     },
-    [dragMode, preview, left, width, rangeStart, schedule, startDate, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick, onSplit, onDuplicate, onDragEnd, disableReorder]
+    [dragMode, preview, left, width, rangeStart, schedule, startDate, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick, onDuplicate, onDragEnd, duplicateOffset]
   );
 
   const displayLeft = left + preview.left;
@@ -213,7 +197,6 @@ export function GanttBar({
       className={cn(
         "absolute flex items-center gap-1.5 px-2 rounded-md select-none",
         "hover:shadow-sm",
-        color.bg,
         isDragging && "shadow-md z-10 opacity-90",
         !isDragging && "transition-[left,top,width] duration-100"
       )}
@@ -222,6 +205,7 @@ export function GanttBar({
         width: Math.max(displayWidth, DAY_WIDTH),
         top: displayTop,
         height: BAR_HEIGHT,
+        backgroundColor: `${color}20`,
       }}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -234,10 +218,7 @@ export function GanttBar({
 
       {/* 바 본체 */}
       <div
-        className={cn(
-          "flex items-center gap-1.5 flex-1 min-w-0",
-          splitPreview !== null ? "cursor-col-resize" : "cursor-grab active:cursor-grabbing"
-        )}
+        className="flex items-center gap-1.5 flex-1 min-w-0 cursor-grab active:cursor-grabbing"
         onPointerDown={(e) => handlePointerDown(e, "move")}
         onMouseMove={(e) => {
           const el = titleRef.current;
@@ -247,15 +228,8 @@ export function GanttBar({
           } else {
             setTooltip(null);
           }
-          if ((e.metaKey || e.ctrlKey) && endDate && span >= 2 && barRef.current) {
-            const rect = barRef.current.getBoundingClientRect();
-            const boundary = Math.round((e.clientX - rect.left) / DAY_WIDTH);
-            setSplitPreview(boundary >= 1 && boundary <= span - 1 ? boundary * DAY_WIDTH : null);
-          } else {
-            setSplitPreview(null);
-          }
         }}
-        onMouseLeave={() => { setTooltip(null); setSplitPreview(null); }}
+        onMouseLeave={() => setTooltip(null)}
       >
         <span ref={titleRef} className="text-xs truncate">{schedule.title}</span>
       </div>
@@ -266,22 +240,11 @@ export function GanttBar({
         onPointerDown={(e) => handlePointerDown(e, "resize-right")}
       />
 
-      {/* 분할 프리뷰 */}
-      {splitPreview !== null && (
-        <div
-          className="absolute top-0 bottom-0 w-px bg-foreground/50 pointer-events-none z-10"
-          style={{ left: splitPreview }}
-        />
-      )}
-
       {/* 복제 고스트 */}
       {duplicateOffset !== null && (
         <div
-          className={cn(
-            "absolute flex items-center gap-1.5 px-2 rounded-md pointer-events-none opacity-50 border border-dashed border-foreground/30",
-            color.bg,
-          )}
-          style={{ left: duplicateOffset, top: 0, width: displayWidth, height: BAR_HEIGHT }}
+          className="absolute flex items-center gap-1.5 px-2 rounded-md pointer-events-none opacity-50 border border-dashed border-foreground/30"
+          style={{ left: duplicateOffset, top: 0, width: displayWidth, height: BAR_HEIGHT, backgroundColor: `${color}20` }}
         >
           <span className="text-xs truncate">{schedule.title}</span>
         </div>

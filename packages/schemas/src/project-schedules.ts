@@ -5,7 +5,9 @@ export type TaskCategory = (typeof TASK_CATEGORIES)[number];
 
 export const projectScheduleWriteSchema = z.object({
   projectId: z.string().uuid(),
-  category: z.enum(TASK_CATEGORIES).default("development"),
+  laneId: z.string().uuid(),
+  category: z.string().default("development"),
+  categoryColor: z.string().nullable().optional(),
   title: z.string().min(1, "제목을 입력해주세요."),
   description: z.string().optional(),
   startDate: z.string(),
@@ -15,8 +17,10 @@ export const projectScheduleWriteSchema = z.object({
 
 export type ProjectScheduleWriteInput = z.infer<typeof projectScheduleWriteSchema>;
 
-export const projectScheduleSplitSchema = z.object({
-  splitDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "날짜 형식이 올바르지 않습니다."),
+export const projectScheduleLaneWriteSchema = z.object({
+  projectId: z.string().uuid(),
+  title: z.string().default(""),
+  sortOrder: z.number().int().optional(),
 });
 
-export type ProjectScheduleSplitInput = z.infer<typeof projectScheduleSplitSchema>;
+export type ProjectScheduleLaneWriteInput = z.infer<typeof projectScheduleLaneWriteSchema>;

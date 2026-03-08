@@ -120,25 +120,33 @@ requireAuth → requireSuperAdmin (선택적)
 
 ### Project Schedules (`/api/project-schedules`)
 
+#### 레인 CRUD
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/project-schedules/lanes` | 레인 목록 (`?projectId=`, sortOrder 정렬) |
+| POST | `/project-schedules/lanes` | 레인 생성 (`{ projectId, title?, sortOrder? }`) |
+| PATCH | `/project-schedules/lanes/:id` | 레인 수정 (`{ title?, sortOrder? }`) |
+| DELETE | `/project-schedules/lanes/:id` | 레인 삭제 (CASCADE: 소속 일정도 삭제) |
+| PUT | `/project-schedules/lanes/reorder` | 레인 순서 변경 (`{ items: [{ id, sortOrder }] }`) |
+
+#### 일정 CRUD
+
 | Method | Path | 설명 |
 |--------|------|------|
 | GET | `/project-schedules` | 목록 (`?projectId=`, sortOrder 정렬, 비페이지네이션) |
-| POST | `/project-schedules` | 생성 |
+| POST | `/project-schedules` | 생성 (`laneId` 필수) |
 | GET | `/project-schedules/:id` | 상세 |
-| PATCH | `/project-schedules/:id` | 수정 |
+| PATCH | `/project-schedules/:id` | 수정 (`laneId` 변경으로 레인 간 이동 가능) |
 | DELETE | `/project-schedules/:id` | **하드 삭제** |
-| POST | `/project-schedules/:id/split` | 일정 분할 (`{ splitDate }` — 같은 groupId 부여) |
-| POST | `/project-schedules/:id/merge` | 같은 그룹 일정 병합 (`{ targetId }` — source 삭제, target에 합산) |
-| POST | `/project-schedules/:id/duplicate` | 같은 그룹으로 일정 복제 (`{ startDate, endDate }`) |
 | PUT | `/project-schedules/reorder` | 순서 변경 (`{ items: [{ id, sortOrder }] }`) |
 | GET | `/project-schedules/overview` | 멀티 프로젝트 오버뷰 (`?status=active\|completed`) |
 
-카테고리: `planning` (기획), `design` (디자인), `development` (개발), `revision` (수정), `delivery` (납품)
+프리셋 카테고리: `planning` (기획), `design` (디자인), `development` (개발), `revision` (수정), `delivery` (납품). 커스텀 카테고리도 지원 (이름+색상).
 
-**분할/병합/복제 흐름:**
-- **분할**: splitDate 기준으로 앞(~splitDate-1)과 뒤(splitDate~endDate) 2개 일정 생성. 같은 groupId 공유
-- **병합**: 같은 groupId의 일정 2개를 합산 (min startDate ~ max endDate). 그룹에 1개만 남으면 groupId 해제
-- **복제**: 원본과 같은 groupId로 새 일정 생성. 원본에 groupId 없으면 자동 부여
+**오버뷰 응답 구조**: 프로젝트 → 레인 → 일정 (레인 기반 행 구조)
+
+**프로젝트 생성 시**: 기본 레인 1개 자동 생성
 
 ### Schedules (`/api/schedules`)
 

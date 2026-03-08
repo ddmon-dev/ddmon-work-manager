@@ -58,21 +58,22 @@ ProtectedLayout 자식에 별도 `errorElement` 배치 — 에러 시에도 사�
 
 #### 프로젝트 일정 모듈 (`project-schedules/`)
 
-프로젝트별 태스크 관리. 독립 `project_schedules` 테이블 사용 (기존 schedules와 분리).
+프로젝트별 태스크 관리. `project_schedule_lanes` + `project_schedules` 테이블 사용 (기존 schedules와 분리).
 
-카테고리 기반 태스크: 기획/디자인/개발/수정/납품 5개 카테고리 → 색상 자동 배정.
+레인(lane) 기반 구조: 각 행이 명시적 레인 엔티티. 한 레인에 여러 독립 일정 배치 가능.
+프리셋 카테고리 5종(기획/디자인/개발/수정/납품) + 커스텀 카테고리(이름+색상) 지원.
 
 ```
 project-schedules/
 ├── config.ts, types.ts, api.ts, constants.ts
 ├── index.tsx              # 모듈 엔트리 (오버뷰 렌더링)
 └── gantt/
-    ├── project-gantt.tsx      # 단일 프로젝트 간트 (프로젝트 상세용)
+    ├── project-gantt.tsx      # 단일 프로젝트 간트 (프로젝트 상세용, 좌측 레인 패널)
     ├── overview.tsx           # 멀티 프로젝트 오버뷰 (진행중/완료 탭)
     ├── timeline-header.tsx    # 날짜 축 (월/일 레이블, 월 sticky)
     ├── gantt-grid.tsx         # 배경 그리드 (날짜 세로줄, 주말 배경, 오늘선)
-    ├── gantt-bar.tsx          # 개별 바 (드래그/리사이즈/분할/복제)
-    ├── schedule-popover.tsx   # 바 클릭 팝오버 (제목 편집, 카테고리 변경, 삭제)
+    ├── gantt-bar.tsx          # 개별 바 (드래그/리사이즈/복제, inline style 색상)
+    ├── schedule-popover.tsx   # 바 클릭 팝오버 (제목 편집, 카테고리 변경, 커스텀 카테고리, 삭제)
     ├── use-gantt.ts           # 범위 계산
     └── utils.ts               # dateToX, xToDate, computeTimelineRange 등
 ```
@@ -81,11 +82,10 @@ project-schedules/
 - Pointer Events API로 드래그 (픽셀 단위 이동, 놓을 때 스냅)
 - 클릭 vs 드래그 판별 (4px threshold)
 - 드래그 축 잠금: 초기 이동 방향에 따라 수직/수평 분리 (동시 이동 불가)
-- groupId 기반 같은 행 렌더링: 분할/복제된 일정이 하나의 행에 표시
-- Ctrl/Cmd+Click: 바 위 클릭 지점에서 즉시 분할 (경계 기반 스냅)
-- Alt+드래그: 같은 그룹으로 일정 복제 (고스트 바 프리뷰)
-- 드래그 병합: 같은 그룹 바를 겹치도록 이동하면 자동 병합
-- 그룹 드래그 동기화: 수직 리오더 시 같은 그룹의 모든 바가 함께 이동
+- 레인 기반 행 렌더링: 1행 = 1레인, 한 레인 내 겹치는 일정 허용
+- Alt+드래그: 같은 레인에 일정 복제 (고스트 바 프리뷰, 일반 생성 API 사용)
+- Y축 드래그: 다른 레인으로 일정 이동 (`laneId` 변경)
+- 좌측 패널: 레인 제목 인라인 편집, 레인 삭제, 레인 추가
 - 오버뷰: 프로젝트별 접기/펼치기, 접힌 상태에서 요약 바 표시, 프로젝트 드래그 리오더
 
 #### 모듈 파일 구성
