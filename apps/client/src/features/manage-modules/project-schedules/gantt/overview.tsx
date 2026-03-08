@@ -14,6 +14,7 @@ import {
   useReorderProjectSchedules,
   useReorderProjects,
   useSplitProjectSchedule,
+  useMergeProjectSchedule,
 } from "../api";
 import { TASK_CATEGORY_CONFIG, getCategoryConfig } from "../constants";
 import type { ProjectScheduleDTO, OverviewProject } from "../types";
@@ -126,6 +127,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   const reorderSchedules = useReorderProjectSchedules();
   const reorderProjects = useReorderProjects();
   const splitSchedule = useSplitProjectSchedule();
+  const mergeSchedule = useMergeProjectSchedule();
 
   const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
   const [popover, setPopover] = useState<{ schedule: ProjectScheduleDTO; rect: DOMRect } | null>(null);
@@ -325,9 +327,26 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     splitSchedule.mutate({ id, data: { splitDate } });
   }, [splitSchedule]);
 
-  const handleDateChange = (id: string, newStartDate: string, newEndDate: string | null) => {
+  const handleDateChange = useCallback((id: string, newStartDate: string, newEndDate: string | null) => {
+    let schedule: ProjectScheduleDTO | undefined;
+    for (const p of projects) {
+      schedule = p.schedules.find((s) => s.id === id);
+      if (schedule) break;
+    }
+    if (schedule?.groupId) {
+      const newEnd = newEndDate ?? newStartDate;
+      const project = projects.find((p) => p.schedules.some((s) => s.id === id));
+      const sibling = project?.schedules.find((s) =>
+        s.id !== id && s.groupId === schedule!.groupId &&
+        newStartDate <= (s.endDate ?? s.startDate) && newEnd >= s.startDate
+      );
+      if (sibling) {
+        mergeSchedule.mutate({ sourceId: id, targetId: sibling.id });
+        return;
+      }
+    }
     updateSchedule.mutate({ id, data: { startDate: newStartDate, endDate: newEndDate } });
-  };
+  }, [projects, updateSchedule, mergeSchedule]);
 
   const handleRowChange = useCallback(
     (fromGlobalRow: number, toGlobalRow: number) => {

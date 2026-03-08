@@ -204,6 +204,51 @@ app.post("/:id/split", async (c) => {
   return successResponse(c, result, 201);
 });
 
+// POST /project-schedules/:id/merge — 같은 그룹 일정 2개 병합
+const mergeSchema = z.object({ targetId: z.string().uuid() });
+
+app.post("/:id/merge", async (c) => {
+  const user = c.get("user");
+  const sourceId = c.req.param("id");
+  const parsed = mergeSchema.safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+  const { targetId } = parsed.data;
+
+  const [source, target] = await Promise.all([
+    db.query.projectSchedules.findFirst({ where: eq(projectSchedules.id, sourceId) }),
+    db.query.projectSchedules.findFirst({ where: eq(projectSchedules.id, targetId) }),
+  ]);
+  if (!source || !target) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+  if (!source.groupId || source.groupId !== target.groupId)
+    return errorResponse(c, ERRORS.VALIDATION, 400, "같은 그룹의 일정만 병합할 수 있습니다.");
+
+  const startDate = source.startDate < target.startDate ? source.startDate : target.startDate;
+  const sourceEnd = source.endDate ?? source.startDate;
+  const targetEnd = target.endDate ?? target.startDate;
+  const endDate = sourceEnd > targetEnd ? sourceEnd : targetEnd;
+
+  // 병합 후 그룹에 남는 일정 수 확인 (source 삭제 후)
+  const groupMembers = await db
+    .select()
+    .from(projectSchedules)
+    .where(eq(projectSchedules.groupId, source.groupId));
+  const newGroupId = groupMembers.length - 1 <= 1 ? null : target.groupId;
+
+  const result = await db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(projectSchedules)
+      .set({ startDate, endDate, groupId: newGroupId, updatedBy: user.id, updatedAt: new Date() })
+      .where(eq(projectSchedules.id, targetId))
+      .returning();
+
+    await tx.delete(projectSchedules).where(eq(projectSchedules.id, sourceId));
+
+    return updated;
+  });
+
+  return successResponse(c, result);
+});
+
 // DELETE /project-schedules/:id — 하드 삭제
 app.delete("/:id", async (c) => {
   const id = c.req.param("id");

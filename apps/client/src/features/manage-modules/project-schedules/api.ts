@@ -263,6 +263,24 @@ export function useSplitProjectSchedule() {
   });
 }
 
+// ── 병합 ────────────────────────────────────────────────────
+
+export function useMergeProjectSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ sourceId, targetId }: { sourceId: string; targetId: string }) =>
+      api.post<ProjectScheduleDTO>(`/project-schedules/${sourceId}/merge`, { targetId }),
+    onSuccess: () => {
+      toast.success("일정이 병합되었습니다.");
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.all });
+    },
+    onError: (error) => {
+      toast.error(error.message || "일정 병합에 실패했습니다.");
+    },
+  });
+}
+
 // ── 삭제 ────────────────────────────────────────────────────
 
 export function useDeleteProjectSchedule() {

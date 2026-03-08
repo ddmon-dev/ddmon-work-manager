@@ -7,6 +7,7 @@ import {
   useUpdateProjectSchedule,
   useReorderProjectSchedules,
   useSplitProjectSchedule,
+  useMergeProjectSchedule,
 } from "../api";
 import type { ProjectScheduleDTO } from "../types";
 import { useGantt } from "./use-gantt";
@@ -67,6 +68,7 @@ export function ProjectGantt({
   const updateSchedule = useUpdateProjectSchedule();
   const reorderSchedules = useReorderProjectSchedules();
   const splitSchedule = useSplitProjectSchedule();
+  const mergeSchedule = useMergeProjectSchedule();
 
   const { range, totalWidth } = useGantt({
     schedules: items,
@@ -159,12 +161,21 @@ export function ProjectGantt({
     setCreateState(null);
   }, [createState, projectId, items, createSchedule, reorderSchedules]);
 
-  const handleDateChange = (id: string, newStartDate: string, newEndDate: string | null) => {
-    updateSchedule.mutate({
-      id,
-      data: { startDate: newStartDate, endDate: newEndDate },
-    });
-  };
+  const handleDateChange = useCallback((id: string, newStartDate: string, newEndDate: string | null) => {
+    const schedule = items.find((s) => s.id === id);
+    if (schedule?.groupId) {
+      const newEnd = newEndDate ?? newStartDate;
+      const sibling = items.find((s) =>
+        s.id !== id && s.groupId === schedule.groupId &&
+        newStartDate <= (s.endDate ?? s.startDate) && newEnd >= s.startDate
+      );
+      if (sibling) {
+        mergeSchedule.mutate({ sourceId: id, targetId: sibling.id });
+        return;
+      }
+    }
+    updateSchedule.mutate({ id, data: { startDate: newStartDate, endDate: newEndDate } });
+  }, [items, updateSchedule, mergeSchedule]);
 
   const handleRowChange = useCallback(
     (fromIndex: number, toIndex: number) => {
