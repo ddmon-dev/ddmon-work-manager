@@ -50,7 +50,8 @@ export function GanttBar({
 }: GanttBarProps) {
   const barRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLSpanElement>(null);
-  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
   const [dragMode, setDragMode] = useState<DragMode>(null);
   const [preview, setPreview] = useState({ left: 0, width: 0, top: 0 });
   const [duplicateOffset, setDuplicateOffset] = useState<number | null>(null);
@@ -64,7 +65,7 @@ export function GanttBar({
   const left = dateToX(startDate, rangeStart);
   const width = span * DAY_WIDTH;
   const top = rowIndex * ROW_HEIGHT + BAR_Y_OFFSET;
-  const { color } = getCategoryConfig(schedule.category, schedule.categoryColor);
+  const { color, label: categoryLabel } = getCategoryConfig(schedule.category, schedule.categoryColor);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent, mode: DragMode) => {
@@ -232,6 +233,16 @@ export function GanttBar({
       }}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseMove={(e) => {
+        const el = tooltipRef.current;
+        const rect = barRef.current?.getBoundingClientRect();
+        if (el && rect) {
+          el.style.left = `${e.clientX}px`;
+          el.style.top = `${rect.top - 32}px`;
+        }
+      }}
+      onMouseLeave={() => setShowTooltip(false)}
     >
       {/* 좌측 리사이즈 핸들 */}
       <div
@@ -243,16 +254,6 @@ export function GanttBar({
       <div
         className="flex items-center gap-1.5 flex-1 min-w-0 cursor-grab active:cursor-grabbing"
         onPointerDown={(e) => handlePointerDown(e, "move")}
-        onMouseMove={(e) => {
-          const el = titleRef.current;
-          if (el && el.scrollWidth > el.clientWidth) {
-            const rect = el.getBoundingClientRect();
-            setTooltip({ text: schedule.title, x: rect.left, y: rect.top });
-          } else {
-            setTooltip(null);
-          }
-        }}
-        onMouseLeave={() => setTooltip(null)}
       >
         <span ref={titleRef} className="text-xs truncate">{schedule.title}</span>
       </div>
@@ -273,13 +274,16 @@ export function GanttBar({
         </div>
       )}
 
-      {/* truncate 시 툴팁 */}
-      {tooltip && (
+      {/* 호버 툴팁: 카테고리 · 제목 (드래그 중에는 숨김) */}
+      {showTooltip && !isDragging && (
         <div
-          className="fixed z-50 px-2.5 py-1 text-xs rounded-md bg-popover text-popover-foreground border border-border shadow-md animate-in fade-in-0 zoom-in-95 duration-100"
-          style={{ left: tooltip.x, top: tooltip.y - 32 }}
+          ref={tooltipRef}
+          className="fixed z-50 px-2.5 py-1 text-xs rounded-md bg-popover text-popover-foreground border border-border shadow-md pointer-events-none whitespace-nowrap"
+          style={{ transform: "translateX(-50%)" }}
         >
-          {tooltip.text}
+          <span style={{ color }}>{categoryLabel}</span>
+          <span className="text-muted-foreground mx-1">·</span>
+          {schedule.title}
         </div>
       )}
     </div>
