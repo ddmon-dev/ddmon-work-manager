@@ -6,6 +6,7 @@ export const projectSchedules = pgTable("project_schedules", {
   projectId: uuid("project_id")
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
+  groupId: uuid("group_id"),
   category: text("category").notNull().default("development"),
   title: text("title").notNull(),
   description: text("description"),

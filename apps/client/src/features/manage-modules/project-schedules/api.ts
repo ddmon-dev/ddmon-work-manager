@@ -4,7 +4,7 @@ import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
-import type { ProjectScheduleWriteInput } from "@packages/schemas";
+import type { ProjectScheduleWriteInput, ProjectScheduleSplitInput } from "@packages/schemas";
 import type { ProjectScheduleDTO, ProjectScheduleListResponse, OverviewResponse } from "./types";
 
 // ── 오버뷰 캐시 업데이트 헬퍼 ─────────────────────────────────────
@@ -71,6 +71,7 @@ export function useCreateProjectSchedule() {
       const tempItem: ProjectScheduleDTO = {
         id: crypto.randomUUID(),
         projectId: data.projectId,
+        groupId: null,
         category: data.category ?? "development",
         title: data.title,
         description: data.description ?? null,
@@ -237,6 +238,27 @@ export function useReorderProjects() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["project-schedules", "overview"] });
+    },
+  });
+}
+
+// ── 분할 ────────────────────────────────────────────────────
+
+export function useSplitProjectSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: ProjectScheduleSplitInput }) =>
+      api.post<{ updated: ProjectScheduleDTO; created: ProjectScheduleDTO }>(
+        `/project-schedules/${id}/split`,
+        data,
+      ),
+    onSuccess: () => {
+      toast.success("일정이 분할되었습니다.");
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.all });
+    },
+    onError: (error) => {
+      toast.error(error.message || "일정 분할에 실패했습니다.");
     },
   });
 }

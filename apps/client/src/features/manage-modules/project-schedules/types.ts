@@ -3,6 +3,7 @@ import type { TaskCategory } from "@packages/schemas";
 export interface ProjectScheduleDTO {
   id: string;
   projectId: string;
+  groupId: string | null;
   category: TaskCategory;
   title: string;
   description: string | null;

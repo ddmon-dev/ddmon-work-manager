@@ -4,7 +4,7 @@ import { db } from "../db";
 import { projectSchedules, projects, clients } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { z } from "zod";
-import { projectScheduleWriteSchema } from "@packages/schemas";
+import { projectScheduleWriteSchema, projectScheduleSplitSchema } from "@packages/schemas";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import type { AppVariables } from "../lib/types";
 
@@ -141,6 +141,67 @@ app.patch("/:id", async (c) => {
 
   if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
   return successResponse(c, updated);
+});
+
+// POST /project-schedules/:id/split — 일정 분할
+app.post("/:id/split", async (c) => {
+  const user = c.get("user");
+  const id = c.req.param("id");
+  const parsed = projectScheduleSplitSchema.safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  const original = await db.query.projectSchedules.findFirst({
+    where: eq(projectSchedules.id, id),
+  });
+  if (!original) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+  if (!original.endDate)
+    return errorResponse(c, ERRORS.VALIDATION, 400, "종료일이 없는 일정은 분할할 수 없습니다.");
+
+  const { splitDate } = parsed.data;
+  if (splitDate <= original.startDate || splitDate >= original.endDate)
+    return errorResponse(c, ERRORS.VALIDATION, 400, "분할 지점은 시작일과 종료일 사이여야 합니다.");
+
+  // 같은 group에 속하도록 groupId 결정
+  const groupId = original.groupId ?? crypto.randomUUID();
+
+  // splitDate 기준: 앞쪽 ~splitDate 전날, 뒤쪽 splitDate~ 원본 endDate
+  const prevDay = new Date(splitDate);
+  prevDay.setDate(prevDay.getDate() - 1);
+  const newEndDate = prevDay.toISOString().slice(0, 10);
+
+  // 트랜잭션: 원본 endDate 수정 + 새 일정 생성
+  const result = await db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(projectSchedules)
+      .set({
+        endDate: newEndDate,
+        groupId,
+        updatedBy: user.id,
+        updatedAt: new Date(),
+      })
+      .where(eq(projectSchedules.id, id))
+      .returning();
+
+    // 새 일정 생성 (splitDate부터 원본 endDate까지)
+    const [created] = await tx
+      .insert(projectSchedules)
+      .values({
+        projectId: original.projectId,
+        groupId,
+        category: original.category,
+        title: original.title,
+        description: original.description,
+        startDate: splitDate,
+        endDate: original.endDate,
+        sortOrder: original.sortOrder + 1,
+        author: user.id,
+      })
+      .returning();
+
+    return { updated, created };
+  });
+
+  return successResponse(c, result, 201);
 });
 
 // DELETE /project-schedules/:id — 하드 삭제

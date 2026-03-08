@@ -90,9 +90,26 @@ export function ProjectScheduleOverview() {
 
 const LEFT_PANEL_WIDTH = 220;
 
+function groupSchedules(schedules: ProjectScheduleDTO[]): ProjectScheduleDTO[][] {
+  const groups: ProjectScheduleDTO[][] = [];
+  const seen = new Set<string>();
+  for (const s of schedules) {
+    if (seen.has(s.id)) continue;
+    if (s.groupId) {
+      const group = schedules.filter((x) => x.groupId === s.groupId);
+      group.forEach((x) => seen.add(x.id));
+      groups.push(group);
+    } else {
+      seen.add(s.id);
+      groups.push([s]);
+    }
+  }
+  return groups;
+}
+
 type OverviewRow =
   | { type: "project"; project: OverviewProject; globalRow: number }
-  | { type: "schedule"; project: OverviewProject; schedule: ProjectScheduleDTO; localIndex: number; globalRow: number }
+  | { type: "schedule"; project: OverviewProject; schedules: ProjectScheduleDTO[]; localIndex: number; globalRow: number }
   | { type: "empty"; project: OverviewProject; globalRow: number };
 
 const CLICK_THRESHOLD = 4;
@@ -149,8 +166,9 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
           result.push({ type: "empty", project: p, globalRow: row });
           row++;
         } else {
-          for (let i = 0; i < p.schedules.length; i++) {
-            result.push({ type: "schedule", project: p, schedule: p.schedules[i], localIndex: i, globalRow: row });
+          const groups = groupSchedules(p.schedules);
+          for (let i = 0; i < groups.length; i++) {
+            result.push({ type: "schedule", project: p, schedules: groups[i], localIndex: i, globalRow: row });
             row++;
           }
         }
@@ -257,7 +275,12 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
       return;
     }
 
-    const insertIndex = row.type === "schedule" ? row.localIndex + 1 : 0;
+    let insertIndex = 0;
+    if (row.type === "schedule") {
+      const last = row.schedules[row.schedules.length - 1];
+      const flatIdx = row.project.schedules.findIndex((s) => s.id === last.id);
+      insertIndex = flatIdx + 1;
+    }
     setPopover(null);
     setCreateState({
       projectId: row.project.id,
@@ -273,7 +296,12 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     const row = rows[rowIndex];
     if (row.type === "project") return;
 
-    const insertIndex = row.type === "schedule" ? row.localIndex + 1 : 0;
+    let insertIndex = 0;
+    if (row.type === "schedule") {
+      const last = row.schedules[row.schedules.length - 1];
+      const flatIdx = row.project.schedules.findIndex((s) => s.id === last.id);
+      insertIndex = flatIdx + 1;
+    }
     setPopover(null);
     setCreateState({
       projectId: row.project.id,
@@ -306,12 +334,14 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
         const project = projects.find((p) => p.id === projectId);
         if (!project) return;
 
-        const reordered = [...project.schedules];
+        const groups = groupSchedules(project.schedules);
+        const reordered = [...groups];
         const [moved] = reordered.splice(fromLocal, 1);
         reordered.splice(toLocal, 0, moved);
 
+        const flat = reordered.flat();
         reorderSchedules.mutate(
-          reordered.map((item, i) => ({ id: item.id, sortOrder: i }))
+          flat.map((item, i) => ({ id: item.id, sortOrder: i }))
         );
         return;
       }
@@ -322,7 +352,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   const handleDragRow = useCallback(
     (scheduleId: string, targetGlobalRow: number) => {
       const scheduleRow = rows.find(
-        (r) => r.type === "schedule" && r.schedule!.id === scheduleId
+        (r) => r.type === "schedule" && r.schedules.some((s) => s.id === scheduleId)
       ) as Extract<OverviewRow, { type: "schedule" }> | undefined;
       if (!scheduleRow) return;
 
@@ -507,10 +537,10 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
               }
 
               // schedule row
-              const config = getCategoryConfig(row.schedule!.category);
+              const config = getCategoryConfig(row.schedules[0].category);
               return (
                 <div
-                  key={`s-${row.schedule!.id}`}
+                  key={`s-${row.schedules[0].id}`}
                   className={cn(
                     "flex items-center gap-1.5 pl-7 pr-2 border-b border-border/30",
                     hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
@@ -518,7 +548,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                   style={{ height: ROW_HEIGHT }}
                 >
                   <span className={cn("size-2 rounded-full shrink-0", config.dot)} />
-                  <span className="text-xs truncate text-muted-foreground">{row.schedule!.title}</span>
+                  <span className="text-xs truncate text-muted-foreground">{row.schedules[0].title}</span>
                 </div>
               );
             })}
@@ -560,12 +590,11 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
 
               if (row.type === "empty") return null;
 
-              // schedule bar
-              const schedule = row.schedule!;
+              // schedule bar(s) — 같은 그룹은 같은 행에 렌더링
               const projectRange = projectScheduleRange.get(row.project.id);
               const visualRow = getVisualRow(row.project.id, row.localIndex, row.globalRow);
 
-              return (
+              return row.schedules.map((schedule) => (
                 <GanttBar
                   key={schedule.id}
                   schedule={schedule}
@@ -580,7 +609,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                   minRow={projectRange?.startRow}
                   maxRow={projectRange ? projectRange.startRow + projectRange.count - 1 : undefined}
                 />
-              );
+              ));
             })}
 
             {/* 고스트 바 */}

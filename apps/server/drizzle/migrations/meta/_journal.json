@@ -43,6 +43,13 @@
       "when": 1772894700000,
       "tag": "0005_open_riptide",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772897164719,
+      "tag": "0006_productive_loa",
+      "breakpoints": true
     }
   ]
 }

@@ -14,3 +14,9 @@ export const projectScheduleWriteSchema = z.object({
 });
 
 export type ProjectScheduleWriteInput = z.infer<typeof projectScheduleWriteSchema>;
+
+export const projectScheduleSplitSchema = z.object({
+  splitDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "날짜 형식이 올바르지 않습니다."),
+});
+
+export type ProjectScheduleSplitInput = z.infer<typeof projectScheduleSplitSchema>;

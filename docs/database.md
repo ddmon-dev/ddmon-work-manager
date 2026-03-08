@@ -126,6 +126,7 @@ user ─────┬── todos (1:N, CASCADE)
 ### 프로젝트 일정 (project_schedules)
 
 - `project_id`: NOT NULL FK → projects(id) ON DELETE CASCADE
+- `group_id`: nullable uuid — 분할된 일정이 같은 그룹 공유 (분할 시 자동 부여)
 - `category`: `"planning"` | `"design"` | `"development"` | `"revision"` | `"delivery"` — 태스크 카테고리 (색상은 클라이언트 상수에서 결정)
 - `sort_order`: integer — 간트 차트 내 수동 정렬 순서 (기본 0)
 

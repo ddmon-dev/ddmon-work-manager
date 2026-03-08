@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from "react";
+import { useRef, useEffect, useCallback, useState, useMemo } from "react";
 import { DetailSectionTitle } from "../../_base/ui";
 import type { TaskCategory } from "@packages/schemas";
 import {
@@ -25,6 +25,23 @@ import {
   BAR_Y_OFFSET,
 } from "./utils";
 
+function groupSchedules(schedules: ProjectScheduleDTO[]): ProjectScheduleDTO[][] {
+  const groups: ProjectScheduleDTO[][] = [];
+  const seen = new Set<string>();
+  for (const s of schedules) {
+    if (seen.has(s.id)) continue;
+    if (s.groupId) {
+      const group = schedules.filter((x) => x.groupId === s.groupId);
+      group.forEach((x) => seen.add(x.id));
+      groups.push(group);
+    } else {
+      seen.add(s.id);
+      groups.push([s]);
+    }
+  }
+  return groups;
+}
+
 interface ProjectGanttProps {
   projectId: string;
   clientId: string;
@@ -43,6 +60,7 @@ export function ProjectGantt({
   const scrollRef = useRef<HTMLDivElement>(null);
   const { data } = useProjectScheduleList(projectId);
   const items = data?.items ?? [];
+  const groups = useMemo(() => groupSchedules(items), [items]);
 
   const createSchedule = useCreateProjectSchedule();
   const updateSchedule = useUpdateProjectSchedule();
@@ -91,7 +109,9 @@ export function ProjectGantt({
 
   const handleEmptyClick = (date: Date, rowIndex: number, anchorRect: DOMRect) => {
     setPopover(null);
-    const insertIndex = rowIndex < items.length ? rowIndex + 1 : items.length;
+    const insertIndex = rowIndex < groups.length
+      ? groups.slice(0, rowIndex + 1).flat().length
+      : items.length;
     setCreateState({
       startDate: format(date, "yyyy-MM-dd"),
       rowIndex,
@@ -102,7 +122,9 @@ export function ProjectGantt({
 
   const handleDragCreate = (startDate: Date, endDate: Date, rowIndex: number, anchorRect: DOMRect) => {
     setPopover(null);
-    const insertIndex = rowIndex < items.length ? rowIndex + 1 : items.length;
+    const insertIndex = rowIndex < groups.length
+      ? groups.slice(0, rowIndex + 1).flat().length
+      : items.length;
     setCreateState({
       startDate: format(startDate, "yyyy-MM-dd"),
       endDate: format(endDate, "yyyy-MM-dd"),
@@ -145,15 +167,16 @@ export function ProjectGantt({
   const handleRowChange = useCallback(
     (fromIndex: number, toIndex: number) => {
       if (fromIndex === toIndex) return;
-      const reordered = [...items];
+      const reordered = [...groups];
       const [moved] = reordered.splice(fromIndex, 1);
       reordered.splice(toIndex, 0, moved);
 
+      const flat = reordered.flat();
       reorderSchedules.mutate(
-        reordered.map((item, i) => ({ id: item.id, sortOrder: i }))
+        flat.map((item, i) => ({ id: item.id, sortOrder: i }))
       );
     },
-    [items, reorderSchedules]
+    [groups, reorderSchedules]
   );
 
   const handleBarClick = useCallback((schedule: ProjectScheduleDTO, rect: DOMRect) => {
@@ -161,8 +184,8 @@ export function ProjectGantt({
     setPopover({ schedule, rect });
   }, []);
 
-  // items + 하단 빈 행 (클릭 영역) — 최소 1행
-  const rowCount = Math.max(items.length + 1, 1);
+  // groups + 하단 빈 행 (클릭 영역) — 최소 1행
+  const rowCount = Math.max(groups.length + 1, 1);
 
   return (
     <div>
@@ -189,20 +212,22 @@ export function ProjectGantt({
               onDragCreate={handleDragCreate}
               onHoverCell={setHoverCell}
             >
-              {items.map((schedule, i) => (
-                <GanttBar
-                  key={schedule.id}
-                  schedule={schedule}
-                  rowIndex={getVisualIndex(i)}
-                  rangeStart={range.start}
-                  totalRows={items.length}
-                  onDateChange={handleDateChange}
-                  onRowChange={handleRowChange}
-                  onBarClick={handleBarClick}
-                  onDragRow={(toIndex) => setDragReorder({ fromIndex: i, toIndex })}
-                  onDragEnd={() => setDragReorder(null)}
-                />
-              ))}
+              {groups.map((group, groupIdx) =>
+                group.map((schedule) => (
+                  <GanttBar
+                    key={schedule.id}
+                    schedule={schedule}
+                    rowIndex={getVisualIndex(groupIdx)}
+                    rangeStart={range.start}
+                    totalRows={groups.length}
+                    onDateChange={handleDateChange}
+                    onRowChange={handleRowChange}
+                    onBarClick={handleBarClick}
+                    onDragRow={(toIndex) => setDragReorder({ fromIndex: groupIdx, toIndex })}
+                    onDragEnd={() => setDragReorder(null)}
+                  />
+                ))
+              )}
 
               {/* 빈 상태 안내 */}
               {items.length === 0 && !createState && (

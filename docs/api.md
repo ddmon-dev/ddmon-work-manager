@@ -127,6 +127,7 @@ requireAuth → requireSuperAdmin (선택적)
 | GET | `/project-schedules/:id` | 상세 |
 | PATCH | `/project-schedules/:id` | 수정 |
 | DELETE | `/project-schedules/:id` | **하드 삭제** |
+| POST | `/project-schedules/:id/split` | 일정 분할 (`{ splitDate }` — 같은 groupId 부여) |
 | PUT | `/project-schedules/reorder` | 순서 변경 (`{ items: [{ id, sortOrder }] }`) |
 | GET | `/project-schedules/overview` | 멀티 프로젝트 오버뷰 (`?status=active\|completed`) |
 
