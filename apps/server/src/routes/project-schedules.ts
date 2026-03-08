@@ -158,7 +158,7 @@ app.post("/:id/split", async (c) => {
     return errorResponse(c, ERRORS.VALIDATION, 400, "종료일이 없는 일정은 분할할 수 없습니다.");
 
   const { splitDate } = parsed.data;
-  if (splitDate <= original.startDate || splitDate >= original.endDate)
+  if (splitDate <= original.startDate || splitDate > original.endDate)
     return errorResponse(c, ERRORS.VALIDATION, 400, "분할 지점은 시작일과 종료일 사이여야 합니다.");
 
   // 같은 group에 속하도록 groupId 결정

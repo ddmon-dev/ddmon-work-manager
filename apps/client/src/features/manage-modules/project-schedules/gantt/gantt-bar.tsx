@@ -23,6 +23,7 @@ interface GanttBarProps {
   onDateChange: (id: string, newStartDate: string, newEndDate: string | null) => void;
   onRowChange: (fromIndex: number, toIndex: number) => void;
   onBarClick: (schedule: ProjectScheduleDTO, rect: DOMRect) => void;
+  onSplit?: (id: string, splitDate: string) => void;
   onDragRow?: (targetRow: number) => void;
   onDragEnd?: () => void;
   disableReorder?: boolean;
@@ -42,6 +43,7 @@ export function GanttBar({
   onDateChange,
   onRowChange,
   onBarClick,
+  onSplit,
   onDragRow,
   onDragEnd,
   disableReorder,
@@ -53,6 +55,7 @@ export function GanttBar({
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const [dragMode, setDragMode] = useState<DragMode>(null);
   const [preview, setPreview] = useState({ left: 0, width: 0, top: 0 });
+  const [splitPreview, setSplitPreview] = useState<number | null>(null);
   const dragStart = useRef({ x: 0, y: 0, originalLeft: 0, originalWidth: 0, moved: false });
 
   const startDate = parseISO(schedule.startDate);
@@ -122,6 +125,15 @@ export function GanttBar({
         setPreview({ left: 0, width: 0, top: 0 });
         onDragEnd?.();
         if (dragMode === "move" && barRef.current) {
+          if ((e.metaKey || e.ctrlKey) && onSplit && endDate && span >= 2) {
+            const rect = barRef.current.getBoundingClientRect();
+            const boundary = Math.round((e.clientX - rect.left) / DAY_WIDTH);
+            if (boundary >= 1 && boundary <= span - 1) {
+              const splitDate = format(addDays(startDate, boundary), "yyyy-MM-dd");
+              onSplit(schedule.id, splitDate);
+              return;
+            }
+          }
           onBarClick(schedule, barRef.current.getBoundingClientRect());
         }
         return;
@@ -167,7 +179,7 @@ export function GanttBar({
       onDragEnd?.();
       setPreview({ left: 0, width: 0, top: 0 });
     },
-    [dragMode, preview, left, width, rangeStart, schedule, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick, onDragEnd, disableReorder]
+    [dragMode, preview, left, width, rangeStart, schedule, startDate, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick, onSplit, onDragEnd, disableReorder]
   );
 
   const displayLeft = left + preview.left;
@@ -203,16 +215,28 @@ export function GanttBar({
 
       {/* 바 본체 */}
       <div
-        className="flex items-center gap-1.5 flex-1 min-w-0 cursor-grab active:cursor-grabbing"
+        className={cn(
+          "flex items-center gap-1.5 flex-1 min-w-0",
+          splitPreview !== null ? "cursor-col-resize" : "cursor-grab active:cursor-grabbing"
+        )}
         onPointerDown={(e) => handlePointerDown(e, "move")}
-        onPointerEnter={() => {
+        onMouseMove={(e) => {
           const el = titleRef.current;
           if (el && el.scrollWidth > el.clientWidth) {
             const rect = el.getBoundingClientRect();
             setTooltip({ text: schedule.title, x: rect.left, y: rect.top });
+          } else {
+            setTooltip(null);
+          }
+          if ((e.metaKey || e.ctrlKey) && endDate && span >= 2 && barRef.current) {
+            const rect = barRef.current.getBoundingClientRect();
+            const boundary = Math.round((e.clientX - rect.left) / DAY_WIDTH);
+            setSplitPreview(boundary >= 1 && boundary <= span - 1 ? boundary * DAY_WIDTH : null);
+          } else {
+            setSplitPreview(null);
           }
         }}
-        onPointerLeave={() => setTooltip(null)}
+        onMouseLeave={() => { setTooltip(null); setSplitPreview(null); }}
       >
         <span ref={titleRef} className="text-xs truncate">{schedule.title}</span>
       </div>
@@ -222,6 +246,14 @@ export function GanttBar({
         className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize rounded-r-md hover:bg-foreground/10"
         onPointerDown={(e) => handlePointerDown(e, "resize-right")}
       />
+
+      {/* 분할 프리뷰 */}
+      {splitPreview !== null && (
+        <div
+          className="absolute top-0 bottom-0 w-px bg-foreground/50 pointer-events-none z-10"
+          style={{ left: splitPreview }}
+        />
+      )}
 
       {/* truncate 시 툴팁 */}
       {tooltip && (

@@ -1,13 +1,12 @@
-import { useState, useRef, useEffect, useMemo } from "react";
-import { Trash2Icon, SplitIcon } from "lucide-react";
-import { addDays, differenceInCalendarDays } from "date-fns";
+import { useState, useRef, useEffect } from "react";
+import { Trash2Icon } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { Button } from "@/shared/ui/button";
 import { useDialog } from "@/shared/ui/app-dialog";
 import { TASK_CATEGORIES } from "@packages/schemas";
 import type { TaskCategory } from "@packages/schemas";
 import { TASK_CATEGORY_CONFIG, getCategoryConfig } from "../constants";
-import { useUpdateProjectSchedule, useDeleteProjectSchedule, useSplitProjectSchedule } from "../api";
+import { useUpdateProjectSchedule, useDeleteProjectSchedule } from "../api";
 import type { ProjectScheduleDTO } from "../types";
 import { format, parseISO } from "./utils";
 
@@ -31,23 +30,9 @@ export function SchedulePopover(props: SchedulePopoverProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  const [splitMode, setSplitMode] = useState(false);
-  const [splitDate, setSplitDate] = useState("");
-
   const updateSchedule = useUpdateProjectSchedule();
   const deleteSchedule = useDeleteProjectSchedule();
-  const splitSchedule = useSplitProjectSchedule();
   const dialog = useDialog();
-
-  // 분할 가능 여부: 편집 모드 + endDate 있음 + 기간 2일 이상
-  const canSplit = useMemo(() => {
-    if (!isEdit || !props.schedule.endDate) return false;
-    const days = differenceInCalendarDays(
-      parseISO(props.schedule.endDate),
-      parseISO(props.schedule.startDate),
-    );
-    return days >= 2;
-  }, [isEdit, props.schedule]);
 
   useEffect(() => {
     if (isEdit) {
@@ -115,22 +100,6 @@ export function SchedulePopover(props: SchedulePopoverProps) {
       },
     });
   };
-
-  const handleSplit = () => {
-    if (!isEdit || !splitDate) return;
-    splitSchedule.mutate(
-      { id: props.schedule.id, data: { splitDate } },
-      { onSuccess: () => onClose() },
-    );
-  };
-
-  // 분할 날짜 범위: startDate+1 ~ endDate-1
-  const splitMinDate = isEdit
-    ? format(addDays(parseISO(props.schedule.startDate), 1), "yyyy-MM-dd")
-    : "";
-  const splitMaxDate = isEdit && props.schedule.endDate
-    ? format(addDays(parseISO(props.schedule.endDate), -1), "yyyy-MM-dd")
-    : "";
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.nativeEvent.isComposing) return;
@@ -217,45 +186,11 @@ export function SchedulePopover(props: SchedulePopoverProps) {
         <div className="flex justify-between items-center pt-1 border-t border-border">
           <span className="text-xs text-muted-foreground">{dateLabel}</span>
           {isEdit && (
-            <div className="flex items-center gap-0.5">
-              {canSplit && (
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() => setSplitMode(!splitMode)}
-                  title="일정 분할"
-                >
-                  <SplitIcon className={cn("size-3.5", splitMode ? "text-primary" : "text-muted-foreground")} />
-                </Button>
-              )}
-              <Button variant="ghost" size="icon-xs" onClick={handleDelete}>
-                <Trash2Icon className="size-3.5 text-destructive" />
-              </Button>
-            </div>
+            <Button variant="ghost" size="icon-xs" onClick={handleDelete}>
+              <Trash2Icon className="size-3.5 text-destructive" />
+            </Button>
           )}
         </div>
-
-        {/* 분할 모드 */}
-        {splitMode && (
-          <div className="flex items-center gap-2 pt-1">
-            <input
-              type="date"
-              value={splitDate}
-              min={splitMinDate}
-              max={splitMaxDate}
-              onChange={(e) => setSplitDate(e.target.value)}
-              className="flex-1 text-xs px-2 py-1.5 rounded-md border border-border bg-background outline-none focus:ring-1 focus:ring-primary/30"
-            />
-            <Button
-              variant="default"
-              size="xs"
-              disabled={!splitDate || splitSchedule.isPending}
-              onClick={handleSplit}
-            >
-              분할
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );

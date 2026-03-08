@@ -13,6 +13,7 @@ import {
   useUpdateProjectSchedule,
   useReorderProjectSchedules,
   useReorderProjects,
+  useSplitProjectSchedule,
 } from "../api";
 import { TASK_CATEGORY_CONFIG, getCategoryConfig } from "../constants";
 import type { ProjectScheduleDTO, OverviewProject } from "../types";
@@ -124,6 +125,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   const updateSchedule = useUpdateProjectSchedule();
   const reorderSchedules = useReorderProjectSchedules();
   const reorderProjects = useReorderProjects();
+  const splitSchedule = useSplitProjectSchedule();
 
   const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
   const [popover, setPopover] = useState<{ schedule: ProjectScheduleDTO; rect: DOMRect } | null>(null);
@@ -149,6 +151,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     projectId: string;
     fromLocal: number;
     toLocal: number;
+    scheduleId: string;
   } | null>(null);
 
   const range = useMemo(() => computeOverviewRange(projects), [projects]);
@@ -318,6 +321,10 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     setPopover({ schedule, rect });
   }, []);
 
+  const handleSplit = useCallback((id: string, splitDate: string) => {
+    splitSchedule.mutate({ id, data: { splitDate } });
+  }, [splitSchedule]);
+
   const handleDateChange = (id: string, newStartDate: string, newEndDate: string | null) => {
     updateSchedule.mutate({ id, data: { startDate: newStartDate, endDate: newEndDate } });
   };
@@ -361,7 +368,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
       if (!range) return;
 
       const toLocal = Math.max(0, Math.min(range.count - 1, targetGlobalRow - range.startRow));
-      setDragReorder({ projectId, fromLocal: scheduleRow.localIndex, toLocal });
+      setDragReorder({ projectId, fromLocal: scheduleRow.localIndex, toLocal, scheduleId });
     },
     [rows, projectScheduleRange]
   );
@@ -594,22 +601,32 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
               const projectRange = projectScheduleRange.get(row.project.id);
               const visualRow = getVisualRow(row.project.id, row.localIndex, row.globalRow);
 
-              return row.schedules.map((schedule) => (
-                <GanttBar
-                  key={schedule.id}
-                  schedule={schedule}
-                  rowIndex={visualRow}
-                  rangeStart={range.start}
-                  totalRows={totalRows}
-                  onDateChange={handleDateChange}
-                  onRowChange={handleRowChange}
-                  onBarClick={handleBarClick}
-                  onDragRow={(targetRow) => handleDragRow(schedule.id, targetRow)}
-                  onDragEnd={handleDragEnd}
-                  minRow={projectRange?.startRow}
-                  maxRow={projectRange ? projectRange.startRow + projectRange.count - 1 : undefined}
-                />
-              ));
+              return row.schedules.map((schedule) => {
+                const isSibling = dragReorder
+                  && dragReorder.projectId === row.project.id
+                  && row.localIndex === dragReorder.fromLocal
+                  && schedule.id !== dragReorder.scheduleId;
+                const effectiveRow = isSibling && projectRange
+                  ? projectRange.startRow + dragReorder.toLocal
+                  : visualRow;
+                return (
+                  <GanttBar
+                    key={schedule.id}
+                    schedule={schedule}
+                    rowIndex={effectiveRow}
+                    rangeStart={range.start}
+                    totalRows={totalRows}
+                    onDateChange={handleDateChange}
+                    onRowChange={handleRowChange}
+                    onBarClick={handleBarClick}
+                    onSplit={handleSplit}
+                    onDragRow={(targetRow) => handleDragRow(schedule.id, targetRow)}
+                    onDragEnd={handleDragEnd}
+                    minRow={projectRange?.startRow}
+                    maxRow={projectRange ? projectRange.startRow + projectRange.count - 1 : undefined}
+                  />
+                );
+              });
             })}
 
             {/* 고스트 바 */}
