@@ -1,4 +1,4 @@
-import { useState, useMemo, memo } from "react";
+import { useState, useRef, useMemo, memo } from "react";
 import { cn } from "@/shared/utils/classnames";
 import {
   DAY_WIDTH,
@@ -6,12 +6,12 @@ import {
   BAR_HEIGHT,
   BAR_Y_OFFSET,
   CLICK_THRESHOLD,
+  TODAY,
   getDaysInRange,
   dateToX,
   xToDate,
   differenceInCalendarDays,
   isWeekend,
-  startOfDay,
 } from "./utils";
 
 interface GanttGridProps {
@@ -19,6 +19,7 @@ interface GanttGridProps {
   rangeEnd: Date;
   totalWidth: number;
   rowCount: number;
+  hoverCell: { col: number; row: number } | null;
   onEmptyClick: (date: Date, rowIndex: number, anchorRect: DOMRect) => void;
   onDragCreate?: (startDate: Date, endDate: Date, rowIndex: number, anchorRect: DOMRect) => void;
   canDragRow?: (rowIndex: number) => boolean;
@@ -26,13 +27,12 @@ interface GanttGridProps {
   children: React.ReactNode;
 }
 
-const TODAY = startOfDay(new Date());
-
 export function GanttGrid({
   rangeStart,
   rangeEnd,
   totalWidth,
   rowCount,
+  hoverCell,
   onEmptyClick,
   onDragCreate,
   canDragRow,
@@ -51,7 +51,8 @@ export function GanttGrid({
     active: boolean;
   } | null>(null);
 
-  const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
+  // 마우스 이동 시 중복 호출 방지용 ref (setState 없이 dedup)
+  const lastHoverRef = useRef<{ col: number; row: number } | null>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -59,12 +60,10 @@ export function GanttGrid({
     const y = e.clientY - rect.top;
     const col = Math.floor(x / DAY_WIDTH);
     const row = Math.floor(y / ROW_HEIGHT);
-    setHoverCell((prev) => {
-      if (prev?.col === col && prev?.row === row) return prev;
-      const next = { col, row };
-      onHoverCell?.(next);
-      return next;
-    });
+    const prev = lastHoverRef.current;
+    if (prev?.col === col && prev?.row === row) return;
+    lastHoverRef.current = { col, row };
+    onHoverCell?.({ col, row });
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -131,7 +130,7 @@ export function GanttGrid({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onMouseMove={handleMouseMove}
-      onMouseLeave={() => { setHoverCell(null); onHoverCell?.(null); }}
+      onMouseLeave={() => { lastHoverRef.current = null; onHoverCell?.(null); }}
     >
       <GridLines days={days} rowCount={rowCount} />
 

@@ -3,11 +3,11 @@ import { cn } from "@/shared/utils/classnames";
 import {
   DAY_WIDTH,
   HEADER_HEIGHT,
+  TODAY,
   getDaysInRange,
   getMonthsInRange,
   isWeekend,
   isSameDay,
-  startOfDay,
 } from "./utils";
 
 interface TimelineHeaderProps {
@@ -17,8 +17,6 @@ interface TimelineHeaderProps {
   hoverCol?: number | null;
   stickyLeft?: number;
 }
-
-const TODAY = startOfDay(new Date());
 
 export function TimelineHeader({ rangeStart, rangeEnd, totalWidth, hoverCol, stickyLeft = 0 }: TimelineHeaderProps) {
   const months = useMemo(() => getMonthsInRange(rangeStart, rangeEnd), [rangeStart, rangeEnd]);

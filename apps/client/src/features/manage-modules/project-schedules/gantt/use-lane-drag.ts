@@ -11,8 +11,12 @@ interface LaneDragState {
 }
 
 interface UseLaneDragParams {
-  laneCount: number;
-  onReorder: (fromLocal: number, toLocal: number) => void;
+  laneCount: number | ((projectId?: string) => number);
+  onReorder: (fromLocal: number, toLocal: number, projectId?: string) => void;
+}
+
+function resolveLaneCount(laneCount: number | ((projectId?: string) => number), projectId?: string): number {
+  return typeof laneCount === "function" ? laneCount(projectId) : laneCount;
 }
 
 export function useLaneDrag({ laneCount, onReorder }: UseLaneDragParams) {
@@ -20,10 +24,17 @@ export function useLaneDrag({ laneCount, onReorder }: UseLaneDragParams) {
   const laneDragRef = useRef(laneDrag);
   laneDragRef.current = laneDrag;
 
+  // ref로 최신 값 유지 — effect 재등록 없이 안정적 참조
+  const laneCountRef = useRef(laneCount);
+  laneCountRef.current = laneCount;
+  const onReorderRef = useRef(onReorder);
+  onReorderRef.current = onReorder;
+
   const laneDropLocal = useMemo(() => {
     if (!laneDrag?.moved) return -1;
+    const count = resolveLaneCount(laneCount, laneDrag.projectId);
     const delta = Math.round((laneDrag.currentY - laneDrag.startY) / ROW_HEIGHT);
-    return Math.max(0, Math.min(laneCount - 1, laneDrag.fromLocal + delta));
+    return Math.max(0, Math.min(count - 1, laneDrag.fromLocal + delta));
   }, [laneDrag, laneCount]);
 
   const handleLanePointerDown = useCallback((e: React.PointerEvent, laneId: string, fromLocal: number, projectId?: string) => {
@@ -48,10 +59,11 @@ export function useLaneDrag({ laneCount, onReorder }: UseLaneDragParams) {
       if (!prev) return;
 
       if (prev.moved) {
+        const count = resolveLaneCount(laneCountRef.current, prev.projectId);
         const delta = Math.round((prev.currentY - prev.startY) / ROW_HEIGHT);
-        const toLocal = Math.max(0, Math.min(laneCount - 1, prev.fromLocal + delta));
+        const toLocal = Math.max(0, Math.min(count - 1, prev.fromLocal + delta));
         if (toLocal !== prev.fromLocal) {
-          onReorder(prev.fromLocal, toLocal);
+          onReorderRef.current(prev.fromLocal, toLocal, prev.projectId);
         }
       }
 
@@ -64,7 +76,7 @@ export function useLaneDrag({ laneCount, onReorder }: UseLaneDragParams) {
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleUp);
     };
-  }, [!!laneDrag, laneCount, onReorder]);
+  }, [!!laneDrag]);
 
   return { laneDrag, laneDropLocal, handleLanePointerDown };
 }

@@ -31,6 +31,7 @@ import {
   CLICK_THRESHOLD,
 } from "./utils";
 import { useScrollToToday } from "./use-scroll-to-today";
+import { useLaneDrag } from "./use-lane-drag";
 import { useLaneActions } from "./use-lane-actions";
 import { TimelineHeader } from "./timeline-header";
 import { GanttGrid } from "./gantt-grid";
@@ -135,17 +136,24 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   const projectDragRef = useRef(projectDrag);
   projectDragRef.current = projectDrag;
 
-  // 레인 드래그 (overview는 projectId도 추적해야 하므로 직접 관리)
-  const [laneDrag, setLaneDrag] = useState<{
-    laneId: string;
-    projectId: string;
-    startY: number;
-    currentY: number;
-    fromLocal: number;
-    moved: boolean;
-  } | null>(null);
-  const laneDragRef = useRef(laneDrag);
-  laneDragRef.current = laneDrag;
+  // 레인 드래그
+  const getLaneCount = useCallback((projectId?: string) => {
+    return projects.find((p) => p.id === projectId)?.lanes.length ?? 0;
+  }, [projects]);
+
+  const handleLaneReorder = useCallback((fromLocal: number, toLocal: number, projectId?: string) => {
+    const project = projects.find((p) => p.id === projectId);
+    if (!project) return;
+    const reordered = [...project.lanes];
+    const [moved] = reordered.splice(fromLocal, 1);
+    reordered.splice(toLocal, 0, moved);
+    reorderLanes.mutate(reordered.map((l, i) => ({ id: l.id, sortOrder: i })));
+  }, [projects, reorderLanes]);
+
+  const { laneDrag, laneDropLocal, handleLanePointerDown: hookLanePointerDown } = useLaneDrag({
+    laneCount: getLaneCount,
+    onReorder: handleLaneReorder,
+  });
 
   const overviewProjects = useMemo(() =>
     projects.map((p) => ({
@@ -221,15 +229,6 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     }
     return rangeMap;
   }, [rows]);
-
-  // 레인 드래그 시 시각적 로컬 인덱스
-  const laneDropLocal = useMemo(() => {
-    if (!laneDrag?.moved) return -1;
-    const project = projects.find((p) => p.id === laneDrag.projectId);
-    if (!project) return -1;
-    const delta = Math.round((laneDrag.currentY - laneDrag.startY) / ROW_HEIGHT);
-    return Math.max(0, Math.min(project.lanes.length - 1, laneDrag.fromLocal + delta));
-  }, [laneDrag, projects]);
 
   const toggleProject = (id: string) => {
     setExpandedProjects((prev) => {
@@ -322,11 +321,9 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   const handleLanePointerDown = useCallback((e: React.PointerEvent, laneId: string, localIndex: number) => {
     const row = rows.find((r) => r.type === "lane" && r.lane.id === laneId);
     if (row?.type === "lane") {
-      e.stopPropagation();
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-      setLaneDrag({ laneId, projectId: row.project.id, startY: e.clientY, currentY: e.clientY, fromLocal: localIndex, moved: false });
+      hookLanePointerDown(e, laneId, localIndex, row.project.id);
     }
-  }, [rows]);
+  }, [rows, hookLanePointerDown]);
 
   // 프로젝트 리오더
   const handleProjectReorder = useCallback((fromIndex: number, toIndex: number) => {
@@ -382,46 +379,6 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
       window.removeEventListener("pointerup", handleUp);
     };
   }, [!!projectDrag, projectRowIndices, handleProjectReorder]);
-
-  useEffect(() => {
-    if (!laneDrag) return;
-
-    const handleMove = (e: PointerEvent) => {
-      setLaneDrag((prev) => {
-        if (!prev) return null;
-        const moved = prev.moved || Math.abs(e.clientY - prev.startY) > CLICK_THRESHOLD;
-        return { ...prev, currentY: e.clientY, moved };
-      });
-    };
-
-    const handleUp = () => {
-      const prev = laneDragRef.current;
-      if (!prev) return;
-
-      if (prev.moved) {
-        const project = projects.find((p) => p.id === prev.projectId);
-        if (project) {
-          const delta = Math.round((prev.currentY - prev.startY) / ROW_HEIGHT);
-          const toLocal = Math.max(0, Math.min(project.lanes.length - 1, prev.fromLocal + delta));
-          if (toLocal !== prev.fromLocal) {
-            const reordered = [...project.lanes];
-            const [moved] = reordered.splice(prev.fromLocal, 1);
-            reordered.splice(toLocal, 0, moved);
-            reorderLanes.mutate(reordered.map((l, i) => ({ id: l.id, sortOrder: i })));
-          }
-        }
-      }
-
-      setLaneDrag(null);
-    };
-
-    window.addEventListener("pointermove", handleMove);
-    window.addEventListener("pointerup", handleUp);
-    return () => {
-      window.removeEventListener("pointermove", handleMove);
-      window.removeEventListener("pointerup", handleUp);
-    };
-  }, [!!laneDrag, projects, reorderLanes]);
 
   const handleCreateSubmit = useCallback((title: string, category: string, categoryColor: string | null) => {
     if (!createState) return;
@@ -570,6 +527,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
             rangeEnd={range.end}
             totalWidth={totalWidth}
             rowCount={totalRows}
+            hoverCell={hoverCell}
             onEmptyClick={handleEmptyClick}
             onDragCreate={handleDragCreate}
             canDragRow={canDragRow}

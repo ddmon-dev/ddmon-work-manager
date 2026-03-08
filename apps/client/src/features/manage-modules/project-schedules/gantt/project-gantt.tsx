@@ -236,6 +236,7 @@ export function ProjectGantt({
                 rangeEnd={range.end}
                 totalWidth={totalWidth}
                 rowCount={rowCount}
+                hoverCell={hoverCell}
                 onEmptyClick={handleEmptyClick}
                 onDragCreate={handleDragCreate}
                 onHoverCell={setHoverCell}

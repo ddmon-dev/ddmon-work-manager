@@ -20,6 +20,18 @@ export const HEADER_HEIGHT = 48;
 export const BAR_HEIGHT = 26;
 export const BAR_Y_OFFSET = Math.floor((ROW_HEIGHT - 1 - BAR_HEIGHT) / 2);
 
+export const TODAY = startOfDay(new Date());
+
+function computeRange(dates: Date[]): { start: Date; end: Date } {
+  const timestamps = dates.map((d) => d.getTime());
+  const min = new Date(Math.min(...timestamps));
+  const max = new Date(Math.max(...timestamps));
+  return {
+    start: subDays(startOfDay(min), 7),
+    end: addDays(startOfDay(max), 14),
+  };
+}
+
 // ── 타임라인 범위 계산 ───────────────────────────────────────
 
 interface ComputeRangeParams {
@@ -35,7 +47,7 @@ export function computeTimelineRange({
   deliveredDate,
   completedDate,
 }: ComputeRangeParams): { start: Date; end: Date } {
-  const dates: Date[] = [];
+  const dates: Date[] = [startOfDay(new Date())];
 
   for (const s of schedules) {
     dates.push(parseISO(s.startDate));
@@ -46,17 +58,7 @@ export function computeTimelineRange({
   if (deliveredDate) dates.push(parseISO(deliveredDate));
   if (completedDate) dates.push(parseISO(completedDate));
 
-  // 오늘은 항상 포함
-  dates.push(startOfDay(new Date()));
-
-  const timestamps = dates.map((d) => d.getTime());
-  const min = new Date(Math.min(...timestamps));
-  const max = new Date(Math.max(...timestamps));
-
-  return {
-    start: subDays(startOfDay(min), 7),
-    end: addDays(startOfDay(max), 14),
-  };
+  return computeRange(dates);
 }
 
 // ── 오버뷰용 범위 계산 ───────────────────────────────────────
@@ -81,14 +83,7 @@ export function computeOverviewRange(projects: OverviewProject[]): { start: Date
     }
   }
 
-  const timestamps = dates.map((d) => d.getTime());
-  const min = new Date(Math.min(...timestamps));
-  const max = new Date(Math.max(...timestamps));
-
-  return {
-    start: subDays(startOfDay(min), 7),
-    end: addDays(startOfDay(max), 14),
-  };
+  return computeRange(dates);
 }
 
 // ── 좌표 변환 ─────────────────────────────────────────────────
