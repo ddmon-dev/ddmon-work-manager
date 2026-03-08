@@ -57,6 +57,7 @@ export function GanttBar({
   const [preview, setPreview] = useState({ left: 0, width: 0, top: 0 });
   const [splitPreview, setSplitPreview] = useState<number | null>(null);
   const dragStart = useRef({ x: 0, y: 0, originalLeft: 0, originalWidth: 0, moved: false });
+  const dragAxis = useRef<"x" | "y" | null>(null);
 
   const startDate = parseISO(schedule.startDate);
   const endDate = schedule.endDate ? parseISO(schedule.endDate) : null;
@@ -74,6 +75,7 @@ export function GanttBar({
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
       setDragMode(mode);
       dragStart.current = { x: e.clientX, y: e.clientY, originalLeft: left, originalWidth: width, moved: false };
+      dragAxis.current = null;
       setPreview({ left: 0, width: 0, top: 0 });
     },
     [left, width]
@@ -85,20 +87,23 @@ export function GanttBar({
       const deltaX = e.clientX - dragStart.current.x;
       const deltaY = e.clientY - dragStart.current.y;
 
-      if (Math.abs(deltaX) > CLICK_THRESHOLD || Math.abs(deltaY) > CLICK_THRESHOLD) {
+      if (!dragStart.current.moved && (Math.abs(deltaX) > CLICK_THRESHOLD || Math.abs(deltaY) > CLICK_THRESHOLD)) {
         dragStart.current.moved = true;
+        if (dragMode === "move") {
+          dragAxis.current = Math.abs(deltaY) > Math.abs(deltaX) ? "y" : "x";
+        }
       }
 
       if (dragMode === "move") {
-        if (disableReorder) {
-          setPreview({ left: deltaX, width: 0, top: 0 });
-        } else {
+        if (dragAxis.current === "y" && !disableReorder) {
           const lo = minRow ?? 0;
           const hi = maxRow ?? (totalRows - 1);
           const targetRow = Math.max(lo, Math.min(hi, rowIndex + Math.round(deltaY / ROW_HEIGHT)));
           const clampedRowDelta = (targetRow - rowIndex) * ROW_HEIGHT;
-          setPreview({ left: deltaX, width: 0, top: clampedRowDelta });
+          setPreview({ left: 0, width: 0, top: clampedRowDelta });
           onDragRow?.(targetRow);
+        } else {
+          setPreview({ left: deltaX, width: 0, top: 0 });
         }
       } else if (dragMode === "resize-left") {
         const maxShrink = dragStart.current.originalWidth - DAY_WIDTH;
