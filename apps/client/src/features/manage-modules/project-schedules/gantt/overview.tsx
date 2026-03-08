@@ -51,18 +51,17 @@ export function ProjectScheduleOverview() {
             <SidebarTrigger />
             <Separator orientation="vertical" className="data-[orientation=vertical]:h-4 mx-2 hidden md:block" />
             <h1 className="text-xl font-semibold hidden md:block">프로젝트 일정</h1>
+            <Separator orientation="vertical" className="data-[orientation=vertical]:h-4 mx-2 hidden md:block" />
 
-            <div className="flex items-center gap-2 ml-auto">
-              <Tabs value={status} onValueChange={setStatus}>
-                <TabsList>
-                  <TabsTrigger value="active">진행중</TabsTrigger>
-                  <TabsTrigger value="completed">완료</TabsTrigger>
-                </TabsList>
-              </Tabs>
+            <Tabs value={status} onValueChange={setStatus}>
+              <TabsList>
+                <TabsTrigger value="active">진행중</TabsTrigger>
+                <TabsTrigger value="completed">완료</TabsTrigger>
+              </TabsList>
+            </Tabs>
 
-              {/* 카테고리 범례 */}
-              <Separator orientation="vertical" className="data-[orientation=vertical]:h-4 mx-1 hidden md:block" />
-              <div className="hidden md:flex items-center gap-3">
+            {/* 카테고리 범례 */}
+            <div className="hidden md:flex items-center gap-3 ml-auto">
                 {TASK_CATEGORIES.map((cat) => {
                   const config = PRESET_COLORS[cat];
                   return (
@@ -75,7 +74,6 @@ export function ProjectScheduleOverview() {
                     </div>
                   );
                 })}
-              </div>
             </div>
           </div>
         </Container>
