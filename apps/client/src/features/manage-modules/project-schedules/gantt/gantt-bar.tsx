@@ -141,9 +141,16 @@ export function GanttBar({
       const snappedWidth = Math.round(preview.width / DAY_WIDTH) * DAY_WIDTH;
       const snappedTop = Math.round(preview.top / ROW_HEIGHT) * ROW_HEIGHT;
 
+      // 스냅 위치로 preview 고정 — optimistic update가 반영될 때까지 유지
+      setPreview({ left: snappedLeft, width: snappedWidth, top: snappedTop });
+      setDragMode(null);
+      setDuplicateOffset(null);
+      onDragEnd?.();
+
       if (dragMode === "move") {
         const newRow = rowIndex + Math.round(snappedTop / ROW_HEIGHT);
-        if (newRow !== rowIndex) {
+        const rowChanged = newRow !== rowIndex;
+        if (rowChanged) {
           onRowChange(rowIndex, newRow);
         }
 
@@ -160,9 +167,15 @@ export function GanttBar({
           const dupStartStr = format(dupStart, "yyyy-MM-dd");
           const dupEndStr = endDate ? format(addDays(dupStart, span - 1), "yyyy-MM-dd") : null;
           onDuplicate(schedule, dupStartStr, dupEndStr);
+          // 복제 시 원본은 제자리 — preview 리셋
+          setPreview({ left: 0, width: 0, top: 0 });
         } else if (newStartStr !== schedule.startDate || newEndStr !== schedule.endDate) {
           onDateChange(schedule.id, newStartStr, newEndStr);
+        } else if (!rowChanged) {
+          // 행도 날짜도 변경 없음 — preview 리셋
+          setPreview({ left: 0, width: 0, top: 0 });
         }
+        // rowChanged인 경우: 낙관적 업데이트 후 보정 코드가 preview를 정리
       } else {
         const finalLeft = left + snappedLeft;
         const finalWidth = width + snappedWidth;
@@ -174,16 +187,27 @@ export function GanttBar({
         const newEndStr = newEnd ? format(newEnd, "yyyy-MM-dd") : null;
         if (newStartStr !== schedule.startDate || newEndStr !== schedule.endDate) {
           onDateChange(schedule.id, newStartStr, newEndStr);
+        } else {
+          setPreview({ left: 0, width: 0, top: 0 });
         }
       }
-
-      setDragMode(null);
-      onDragEnd?.();
-      setPreview({ left: 0, width: 0, top: 0 });
-      setDuplicateOffset(null);
     },
     [dragMode, preview, left, width, rangeStart, schedule, startDate, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick, onDuplicate, onDragEnd, duplicateOffset]
   );
+
+  // optimistic update로 데이터 위치가 변하면 preview를 보정하여 점프 방지
+  // React의 "렌더 중 상태 조정" 패턴 — paint 전에 재렌더링됨
+  const prevPosRef = useRef({ left, width, top });
+  if (prevPosRef.current.left !== left || prevPosRef.current.width !== width || prevPosRef.current.top !== top) {
+    if (dragMode === null && (preview.left !== 0 || preview.width !== 0 || preview.top !== 0)) {
+      setPreview({
+        left: preview.left - (left - prevPosRef.current.left),
+        width: preview.width - (width - prevPosRef.current.width),
+        top: preview.top - (top - prevPosRef.current.top),
+      });
+    }
+    prevPosRef.current = { left, width, top };
+  }
 
   const displayLeft = left + preview.left;
   const displayWidth = width + preview.width;
@@ -198,7 +222,6 @@ export function GanttBar({
         "absolute flex items-center gap-1.5 px-2 rounded-md select-none",
         "hover:shadow-sm",
         isDragging && "shadow-md z-10 opacity-90",
-        !isDragging && "transition-[left,top,width] duration-100"
       )}
       style={{
         left: displayLeft,
