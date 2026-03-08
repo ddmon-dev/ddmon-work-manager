@@ -281,6 +281,24 @@ export function useMergeProjectSchedule() {
   });
 }
 
+// ── 복제 ────────────────────────────────────────────────────
+
+export function useDuplicateProjectSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { startDate: string; endDate: string | null } }) =>
+      api.post<ProjectScheduleDTO>(`/project-schedules/${id}/duplicate`, data),
+    onSuccess: () => {
+      toast.success("일정이 복제되었습니다.");
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.all });
+    },
+    onError: (error) => {
+      toast.error(error.message || "일정 복제에 실패했습니다.");
+    },
+  });
+}
+
 // ── 삭제 ────────────────────────────────────────────────────
 
 export function useDeleteProjectSchedule() {

@@ -8,6 +8,7 @@ import {
   useReorderProjectSchedules,
   useSplitProjectSchedule,
   useMergeProjectSchedule,
+  useDuplicateProjectSchedule,
 } from "../api";
 import type { ProjectScheduleDTO } from "../types";
 import { useGantt } from "./use-gantt";
@@ -69,6 +70,7 @@ export function ProjectGantt({
   const reorderSchedules = useReorderProjectSchedules();
   const splitSchedule = useSplitProjectSchedule();
   const mergeSchedule = useMergeProjectSchedule();
+  const duplicateSchedule = useDuplicateProjectSchedule();
 
   const { range, totalWidth } = useGantt({
     schedules: items,
@@ -201,6 +203,10 @@ export function ProjectGantt({
     splitSchedule.mutate({ id, data: { splitDate } });
   }, [splitSchedule]);
 
+  const handleDuplicate = useCallback((schedule: ProjectScheduleDTO, newStartDate: string, newEndDate: string | null) => {
+    duplicateSchedule.mutate({ id: schedule.id, data: { startDate: newStartDate, endDate: newEndDate } });
+  }, [duplicateSchedule]);
+
   // groups + 하단 빈 행 (클릭 영역) — 최소 1행
   const rowCount = Math.max(groups.length + 1, 1);
 
@@ -245,6 +251,7 @@ export function ProjectGantt({
                       onRowChange={handleRowChange}
                       onBarClick={handleBarClick}
                       onSplit={handleSplit}
+                      onDuplicate={handleDuplicate}
                       onDragRow={(toIndex) => setDragReorder({ fromIndex: groupIdx, toIndex, scheduleId: schedule.id })}
                       onDragEnd={() => setDragReorder(null)}
                     />

@@ -15,6 +15,7 @@ import {
   useReorderProjects,
   useSplitProjectSchedule,
   useMergeProjectSchedule,
+  useDuplicateProjectSchedule,
 } from "../api";
 import { TASK_CATEGORY_CONFIG, getCategoryConfig } from "../constants";
 import type { ProjectScheduleDTO, OverviewProject } from "../types";
@@ -128,6 +129,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   const reorderProjects = useReorderProjects();
   const splitSchedule = useSplitProjectSchedule();
   const mergeSchedule = useMergeProjectSchedule();
+  const duplicateSchedule = useDuplicateProjectSchedule();
 
   const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
   const [popover, setPopover] = useState<{ schedule: ProjectScheduleDTO; rect: DOMRect } | null>(null);
@@ -326,6 +328,10 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   const handleSplit = useCallback((id: string, splitDate: string) => {
     splitSchedule.mutate({ id, data: { splitDate } });
   }, [splitSchedule]);
+
+  const handleDuplicate = useCallback((schedule: ProjectScheduleDTO, newStartDate: string, newEndDate: string | null) => {
+    duplicateSchedule.mutate({ id: schedule.id, data: { startDate: newStartDate, endDate: newEndDate } });
+  }, [duplicateSchedule]);
 
   const handleDateChange = useCallback((id: string, newStartDate: string, newEndDate: string | null) => {
     let schedule: ProjectScheduleDTO | undefined;
@@ -639,6 +645,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                     onRowChange={handleRowChange}
                     onBarClick={handleBarClick}
                     onSplit={handleSplit}
+                    onDuplicate={handleDuplicate}
                     onDragRow={(targetRow) => handleDragRow(schedule.id, targetRow)}
                     onDragEnd={handleDragEnd}
                     minRow={projectRange?.startRow}

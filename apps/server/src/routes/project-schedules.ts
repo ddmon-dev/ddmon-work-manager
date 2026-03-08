@@ -249,6 +249,55 @@ app.post("/:id/merge", async (c) => {
   return successResponse(c, result);
 });
 
+// POST /project-schedules/:id/duplicate — 같은 그룹으로 일정 복제
+const duplicateSchema = z.object({
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+});
+
+app.post("/:id/duplicate", async (c) => {
+  const user = c.get("user");
+  const id = c.req.param("id");
+  const parsed = duplicateSchema.safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  const original = await db.query.projectSchedules.findFirst({
+    where: eq(projectSchedules.id, id),
+  });
+  if (!original) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  const groupId = original.groupId ?? crypto.randomUUID();
+
+  const result = await db.transaction(async (tx) => {
+    // 원본에 groupId가 없으면 부여
+    if (!original.groupId) {
+      await tx
+        .update(projectSchedules)
+        .set({ groupId, updatedBy: user.id, updatedAt: new Date() })
+        .where(eq(projectSchedules.id, id));
+    }
+
+    const [created] = await tx
+      .insert(projectSchedules)
+      .values({
+        projectId: original.projectId,
+        groupId,
+        category: original.category,
+        title: original.title,
+        description: original.description,
+        startDate: parsed.data.startDate,
+        endDate: parsed.data.endDate ?? null,
+        sortOrder: original.sortOrder + 1,
+        author: user.id,
+      })
+      .returning();
+
+    return created;
+  });
+
+  return successResponse(c, result, 201);
+});
+
 // DELETE /project-schedules/:id — 하드 삭제
 app.delete("/:id", async (c) => {
   const id = c.req.param("id");

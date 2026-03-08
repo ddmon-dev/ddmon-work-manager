@@ -24,6 +24,7 @@ interface GanttBarProps {
   onRowChange: (fromIndex: number, toIndex: number) => void;
   onBarClick: (schedule: ProjectScheduleDTO, rect: DOMRect) => void;
   onSplit?: (id: string, splitDate: string) => void;
+  onDuplicate?: (schedule: ProjectScheduleDTO, newStartDate: string, newEndDate: string | null) => void;
   onDragRow?: (targetRow: number) => void;
   onDragEnd?: () => void;
   disableReorder?: boolean;
@@ -44,6 +45,7 @@ export function GanttBar({
   onRowChange,
   onBarClick,
   onSplit,
+  onDuplicate,
   onDragRow,
   onDragEnd,
   disableReorder,
@@ -56,6 +58,7 @@ export function GanttBar({
   const [dragMode, setDragMode] = useState<DragMode>(null);
   const [preview, setPreview] = useState({ left: 0, width: 0, top: 0 });
   const [splitPreview, setSplitPreview] = useState<number | null>(null);
+  const [duplicateOffset, setDuplicateOffset] = useState<number | null>(null);
   const dragStart = useRef({ x: 0, y: 0, originalLeft: 0, originalWidth: 0, moved: false });
   const dragAxis = useRef<"x" | "y" | null>(null);
 
@@ -102,8 +105,12 @@ export function GanttBar({
           const clampedRowDelta = (targetRow - rowIndex) * ROW_HEIGHT;
           setPreview({ left: 0, width: 0, top: clampedRowDelta });
           onDragRow?.(targetRow);
+        } else if (e.altKey && onDuplicate) {
+          setPreview({ left: 0, width: 0, top: 0 });
+          setDuplicateOffset(deltaX);
         } else {
           setPreview({ left: deltaX, width: 0, top: 0 });
+          setDuplicateOffset(null);
         }
       } else if (dragMode === "resize-left") {
         const maxShrink = dragStart.current.originalWidth - DAY_WIDTH;
@@ -116,7 +123,7 @@ export function GanttBar({
         }
       }
     },
-    [dragMode, rowIndex, totalRows, onDragRow, disableReorder, minRow, maxRow]
+    [dragMode, rowIndex, totalRows, onDragRow, onDuplicate, disableReorder, minRow, maxRow]
   );
 
   const handlePointerUp = useCallback(
@@ -163,7 +170,13 @@ export function GanttBar({
           ? format(addDays(newStart, span - 1), "yyyy-MM-dd")
           : null;
 
-        if (newStartStr !== schedule.startDate || newEndStr !== schedule.endDate) {
+        if (e.altKey && onDuplicate && duplicateOffset !== null) {
+          const dupLeft = left + Math.round(duplicateOffset / DAY_WIDTH) * DAY_WIDTH;
+          const dupStart = xToDate(dupLeft, rangeStart);
+          const dupStartStr = format(dupStart, "yyyy-MM-dd");
+          const dupEndStr = endDate ? format(addDays(dupStart, span - 1), "yyyy-MM-dd") : null;
+          onDuplicate(schedule, dupStartStr, dupEndStr);
+        } else if (newStartStr !== schedule.startDate || newEndStr !== schedule.endDate) {
           onDateChange(schedule.id, newStartStr, newEndStr);
         }
       } else {
@@ -183,8 +196,9 @@ export function GanttBar({
       setDragMode(null);
       onDragEnd?.();
       setPreview({ left: 0, width: 0, top: 0 });
+      setDuplicateOffset(null);
     },
-    [dragMode, preview, left, width, rangeStart, schedule, startDate, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick, onSplit, onDragEnd, disableReorder]
+    [dragMode, preview, left, width, rangeStart, schedule, startDate, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick, onSplit, onDuplicate, onDragEnd, disableReorder]
   );
 
   const displayLeft = left + preview.left;
@@ -258,6 +272,19 @@ export function GanttBar({
           className="absolute top-0 bottom-0 w-px bg-foreground/50 pointer-events-none z-10"
           style={{ left: splitPreview }}
         />
+      )}
+
+      {/* 복제 고스트 */}
+      {duplicateOffset !== null && (
+        <div
+          className={cn(
+            "absolute flex items-center gap-1.5 px-2 rounded-md pointer-events-none opacity-50 border border-dashed border-foreground/30",
+            color.bg,
+          )}
+          style={{ left: duplicateOffset, top: 0, width: displayWidth, height: BAR_HEIGHT }}
+        >
+          <span className="text-xs truncate">{schedule.title}</span>
+        </div>
       )}
 
       {/* truncate 시 툴팁 */}
