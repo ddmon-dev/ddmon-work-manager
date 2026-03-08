@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo, memo } from "react";
 import { cn } from "@/shared/utils/classnames";
 import {
   DAY_WIDTH,
   ROW_HEIGHT,
   BAR_HEIGHT,
   BAR_Y_OFFSET,
+  CLICK_THRESHOLD,
   getDaysInRange,
   dateToX,
   xToDate,
@@ -25,7 +26,7 @@ interface GanttGridProps {
   children: React.ReactNode;
 }
 
-const CLICK_THRESHOLD = 4;
+const TODAY = startOfDay(new Date());
 
 export function GanttGrid({
   rangeStart,
@@ -38,9 +39,8 @@ export function GanttGrid({
   onHoverCell,
   children,
 }: GanttGridProps) {
-  const today = startOfDay(new Date());
-  const days = getDaysInRange(rangeStart, rangeEnd);
-  const todayX = dateToX(today, rangeStart);
+  const days = useMemo(() => getDaysInRange(rangeStart, rangeEnd), [rangeStart, rangeEnd]);
+  const todayX = dateToX(TODAY, rangeStart);
   const showTodayLine = todayX >= 0 && todayX <= totalWidth;
   const contentHeight = Math.max(rowCount, 1) * ROW_HEIGHT;
 
@@ -133,32 +133,7 @@ export function GanttGrid({
       onMouseMove={handleMouseMove}
       onMouseLeave={() => { setHoverCell(null); onHoverCell?.(null); }}
     >
-      {/* 세로 그리드 줄 + 주말 배경 */}
-      {days.map((day, i) => {
-        const weekend = isWeekend(day);
-        const isLastOfMonth =
-          i < days.length - 1 && days[i + 1].getDate() === 1;
-        return (
-          <div
-            key={i}
-            className={cn(
-              "absolute top-0 bottom-0 border-r border-border/50",
-              weekend && "bg-destructive/4",
-              isLastOfMonth && "border-r-border"
-            )}
-            style={{ left: i * DAY_WIDTH, width: DAY_WIDTH }}
-          />
-        );
-      })}
-
-      {/* 가로 그리드 줄 */}
-      {Array.from({ length: rowCount - 1 }, (_, i) => (
-        <div
-          key={`row-${i}`}
-          className="absolute left-0 right-0 border-b border-border/30"
-          style={{ top: (i + 1) * ROW_HEIGHT - 1 }}
-        />
-      ))}
+      <GridLines days={days} rowCount={rowCount} />
 
       {/* 호버 크로스헤어 */}
       {hoverCell && !dragState?.active && (
@@ -200,3 +175,33 @@ export function GanttGrid({
     </div>
   );
 }
+
+// 세로/가로 그리드 줄 — days와 rowCount에만 의존
+const GridLines = memo(function GridLines({ days, rowCount }: { days: Date[]; rowCount: number }) {
+  return (
+    <>
+      {days.map((day, i) => {
+        const weekend = isWeekend(day);
+        const isLastOfMonth = i < days.length - 1 && days[i + 1].getDate() === 1;
+        return (
+          <div
+            key={i}
+            className={cn(
+              "absolute top-0 bottom-0 border-r border-border/50",
+              weekend && "bg-destructive/4",
+              isLastOfMonth && "border-r-border"
+            )}
+            style={{ left: i * DAY_WIDTH, width: DAY_WIDTH }}
+          />
+        );
+      })}
+      {Array.from({ length: rowCount - 1 }, (_, i) => (
+        <div
+          key={`row-${i}`}
+          className="absolute left-0 right-0 border-b border-border/30"
+          style={{ top: (i + 1) * ROW_HEIGHT - 1 }}
+        />
+      ))}
+    </>
+  );
+});

@@ -1,10 +1,11 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, memo } from "react";
 import { cn } from "@/shared/utils/classnames";
 import {
   DAY_WIDTH,
   ROW_HEIGHT,
   BAR_HEIGHT,
   BAR_Y_OFFSET,
+  CLICK_THRESHOLD,
   dateToX,
   xToDate,
   parseISO,
@@ -21,20 +22,16 @@ interface GanttBarProps {
   rangeStart: Date;
   totalRows: number;
   onDateChange: (id: string, newStartDate: string, newEndDate: string | null) => void;
-  onRowChange: (fromIndex: number, toIndex: number) => void;
+  onRowChange: (scheduleId: string, fromIndex: number, toIndex: number) => void;
   onBarClick: (schedule: ProjectScheduleDTO, rect: DOMRect) => void;
   onDuplicate?: (schedule: ProjectScheduleDTO, newStartDate: string, newEndDate: string | null) => void;
-  onDragRow?: (targetRow: number) => void;
-  onDragEnd?: () => void;
   minRow?: number;
   maxRow?: number;
 }
 
 type DragMode = "move" | "resize-left" | "resize-right" | null;
 
-const CLICK_THRESHOLD = 4;
-
-export function GanttBar({
+export const GanttBar = memo(function GanttBar({
   schedule,
   rowIndex,
   rangeStart,
@@ -43,8 +40,6 @@ export function GanttBar({
   onRowChange,
   onBarClick,
   onDuplicate,
-  onDragRow,
-  onDragEnd,
   minRow,
   maxRow,
 }: GanttBarProps) {
@@ -100,7 +95,6 @@ export function GanttBar({
           const targetRow = Math.max(lo, Math.min(hi, rowIndex + Math.round(deltaY / ROW_HEIGHT)));
           const clampedRowDelta = (targetRow - rowIndex) * ROW_HEIGHT;
           setPreview({ left: 0, width: 0, top: clampedRowDelta });
-          onDragRow?.(targetRow);
         } else if (e.altKey && onDuplicate) {
           setPreview({ left: 0, width: 0, top: 0 });
           setDuplicateOffset(deltaX);
@@ -119,7 +113,7 @@ export function GanttBar({
         }
       }
     },
-    [dragMode, rowIndex, totalRows, onDragRow, onDuplicate, minRow, maxRow]
+    [dragMode, rowIndex, totalRows, onDuplicate, minRow, maxRow]
   );
 
   const handlePointerUp = useCallback(
@@ -131,7 +125,7 @@ export function GanttBar({
       if (!wasDragged) {
         setDragMode(null);
         setPreview({ left: 0, width: 0, top: 0 });
-        onDragEnd?.();
+        
         if (dragMode === "move" && barRef.current) {
           onBarClick(schedule, barRef.current.getBoundingClientRect());
         }
@@ -146,13 +140,13 @@ export function GanttBar({
       setPreview({ left: snappedLeft, width: snappedWidth, top: snappedTop });
       setDragMode(null);
       setDuplicateOffset(null);
-      onDragEnd?.();
+      
 
       if (dragMode === "move") {
         const newRow = rowIndex + Math.round(snappedTop / ROW_HEIGHT);
         const rowChanged = newRow !== rowIndex;
         if (rowChanged) {
-          onRowChange(rowIndex, newRow);
+          onRowChange(schedule.id, rowIndex, newRow);
         }
 
         const finalLeft = left + snappedLeft;
@@ -193,7 +187,7 @@ export function GanttBar({
         }
       }
     },
-    [dragMode, preview, left, width, rangeStart, schedule, startDate, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick, onDuplicate, onDragEnd, duplicateOffset]
+    [dragMode, preview, left, width, rangeStart, schedule, startDate, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick, onDuplicate, duplicateOffset]
   );
 
   // optimistic update로 데이터 위치가 변하면 preview를 보정하여 점프 방지
@@ -288,4 +282,4 @@ export function GanttBar({
       )}
     </div>
   );
-}
+});

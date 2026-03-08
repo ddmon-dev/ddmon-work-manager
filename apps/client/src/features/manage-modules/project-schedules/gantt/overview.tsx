@@ -1,7 +1,6 @@
 import { useRef, useEffect, useMemo, useState, useCallback } from "react";
-import { ChevronRightIcon, ChevronsUpDownIcon, GripVerticalIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { ChevronRightIcon, ChevronsUpDownIcon } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
-import { useDialog } from "@/shared/ui/app-dialog";
 import { Container } from "@/shared/ui/container";
 import { Separator } from "@/shared/ui/separator";
 import { SidebarTrigger } from "@/shared/ui/sidebar";
@@ -12,18 +11,14 @@ import {
   useCreateProjectSchedule,
   useUpdateProjectSchedule,
   useReorderProjects,
-  useCreateLane,
-  useUpdateLane,
-  useDeleteLane,
   useReorderLanes,
 } from "../api";
-import { PRESET_COLORS, getCategoryConfig } from "../constants";
+import { PRESET_COLORS } from "../constants";
 import type { ProjectScheduleDTO, LaneWithSchedules, OverviewProject } from "../types";
 import {
   computeOverviewRange,
   getTotalWidth,
   dateToX,
-  startOfDay,
   parseISO,
   differenceInCalendarDays,
   format,
@@ -32,15 +27,21 @@ import {
   HEADER_HEIGHT,
   BAR_HEIGHT,
   BAR_Y_OFFSET,
+  LEFT_PANEL_WIDTH,
+  CLICK_THRESHOLD,
 } from "./utils";
+import { useScrollToToday } from "./use-scroll-to-today";
+import { useLaneActions } from "./use-lane-actions";
 import { TimelineHeader } from "./timeline-header";
 import { GanttGrid } from "./gantt-grid";
 import { GanttBar } from "./gantt-bar";
+import { GhostBar } from "./ghost-bar";
+import { LaneRow } from "./lane-row";
 import { SchedulePopover } from "./schedule-popover";
 import { StatusBadge } from "../../projects/status-badge";
 
 export function ProjectScheduleOverview() {
-  const [status, setStatus] = useState("active");
+  const [status, setStatus] = useState<"active" | "completed">("active");
   const { data } = useProjectScheduleOverview(status);
   const projects = data?.items ?? [];
 
@@ -54,7 +55,7 @@ export function ProjectScheduleOverview() {
             <h1 className="text-xl font-semibold hidden md:block">프로젝트 일정</h1>
             <Separator orientation="vertical" className="data-[orientation=vertical]:h-4 mx-2 hidden md:block" />
 
-            <Tabs value={status} onValueChange={setStatus}>
+            <Tabs value={status} onValueChange={(v) => setStatus(v as "active" | "completed")}>
               <TabsList>
                 <TabsTrigger value="active">진행중</TabsTrigger>
                 <TabsTrigger value="completed">완료</TabsTrigger>
@@ -93,14 +94,10 @@ export function ProjectScheduleOverview() {
 
 // ── 오버뷰 간트 본체 ──────────────────────────────────────────
 
-const LEFT_PANEL_WIDTH = 220;
-
 type OverviewRow =
   | { type: "project"; project: OverviewProject; globalRow: number }
   | { type: "lane"; project: OverviewProject; lane: LaneWithSchedules; localIndex: number; globalRow: number }
   | { type: "empty"; project: OverviewProject; globalRow: number };
-
-const CLICK_THRESHOLD = 4;
 
 function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProject[]; defaultExpanded?: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -111,11 +108,12 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   const createSchedule = useCreateProjectSchedule();
   const updateSchedule = useUpdateProjectSchedule();
   const reorderProjects = useReorderProjects();
-  const createLane = useCreateLane();
-  const updateLane = useUpdateLane();
-  const deleteLane = useDeleteLane();
   const reorderLanes = useReorderLanes();
-  const dialog = useDialog();
+  const {
+    editingLaneId, editingLaneTitle, setEditingLaneTitle,
+    startEdit, saveEdit, cancelEdit,
+    handleDelete: laneDelete, handleAddBelow: laneAddBelow,
+  } = useLaneActions();
 
   const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
   const [popover, setPopover] = useState<{ schedule: ProjectScheduleDTO; rect: DOMRect } | null>(null);
@@ -137,10 +135,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   const projectDragRef = useRef(projectDrag);
   projectDragRef.current = projectDrag;
 
-  const [editingLaneId, setEditingLaneId] = useState<string | null>(null);
-  const [editingLaneTitle, setEditingLaneTitle] = useState("");
-
-  // 행 드래그 리오더
+  // 레인 드래그 (overview는 projectId도 추적해야 하므로 직접 관리)
   const [laneDrag, setLaneDrag] = useState<{
     laneId: string;
     projectId: string;
@@ -164,6 +159,8 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
 
   const range = useMemo(() => computeOverviewRange(overviewProjects), [overviewProjects]);
   const totalWidth = useMemo(() => getTotalWidth(range.start, range.end), [range]);
+
+  useScrollToToday(scrollRef, range.start);
 
   // 행 구조 계산
   const rows = useMemo(() => {
@@ -192,13 +189,10 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   // 프로젝트 행 인덱스
   const projectRowIndices = useMemo(() =>
     rows
-      .map((r, i) => (r.type === "project" ? { index: i, globalRow: r.globalRow, projectIndex: -1 } : null))
-      .filter(Boolean) as { index: number; globalRow: number; projectIndex: number }[],
+      .map((r, i) => (r.type === "project" ? { index: i, globalRow: r.globalRow } : null))
+      .filter(Boolean) as { index: number; globalRow: number }[],
     [rows]
   );
-  useMemo(() => {
-    projectRowIndices.forEach((item, i) => { item.projectIndex = i; });
-  }, [projectRowIndices]);
 
   const dropIndex = useMemo(() => {
     if (!projectDrag?.moved) return -1;
@@ -228,7 +222,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     return rangeMap;
   }, [rows]);
 
-  // 행 드래그 시 시각적 로컬 인덱스
+  // 레인 드래그 시 시각적 로컬 인덱스
   const laneDropLocal = useMemo(() => {
     if (!laneDrag?.moved) return -1;
     const project = projects.find((p) => p.id === laneDrag.projectId);
@@ -236,16 +230,6 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     const delta = Math.round((laneDrag.currentY - laneDrag.startY) / ROW_HEIGHT);
     return Math.max(0, Math.min(project.lanes.length - 1, laneDrag.fromLocal + delta));
   }, [laneDrag, projects]);
-
-  // 초기 스크롤
-  const didScroll = useRef(false);
-  useEffect(() => {
-    if (didScroll.current || !scrollRef.current) return;
-    didScroll.current = true;
-    const todayX = dateToX(startOfDay(new Date()), range.start);
-    const containerWidth = scrollRef.current.clientWidth;
-    scrollRef.current.scrollLeft = Math.max(0, todayX - containerWidth / 3);
-  }, [range.start]);
 
   const toggleProject = (id: string) => {
     setExpandedProjects((prev) => {
@@ -319,15 +303,30 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     updateSchedule.mutate({ id, data: { startDate: newStartDate, endDate: newEndDate } });
   }, [updateSchedule]);
 
-  const handleRowChange = useCallback(
-    (fromGlobalRow: number, toGlobalRow: number) => {
-      const fromRow = rows[fromGlobalRow];
-      const toRow = rows[toGlobalRow];
-      if (!fromRow || !toRow) return;
-      if (fromRow.type !== "lane" || toRow.type !== "lane") return;
-    },
-    [rows]
-  );
+  const handleRowChange = useCallback((scheduleId: string, fromRow: number, toRow: number) => {
+    if (fromRow === toRow) return;
+    const toRowData = rows[toRow];
+    if (toRowData?.type === "lane") {
+      updateSchedule.mutate({ id: scheduleId, data: { laneId: toRowData.lane.id } });
+    }
+  }, [rows, updateSchedule]);
+
+  // 레인 콜백 (안정적 참조)
+  const handleLaneAddBelow = useCallback((laneId: string, localIndex: number) => {
+    const row = rows.find((r) => r.type === "lane" && r.lane.id === laneId);
+    if (row?.type === "lane") {
+      laneAddBelow(row.project.id, localIndex, row.project.lanes);
+    }
+  }, [rows, laneAddBelow]);
+
+  const handleLanePointerDown = useCallback((e: React.PointerEvent, laneId: string, localIndex: number) => {
+    const row = rows.find((r) => r.type === "lane" && r.lane.id === laneId);
+    if (row?.type === "lane") {
+      e.stopPropagation();
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      setLaneDrag({ laneId, projectId: row.project.id, startY: e.clientY, currentY: e.clientY, fromLocal: localIndex, moved: false });
+    }
+  }, [rows]);
 
   // 프로젝트 리오더
   const handleProjectReorder = useCallback((fromIndex: number, toIndex: number) => {
@@ -382,14 +381,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleUp);
     };
-  }, [projectDrag, projectRowIndices, handleProjectReorder]);
-
-  // 행 드래그 리오더
-  const handleLanePointerDown = useCallback((e: React.PointerEvent, laneId: string, projectId: string, fromLocal: number) => {
-    e.stopPropagation();
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    setLaneDrag({ laneId, projectId, startY: e.clientY, currentY: e.clientY, fromLocal, moved: false });
-  }, []);
+  }, [!!projectDrag, projectRowIndices, handleProjectReorder]);
 
   useEffect(() => {
     if (!laneDrag) return;
@@ -429,7 +421,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleUp);
     };
-  }, [laneDrag, projects, reorderLanes]);
+  }, [!!laneDrag, projects, reorderLanes]);
 
   const handleCreateSubmit = useCallback((title: string, category: string, categoryColor: string | null) => {
     if (!createState) return;
@@ -445,53 +437,6 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     });
     setCreateState(null);
   }, [createState, createSchedule]);
-
-  const handleLaneEdit = (lane: LaneWithSchedules) => {
-    setEditingLaneId(lane.id);
-    setEditingLaneTitle(lane.title);
-  };
-
-  const handleLaneEditSave = (laneId: string) => {
-    const lane = projects.flatMap((p) => p.lanes).find((l) => l.id === laneId);
-    if (lane && editingLaneTitle.trim() !== lane.title) {
-      updateLane.mutate({ id: laneId, data: { title: editingLaneTitle.trim() } });
-    }
-    setEditingLaneId(null);
-  };
-
-  const handleAddLaneBelow = useCallback((projectId: string, afterIndex: number) => {
-    const project = projects.find((p) => p.id === projectId);
-    if (!project) return;
-    createLane.mutate({
-      projectId,
-      title: "",
-      sortOrder: afterIndex + 1,
-    }, {
-      onSuccess: () => {
-        // 기존 행 sortOrder 밀기
-        const toReorder = project.lanes
-          .filter((_, i) => i > afterIndex)
-          .map((l, i) => ({ id: l.id, sortOrder: afterIndex + 2 + i }));
-        if (toReorder.length > 0) {
-          reorderLanes.mutate(toReorder);
-        }
-      },
-    });
-  }, [projects, createLane, reorderLanes]);
-
-  const handleLaneDelete = useCallback((lane: LaneWithSchedules) => {
-    if (lane.schedules.length > 0) {
-      dialog.confirm({
-        title: "행 삭제",
-        description: `이 행에 ${lane.schedules.length}개의 일정이 있습니다. 행과 함께 모든 일정이 삭제됩니다.`,
-        variant: "destructive",
-        confirmText: "삭제",
-        onConfirm: () => deleteLane.mutate(lane.id),
-      });
-    } else {
-      deleteLane.mutate(lane.id);
-    }
-  }, [dialog, deleteLane]);
 
   // 좌측 패널 높이 동기화
   const contentHeight = Math.max(totalRows, 1) * ROW_HEIGHT;
@@ -578,73 +523,34 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
               }
 
               // lane row
-              const isLaneDragging = laneDrag?.moved && laneDrag.laneId === row.lane.id;
-              const showLaneDropIndicator = laneDrag?.moved
+              const isLaneDragging = !!(laneDrag?.moved && laneDrag.laneId === row.lane.id);
+              const showLaneDropIndicator = !!(laneDrag?.moved
                 && laneDrag.projectId === row.project.id
                 && laneDropLocal === row.localIndex
-                && laneDropLocal !== laneDrag.fromLocal;
+                && laneDropLocal !== laneDrag.fromLocal);
+              const isEditingThis = editingLaneId === row.lane.id;
 
               return (
-                <div key={`l-${row.lane.id}`} className="relative">
-                  {showLaneDropIndicator && laneDropLocal < laneDrag!.fromLocal && (
-                    <div className="absolute top-0 left-2 right-1 h-0.5 bg-primary z-10" />
-                  )}
-                  <div
-                    className={cn(
-                      "group flex items-center gap-1 pl-2 pr-1 border-b border-border/30",
-                      hoverCell?.row === row.globalRow && "bg-foreground/[0.02]",
-                      isLaneDragging && "opacity-50"
-                    )}
-                    style={{ height: ROW_HEIGHT }}
-                  >
-                    <div
-                      className="shrink-0 cursor-grab p-0.5 touch-none"
-                      onPointerDown={(e) => handleLanePointerDown(e, row.lane.id, row.project.id, row.localIndex)}
-                    >
-                      <GripVerticalIcon className="size-3 text-muted-foreground" />
-                    </div>
-                    {editingLaneId === row.lane.id ? (
-                      <input
-                        autoFocus
-                        type="text"
-                        value={editingLaneTitle}
-                        onChange={(e) => setEditingLaneTitle(e.target.value)}
-                        onBlur={() => handleLaneEditSave(row.lane.id)}
-                        onKeyDown={(e) => {
-                          if (e.nativeEvent.isComposing) return;
-                          if (e.key === "Enter") handleLaneEditSave(row.lane.id);
-                          if (e.key === "Escape") setEditingLaneId(null);
-                        }}
-                        className="flex-1 min-w-0 text-xs px-1 py-0.5 rounded border border-border bg-background outline-none focus:ring-1 focus:ring-primary/30"
-                      />
-                    ) : (
-                      <span
-                        className="flex-1 min-w-0 text-xs truncate text-muted-foreground cursor-text hover:text-foreground"
-                        onClick={() => handleLaneEdit(row.lane)}
-                      >
-                        {row.lane.title || "제목 없음"}
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 transition-opacity shrink-0"
-                      onClick={() => handleLaneDelete(row.lane)}
-                    >
-                      <Trash2Icon className="size-3 text-destructive" />
-                    </button>
-                    <button
-                      type="button"
-                      className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-accent transition-opacity shrink-0"
-                      title="아래에 행 추가"
-                      onClick={() => handleAddLaneBelow(row.project.id, row.localIndex)}
-                    >
-                      <PlusIcon className="size-3 text-muted-foreground" />
-                    </button>
-                  </div>
-                  {showLaneDropIndicator && laneDropLocal > laneDrag!.fromLocal && (
-                    <div className="absolute bottom-0 left-2 right-1 h-0.5 bg-primary z-10" />
-                  )}
-                </div>
+                <LaneRow
+                  key={`l-${row.lane.id}`}
+                  laneId={row.lane.id}
+                  title={row.lane.title}
+                  localIndex={row.localIndex}
+                  scheduleCount={row.lane.schedules.length}
+                  isHovered={hoverCell?.row === row.globalRow}
+                  isEditing={isEditingThis}
+                  editingTitle={isEditingThis ? editingLaneTitle : ""}
+                  isDragging={isLaneDragging}
+                  showDropBefore={showLaneDropIndicator && laneDropLocal < laneDrag!.fromLocal}
+                  showDropAfter={showLaneDropIndicator && laneDropLocal > laneDrag!.fromLocal}
+                  onEditingTitleChange={setEditingLaneTitle}
+                  onStartEdit={startEdit}
+                  onSaveEdit={saveEdit}
+                  onCancelEdit={cancelEdit}
+                  onDelete={laneDelete}
+                  onAddBelow={handleLaneAddBelow}
+                  onPointerDown={handleLanePointerDown}
+                />
               );
             })}
           </div>
@@ -695,17 +601,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                   rangeStart={range.start}
                   totalRows={totalRows}
                   onDateChange={handleDateChange}
-                  onRowChange={(fromRow, toRow) => {
-                    if (fromRow !== toRow) {
-                      const toRowData = rows[toRow];
-                      if (toRowData?.type === "lane") {
-                        updateSchedule.mutate({
-                          id: schedule.id,
-                          data: { laneId: toRowData.lane.id },
-                        });
-                      }
-                    }
-                  }}
+                  onRowChange={handleRowChange}
                   onBarClick={handleBarClick}
                   onDuplicate={handleDuplicate}
                   minRow={laneRange?.startRow}
@@ -714,22 +610,14 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
               ));
             })}
 
-            {/* 고스트 바 */}
-            {createState && (() => {
-              const ghostLeft = dateToX(parseISO(createState.startDate), range.start);
-              const days = createState.endDate
-                ? differenceInCalendarDays(parseISO(createState.endDate), parseISO(createState.startDate)) + 1
-                : 1;
-              const ghostWidth = Math.max(days * DAY_WIDTH, DAY_WIDTH);
-              const ghostTop = createState.rowIndex * ROW_HEIGHT + BAR_Y_OFFSET;
-              return (
-                <div
-                  data-gantt-bar
-                  className="absolute rounded-md bg-primary/20 border border-primary/40 z-20"
-                  style={{ left: ghostLeft, width: ghostWidth, top: ghostTop, height: BAR_HEIGHT }}
-                />
-              );
-            })()}
+            {createState && (
+              <GhostBar
+                startDate={createState.startDate}
+                endDate={createState.endDate}
+                rowIndex={createState.rowIndex}
+                rangeStart={range.start}
+              />
+            )}
           </GanttGrid>
         </div>
       </div>
@@ -768,23 +656,34 @@ function SummaryBar({
   rowIndex: number;
   rangeStart: Date;
 }) {
-  const allSchedules = project.lanes.flatMap((l) => l.schedules);
+  const allSchedules = useMemo(
+    () => project.lanes.flatMap((l) => l.schedules),
+    [project.lanes]
+  );
+
+  const { left, width, top } = useMemo(() => {
+    if (allSchedules.length === 0) return { left: 0, width: 0, top: 0 };
+
+    const dates: Date[] = [];
+    for (const s of allSchedules) {
+      dates.push(parseISO(s.startDate));
+      if (s.endDate) dates.push(parseISO(s.endDate));
+    }
+
+    const timestamps = dates.map((d) => d.getTime());
+    const minDate = new Date(Math.min(...timestamps));
+    const maxDate = new Date(Math.max(...timestamps));
+
+    const l = dateToX(minDate, rangeStart);
+    const span = differenceInCalendarDays(maxDate, minDate) + 1;
+    return {
+      left: l,
+      width: Math.max(span * DAY_WIDTH, DAY_WIDTH),
+      top: rowIndex * ROW_HEIGHT + BAR_Y_OFFSET,
+    };
+  }, [allSchedules, rangeStart, rowIndex]);
+
   if (allSchedules.length === 0) return null;
-
-  const dates: Date[] = [];
-  for (const s of allSchedules) {
-    dates.push(parseISO(s.startDate));
-    if (s.endDate) dates.push(parseISO(s.endDate));
-  }
-
-  const timestamps = dates.map((d) => d.getTime());
-  const minDate = new Date(Math.min(...timestamps));
-  const maxDate = new Date(Math.max(...timestamps));
-
-  const left = dateToX(minDate, rangeStart);
-  const span = differenceInCalendarDays(maxDate, minDate) + 1;
-  const width = Math.max(span * DAY_WIDTH, DAY_WIDTH);
-  const top = rowIndex * ROW_HEIGHT + BAR_Y_OFFSET;
 
   return (
     <div

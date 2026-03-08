@@ -135,4 +135,9 @@ export function getTotalWidth(start: Date, end: Date): number {
   return (differenceInCalendarDays(end, start) + 1) * DAY_WIDTH;
 }
 
+// ── 공유 상수 ────────────────────────────────────────────────
+
+export const LEFT_PANEL_WIDTH = 220;
+export const CLICK_THRESHOLD = 4;
+
 export { isWeekend, isSameDay, startOfDay, format, addDays, differenceInCalendarDays, parseISO };

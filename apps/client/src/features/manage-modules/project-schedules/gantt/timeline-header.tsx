@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { cn } from "@/shared/utils/classnames";
 import {
   DAY_WIDTH,
@@ -17,10 +18,11 @@ interface TimelineHeaderProps {
   stickyLeft?: number;
 }
 
+const TODAY = startOfDay(new Date());
+
 export function TimelineHeader({ rangeStart, rangeEnd, totalWidth, hoverCol, stickyLeft = 0 }: TimelineHeaderProps) {
-  const today = startOfDay(new Date());
-  const months = getMonthsInRange(rangeStart, rangeEnd);
-  const days = getDaysInRange(rangeStart, rangeEnd);
+  const months = useMemo(() => getMonthsInRange(rangeStart, rangeEnd), [rangeStart, rangeEnd]);
+  const days = useMemo(() => getDaysInRange(rangeStart, rangeEnd), [rangeStart, rangeEnd]);
 
   return (
     <div
@@ -45,7 +47,7 @@ export function TimelineHeader({ rangeStart, rangeEnd, totalWidth, hoverCol, sti
       {/* 일 숫자 */}
       <div className="flex h-[22px]">
         {days.map((day, i) => {
-          const isToday = isSameDay(day, today);
+          const isToday = isSameDay(day, TODAY);
           const weekend = isWeekend(day);
           const isLastOfMonth =
             i < days.length - 1 && days[i + 1].getDate() === 1;

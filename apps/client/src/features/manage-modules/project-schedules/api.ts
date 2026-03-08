@@ -21,7 +21,7 @@ function updateOverviewCache(
   projectId?: string,
 ) {
   const overviewQueries = queryClient.getQueriesData<OverviewResponse>({
-    queryKey: ["project-schedules", "overview"],
+    queryKey: queryKeys.projectSchedules.overviews,
   });
   for (const [key, old] of overviewQueries) {
     if (!old) continue;
@@ -163,7 +163,7 @@ export function useCreateProjectSchedule() {
       };
 
       const listQueries = queryClient.getQueriesData<ProjectScheduleListResponse>({
-        queryKey: ["project-schedules", "list"],
+        queryKey: queryKeys.projectSchedules.lists,
       });
       for (const [key, old] of listQueries) {
         if (!old) continue;
@@ -211,7 +211,7 @@ export function useUpdateProjectSchedule() {
       await queryClient.cancelQueries({ queryKey: queryKeys.projectSchedules.all });
 
       const listQueries = queryClient.getQueriesData<ProjectScheduleListResponse>({
-        queryKey: ["project-schedules", "list"],
+        queryKey: queryKeys.projectSchedules.lists,
       });
       for (const [key, old] of listQueries) {
         if (!old) continue;
@@ -271,7 +271,7 @@ export function useReorderProjectSchedules() {
       const orderMap = new Map(reorderedItems.map((item) => [item.id, item.sortOrder]));
 
       const listQueries = queryClient.getQueriesData<ProjectScheduleListResponse>({
-        queryKey: ["project-schedules", "list"],
+        queryKey: queryKeys.projectSchedules.lists,
       });
       for (const [key, old] of listQueries) {
         if (!old) continue;
@@ -316,11 +316,11 @@ export function useReorderProjects() {
     mutationFn: (items: { id: string; sortOrder: number }[]) =>
       api.put<{ updated: number }>("/projects/reorder", { items }),
     onMutate: async (reorderedItems) => {
-      await queryClient.cancelQueries({ queryKey: ["project-schedules", "overview"] });
+      await queryClient.cancelQueries({ queryKey: queryKeys.projectSchedules.overviews });
       const orderMap = new Map(reorderedItems.map((item) => [item.id, item.sortOrder]));
 
       const overviewQueries = queryClient.getQueriesData<OverviewResponse>({
-        queryKey: ["project-schedules", "overview"],
+        queryKey: queryKeys.projectSchedules.overviews,
       });
       for (const [key, old] of overviewQueries) {
         if (!old) continue;
@@ -339,7 +339,7 @@ export function useReorderProjects() {
       toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("프로젝트 순서"));
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-schedules", "overview"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.overviews });
     },
   });
 }
@@ -356,7 +356,7 @@ export function useDeleteProjectSchedule() {
       await queryClient.cancelQueries({ queryKey: queryKeys.projectSchedules.all });
 
       const listQueries = queryClient.getQueriesData<ProjectScheduleListResponse>({
-        queryKey: ["project-schedules", "list"],
+        queryKey: queryKeys.projectSchedules.lists,
       });
       for (const [key, old] of listQueries) {
         if (!old) continue;
