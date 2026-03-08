@@ -37,6 +37,7 @@ import { TimelineHeader } from "./timeline-header";
 import { GanttGrid } from "./gantt-grid";
 import { GanttBar } from "./gantt-bar";
 import { SchedulePopover } from "./schedule-popover";
+import { StatusBadge } from "../../projects/status-badge";
 
 export function ProjectScheduleOverview() {
   const [status, setStatus] = useState("active");
@@ -547,7 +548,10 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                         )}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate">{row.project.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-medium truncate">{row.project.name}</p>
+                          <StatusBadge projectId={row.project.id} status={row.project.status as any} readonly className="text-[10px] h-4 min-w-0 px-1.5 shrink-0 ml-auto" />
+                        </div>
                         <p className="text-[10px] text-muted-foreground truncate">{row.project.companyName}</p>
                       </div>
                     </div>
