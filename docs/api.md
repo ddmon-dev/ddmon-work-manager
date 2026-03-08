@@ -128,10 +128,17 @@ requireAuth → requireSuperAdmin (선택적)
 | PATCH | `/project-schedules/:id` | 수정 |
 | DELETE | `/project-schedules/:id` | **하드 삭제** |
 | POST | `/project-schedules/:id/split` | 일정 분할 (`{ splitDate }` — 같은 groupId 부여) |
+| POST | `/project-schedules/:id/merge` | 같은 그룹 일정 병합 (`{ targetId }` — source 삭제, target에 합산) |
+| POST | `/project-schedules/:id/duplicate` | 같은 그룹으로 일정 복제 (`{ startDate, endDate }`) |
 | PUT | `/project-schedules/reorder` | 순서 변경 (`{ items: [{ id, sortOrder }] }`) |
 | GET | `/project-schedules/overview` | 멀티 프로젝트 오버뷰 (`?status=active\|completed`) |
 
 카테고리: `planning` (기획), `design` (디자인), `development` (개발), `revision` (수정), `delivery` (납품)
+
+**분할/병합/복제 흐름:**
+- **분할**: splitDate 기준으로 앞(~splitDate-1)과 뒤(splitDate~endDate) 2개 일정 생성. 같은 groupId 공유
+- **병합**: 같은 groupId의 일정 2개를 합산 (min startDate ~ max endDate). 그룹에 1개만 남으면 groupId 해제
+- **복제**: 원본과 같은 groupId로 새 일정 생성. 원본에 groupId 없으면 자동 부여
 
 ### Schedules (`/api/schedules`)
 

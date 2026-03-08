@@ -71,17 +71,22 @@ project-schedules/
     ├── overview.tsx           # 멀티 프로젝트 오버뷰 (진행중/완료 탭)
     ├── timeline-header.tsx    # 날짜 축 (월/일 레이블, 월 sticky)
     ├── gantt-grid.tsx         # 배경 그리드 (날짜 세로줄, 주말 배경, 오늘선)
-    ├── gantt-bar.tsx          # 개별 바 (드래그 이동 + 좌우 리사이즈)
-    ├── bar-popover.tsx        # 바 클릭 팝오버 (제목 편집, 카테고리 변경, 삭제)
-    ├── inline-create-row.tsx  # 빈 영역 클릭 시 카테고리 선택 + 제목 입력
-    ├── use-gantt.ts           # 범위 계산, 인라인 생성 상태 관리
+    ├── gantt-bar.tsx          # 개별 바 (드래그/리사이즈/분할/복제)
+    ├── schedule-popover.tsx   # 바 클릭 팝오버 (제목 편집, 카테고리 변경, 삭제)
+    ├── use-gantt.ts           # 범위 계산
     └── utils.ts               # dateToX, xToDate, computeTimelineRange 등
 ```
 
-- DAY_WIDTH=40px, ROW_HEIGHT=36px, absolute 포지셔닝 기반
+- DAY_WIDTH=36px, ROW_HEIGHT=36px, absolute 포지셔닝 기반
 - Pointer Events API로 드래그 (픽셀 단위 이동, 놓을 때 스냅)
 - 클릭 vs 드래그 판별 (4px threshold)
-- 오버뷰: 프로젝트별 접기/펼치기, 접힌 상태에서 요약 바 표시
+- 드래그 축 잠금: 초기 이동 방향에 따라 수직/수평 분리 (동시 이동 불가)
+- groupId 기반 같은 행 렌더링: 분할/복제된 일정이 하나의 행에 표시
+- Ctrl/Cmd+Click: 바 위 클릭 지점에서 즉시 분할 (경계 기반 스냅)
+- Alt+드래그: 같은 그룹으로 일정 복제 (고스트 바 프리뷰)
+- 드래그 병합: 같은 그룹 바를 겹치도록 이동하면 자동 병합
+- 그룹 드래그 동기화: 수직 리오더 시 같은 그룹의 모든 바가 함께 이동
+- 오버뷰: 프로젝트별 접기/펼치기, 접힌 상태에서 요약 바 표시, 프로젝트 드래그 리오더
 
 #### 모듈 파일 구성
 
