@@ -229,7 +229,7 @@ export function GanttBar({
         width: Math.max(displayWidth, DAY_WIDTH),
         top: displayTop,
         height: BAR_HEIGHT,
-        backgroundColor: `${color}20`,
+        backgroundColor: `${color}35`,
       }}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -268,7 +268,7 @@ export function GanttBar({
       {duplicateOffset !== null && (
         <div
           className="absolute flex items-center gap-1.5 px-2 rounded-md pointer-events-none opacity-50 border border-dashed border-foreground/30"
-          style={{ left: duplicateOffset, top: 0, width: displayWidth, height: BAR_HEIGHT, backgroundColor: `${color}20` }}
+          style={{ left: duplicateOffset, top: 0, width: displayWidth, height: BAR_HEIGHT, backgroundColor: `${color}35` }}
         >
           <span className="text-xs truncate">{schedule.title}</span>
         </div>
