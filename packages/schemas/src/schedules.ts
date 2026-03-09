@@ -10,7 +10,7 @@ export const scheduleWriteSchema = z.object({
   color: z.string().default("default"),
   sortOrder: z.number().int().optional(),
   recurrenceType: z
-    .enum(["none", "daily", "weekly", "monthly"])
+    .enum(["none", "daily", "weekly", "monthly", "yearly"])
     .default("none"),
   recurrenceEndDate: z.string().nullable().optional(),
 });

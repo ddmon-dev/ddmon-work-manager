@@ -91,7 +91,9 @@ function generateOccurrences(
       ? (d: Date, n: number) => addDays(d, n)
       : row.recurrenceType === "weekly"
         ? (d: Date, n: number) => addWeeks(d, n)
-        : (d: Date, n: number) => addMonths(d, n);
+        : row.recurrenceType === "yearly"
+          ? (d: Date, n: number) => addMonths(d, n * 12)
+          : (d: Date, n: number) => addMonths(d, n);
 
   let step = 0;
   while (step < 366) {

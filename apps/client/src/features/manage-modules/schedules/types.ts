@@ -8,7 +8,7 @@ export interface ScheduleDTO {
   endTime: string | null;
   color: string;
   sortOrder: number;
-  recurrenceType: "none" | "daily" | "weekly" | "monthly";
+  recurrenceType: "none" | "daily" | "weekly" | "monthly" | "yearly";
   recurrenceEndDate: string | null;
   author: string;
   updatedBy: string | null;

@@ -19,6 +19,7 @@ export const RECURRENCE_LABELS: Record<string, string> = {
   daily: "매일",
   weekly: "매주",
   monthly: "매월",
+  yearly: "매년",
 };
 
 export function getColorClassName(color: string): string {
