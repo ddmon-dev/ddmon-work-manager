@@ -83,16 +83,19 @@ project-schedules/
     └── utils.ts               # dateToX, xToDate, computeTimelineRange, TODAY 등
 ```
 
-- DAY_WIDTH=40px, ROW_HEIGHT=40px, absolute 포지셔닝 기반
+- DAY_WIDTH=42px, ROW_HEIGHT=42px, BAR_INSET=4px, absolute 포지셔닝 기반
+- 바 디자인: 좌측 카테고리 스트라이프(3px), `color-mix` 불투명 배경(18%), 양쪽 인셋(4px) 여백
 - Pointer Events API로 드래그 (픽셀 단위 이동, 놓을 때 스냅)
 - 클릭 vs 드래그 판별 (4px threshold)
 - 드래그 축 잠금: 초기 이동 방향에 따라 수직/수평 분리 (동시 이동 불가)
 - 레인 기반 행 렌더링: 1행 = 1레인, 한 레인 내 겹치는 일정 허용
 - Alt+드래그: 같은 레인에 일정 복제 (고스트 바 프리뷰, 일반 생성 API 사용)
 - Y축 드래그: 다른 레인으로 일정 이동 (`laneId` 변경)
-- 좌측 패널: 레인 제목 인라인 편집, 레인 삭제, 레인 추가, 레인 드래그 리오더
+- 좌측 패널: 업체명+프로젝트명+레인 3열 (오버뷰), 레인만 (프로젝트 간트)
 - 오버뷰: 프로젝트별 접기/펼치기, 접힌 상태에서 요약 바 표시, 프로젝트/레인 드래그 리오더
-- GanttGrid: 제어 컴포넌트 패턴 (hoverCell prop, 부모가 상태 소유)
+- 팝오버: 수정 모드 인라인 자동 저장 (삭제 버튼만 표시), 생성 모드 취소/저장 버튼
+- z-index 계층: 그리드(1-5) → 바(6, 호버시 20) → 좌측패널(30) → 패널헤더(40) → 팝오버(50)
+- GanttGrid: 제어 컴포넌트 패턴 (hoverCell prop, 부모가 상태 소유), 프로젝트 경계선 강조
 
 #### 모듈 파일 구성
 
