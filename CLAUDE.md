@@ -61,7 +61,6 @@ npm run production:rebuild # 운영 배포 (마이그레이션 + 빌드 + 서비
 - **API 응답**: `{ success: true, data }` / `{ success: false, error, message }`
 - **DB 삭제**: 소프트 삭제 기본 (schedules, todos만 하드 삭제)
 - **Git**: 커밋: `타입: 제목` (feat, fix, refactor, docs, style, test, chore)
-- **마이그레이션 네이밍**: `npm run db:generate -- --name "add_xxx"` 형식 사용 (`add_xxx`, `drop_xxx`, `alter_xxx`)
 
 ## 문서
 
