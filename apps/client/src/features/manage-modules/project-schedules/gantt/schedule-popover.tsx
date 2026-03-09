@@ -271,20 +271,23 @@ export function SchedulePopover(props: SchedulePopoverProps) {
           </div>
         )}
 
-        {/* 하단: 날짜 + 액션 */}
-        <div className="flex items-center gap-2 pt-1 border-t border-border">
-          <span className="text-xs text-muted-foreground flex-1">{dateLabel}</span>
-          {isEdit && (
-            <Button variant="ghost" size="icon-xs" onClick={handleDelete}>
-              <Trash2Icon className="size-3.5 text-destructive" />
+        {/* 하단: 액션 */}
+        <div className="flex items-center pt-2 border-t border-border">
+          <span className="text-xs text-foreground/50 flex-1">{dateLabel}</span>
+          {isEdit ? (
+            <Button variant="ghost" size="icon-xs" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleDelete}>
+              <Trash2Icon className="size-3.5" />
             </Button>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <Button variant="outline" size="sm" className="h-7 px-3 text-xs" onClick={onClose}>
+                취소
+              </Button>
+              <Button size="sm" className="h-7 px-3 text-xs" onClick={handleSave}>
+                저장
+              </Button>
+            </div>
           )}
-          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onClose}>
-            취소
-          </Button>
-          <Button size="sm" className="h-7 px-3 text-xs" onClick={handleSave}>
-            저장
-          </Button>
         </div>
       </div>
     </div>

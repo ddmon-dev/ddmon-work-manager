@@ -438,11 +438,11 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
       <div className="flex" style={{ width: LEFT_PANEL_WIDTH + totalWidth }}>
         {/* 좌측 고정 패널 (2열: 프로젝트 + 레인) */}
         <div
-          className="sticky left-0 z-20 shrink-0 border-r border-border bg-background"
+          className="sticky left-0 z-30 shrink-0 border-r border-border bg-background"
           style={{ width: LEFT_PANEL_WIDTH }}
         >
           {/* 헤더 */}
-          <div className="sticky top-0 z-30 h-12 border-b border-border flex bg-background">
+          <div className="sticky top-0 z-40 h-12 border-b border-border flex bg-background">
             <div className="flex items-center px-2 border-r border-border/30" style={{ width: COMPANY_COL_WIDTH }}>
               <span className="text-xs font-medium text-foreground">업체명</span>
             </div>
