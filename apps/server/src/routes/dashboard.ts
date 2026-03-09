@@ -9,14 +9,8 @@ import {
 } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { successResponse } from "../lib/errors";
-import { softDeleteFilter } from "../lib/query-helpers";
+import { softDeleteFilter, getBilledAmount } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
-
-function getBilledAmount(amount: number, taxType: string | null): number {
-  if (taxType === "withholding") return amount - Math.round(amount * 0.033);
-  if (taxType === "vat") return amount + Math.round(amount * 0.1);
-  return amount;
-}
 
 const app = new Hono<{ Variables: AppVariables }>();
 app.use("*", requireAuth);

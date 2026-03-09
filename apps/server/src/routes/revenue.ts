@@ -5,19 +5,13 @@ import { db } from "../db";
 import { projects, projectPayments, clients } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { softDeleteFilter } from "../lib/query-helpers";
+import { softDeleteFilter, getBilledAmount } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const MONTH_LABELS = [
   "1월", "2월", "3월", "4월", "5월", "6월",
   "7월", "8월", "9월", "10월", "11월", "12월",
 ];
-
-function getBilledAmount(amount: number, taxType: string | null): number {
-  if (taxType === "withholding") return amount - Math.round(amount * 0.033);
-  if (taxType === "vat") return amount + Math.round(amount * 0.1);
-  return amount;
-}
 
 const app = new Hono<{ Variables: AppVariables }>();
 app.use("*", requireAuth);

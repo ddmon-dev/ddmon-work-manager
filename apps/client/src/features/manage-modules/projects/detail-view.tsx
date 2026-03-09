@@ -595,18 +595,15 @@ export function DetailView({ data, refetch }: DetailViewProps) {
   const deleteMemo = useDeleteProjectMemo();
 
   const handleAddMemo = async (content: string) => {
-    await createMemo.mutateAsync({ projectId: data.id, content });
-    refetch();
+    await createMemo.mutateAsync({ parentId: data.id, content });
   };
 
   const handleUpdateMemo = async (memoId: string, content: string) => {
-    await updateMemo.mutateAsync({ projectId: data.id, memoId, content });
-    refetch();
+    await updateMemo.mutateAsync({ parentId: data.id, memoId, content });
   };
 
   const handleDeleteMemo = async (memoId: string) => {
-    await deleteMemo.mutateAsync({ projectId: data.id, memoId });
-    refetch();
+    await deleteMemo.mutateAsync({ parentId: data.id, memoId });
   };
 
   const contractAmount = data.contractAmount ? Number(data.contractAmount) : 0;

@@ -1,13 +1,12 @@
 import { Hono } from "hono";
-import { count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, gte, lte, ne, or } from "drizzle-orm";
 import { db } from "../db";
 import { schedules } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
-import { z } from "zod";
 import { scheduleWriteSchema } from "@packages/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { searchFilter } from "../lib/query-helpers";
+import { searchFilter, reorderSchema, executeReorder } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -137,28 +136,29 @@ app.get("/month", async (c) => {
   const rangeStart = formatDate(monthStart);
   const rangeEnd = formatDate(monthEnd);
 
-  // 단발 일정: start_date <= monthEnd AND (end_date >= monthStart OR start_date >= monthStart)
+  // 단발 일정: recurrenceType = 'none' AND startDate <= rangeEnd AND (endDate >= rangeStart OR startDate >= rangeStart)
   const singleSchedules = await db.query.schedules.findMany({
-    where: eq(schedules.recurrenceType, "none"),
+    where: and(
+      eq(schedules.recurrenceType, "none"),
+      lte(schedules.startDate, rangeEnd),
+      or(
+        gte(schedules.endDate, rangeStart),
+        gte(schedules.startDate, rangeStart)
+      )
+    ),
     orderBy: [desc(schedules.startDate)],
   });
 
-  // 범위 필터 (drizzle에서 복합 OR 조건 처리가 복잡하여 JS에서 필터)
-  const filteredSingles = singleSchedules.filter((s) => {
-    if (s.startDate > rangeEnd) return false;
-    if (s.endDate) return s.endDate >= rangeStart;
-    return s.startDate >= rangeStart;
+  // 반복 일정: recurrenceType != 'none' AND startDate <= rangeEnd
+  const recurringSchedules = await db.query.schedules.findMany({
+    where: and(
+      ne(schedules.recurrenceType, "none"),
+      lte(schedules.startDate, rangeEnd)
+    ),
   });
 
-  // 반복 일정: start_date <= monthEnd
-  const recurringSchedules = await db.query.schedules.findMany();
-
-  const filtered = recurringSchedules.filter(
-    (s) => s.recurrenceType !== "none" && s.startDate <= rangeEnd
-  );
-
-  const singles = filteredSingles.map((s) => toCalendarSchedule(s));
-  const recurrences = filtered.flatMap((s) =>
+  const singles = singleSchedules.map((s) => toCalendarSchedule(s));
+  const recurrences = recurringSchedules.flatMap((s) =>
     generateOccurrences(s, monthStart, monthEnd)
   );
 
@@ -225,24 +225,18 @@ app.patch("/:id", async (c) => {
 });
 
 // PUT /schedules/reorder — 순서 일괄 변경
-const reorderSchema = z.object({
-  items: z.array(z.object({ id: z.string().uuid(), sortOrder: z.number().int() })),
-});
-
 app.put("/reorder", async (c) => {
   const parsed = reorderSchema.safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
   const user = c.get("user");
-  await Promise.all(
-    parsed.data.items.map(({ id, sortOrder }) =>
-      db.update(schedules)
-        .set({ sortOrder, updatedBy: user.id, updatedAt: new Date() })
-        .where(eq(schedules.id, id))
-    )
+  const result = await executeReorder(parsed.data.items, (id, sortOrder) =>
+    db.update(schedules)
+      .set({ sortOrder, updatedBy: user.id, updatedAt: new Date() })
+      .where(eq(schedules.id, id))
   );
 
-  return successResponse(c, { updated: parsed.data.items.length });
+  return successResponse(c, result);
 });
 
 // DELETE /schedules/:id — 하드 삭제

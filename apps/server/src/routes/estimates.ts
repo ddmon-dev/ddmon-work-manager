@@ -17,8 +17,9 @@ app.use("*", requireAuth);
 
 // --- 헬퍼 ---
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function insertGroupsAndItems(tx: any, estimateId: string, groups: EstimateGroupWriteInput[]) {
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function insertGroupsAndItems(tx: DbTransaction, estimateId: string, groups: EstimateGroupWriteInput[]) {
   for (const group of groups) {
     const [insertedGroup] = await tx
       .insert(estimateItemGroups)

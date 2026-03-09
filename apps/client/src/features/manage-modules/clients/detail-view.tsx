@@ -16,27 +16,23 @@ import type { ClientWithMemos } from "./types";
 
 interface DetailViewProps {
   data: ClientWithMemos;
-  refetch: () => void;
 }
 
-export function DetailView({ data, refetch }: DetailViewProps) {
+export function DetailView({ data }: DetailViewProps) {
   const createMemo = useCreateClientMemo();
   const updateMemo = useUpdateClientMemo();
   const deleteMemo = useDeleteClientMemo();
 
   const handleAddMemo = async (content: string) => {
-    await createMemo.mutateAsync({ clientId: data.id, content });
-    refetch();
+    await createMemo.mutateAsync({ parentId: data.id, content });
   };
 
   const handleUpdateMemo = async (memoId: string, content: string) => {
-    await updateMemo.mutateAsync({ clientId: data.id, memoId, content });
-    refetch();
+    await updateMemo.mutateAsync({ parentId: data.id, memoId, content });
   };
 
   const handleDeleteMemo = async (memoId: string) => {
-    await deleteMemo.mutateAsync({ clientId: data.id, memoId });
-    refetch();
+    await deleteMemo.mutateAsync({ parentId: data.id, memoId });
   };
 
   return (
