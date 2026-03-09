@@ -21,6 +21,7 @@ interface LaneRowProps {
   onDelete: (laneId: string, scheduleCount: number) => void;
   onAddBelow: (laneId: string, localIndex: number) => void;
   onPointerDown: (e: React.PointerEvent, laneId: string, localIndex: number) => void;
+  isLast?: boolean;
   className?: string;
 }
 
@@ -42,6 +43,7 @@ export const LaneRow = memo(function LaneRow({
   onDelete,
   onAddBelow,
   onPointerDown,
+  isLast,
   className,
 }: LaneRowProps) {
   return (
@@ -51,7 +53,8 @@ export const LaneRow = memo(function LaneRow({
       )}
       <div
         className={cn(
-          "group flex items-center gap-1 pl-2 pr-1 border-b border-border/30",
+          "group flex items-center gap-1 pl-2 pr-1 border-b",
+          isLast ? "border-border" : "border-border/30",
           isHovered && "bg-foreground/[0.02]",
           isDragging && "opacity-50",
           className,

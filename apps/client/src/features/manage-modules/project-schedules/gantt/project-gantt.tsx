@@ -210,6 +210,7 @@ export function ProjectGantt({
                       onDelete={laneDelete}
                       onAddBelow={handleLaneAddBelow}
                       onPointerDown={handleLanePointerDown}
+                      isLast={laneIdx === lanes.length - 1}
                       className="px-1"
                     />
                   );

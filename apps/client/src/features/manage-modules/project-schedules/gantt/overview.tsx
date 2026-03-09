@@ -422,7 +422,8 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
           </div>
 
           <div style={{ height: contentHeight }}>
-            {rows.map((row) => {
+            {rows.map((row, rowIdx) => {
+              const isLastRow = rowIdx === rows.length - 1;
               if (row.type === "project") {
                 const isExpanded = expandedProjects.has(row.project.id);
                 const projectIdx = projectRowIndices.findIndex((p) => p.globalRow === row.globalRow);
@@ -436,7 +437,8 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                     )}
                     <div
                       className={cn(
-                        "sticky z-10 flex items-center gap-1 px-2 border-b border-border/30 cursor-pointer hover:bg-accent bg-background select-none",
+                        "sticky z-10 flex items-center gap-1 px-2 border-b cursor-pointer hover:bg-accent bg-background select-none",
+                        isLastRow ? "border-border" : "border-border/30",
                         hoverCell?.row === row.globalRow && "bg-accent/50",
                         isDragging && "opacity-50"
                       )}
@@ -469,7 +471,8 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                   <div
                     key={`empty-${row.project.id}`}
                     className={cn(
-                      "flex items-center pl-6 pr-2 border-b border-border/30",
+                      "flex items-center pl-6 pr-2 border-b",
+                      isLastRow ? "border-border" : "border-border/30",
                       hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
                     )}
                     style={{ height: ROW_HEIGHT }}
@@ -507,6 +510,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                   onDelete={laneDelete}
                   onAddBelow={handleLaneAddBelow}
                   onPointerDown={handleLanePointerDown}
+                  isLast={isLastRow}
                 />
               );
             })}

@@ -194,10 +194,13 @@ const GridLines = memo(function GridLines({ days, rowCount }: { days: Date[]; ro
           />
         );
       })}
-      {Array.from({ length: rowCount - 1 }, (_, i) => (
+      {Array.from({ length: rowCount }, (_, i) => (
         <div
           key={`row-${i}`}
-          className="absolute left-0 right-0 border-b border-border/30"
+          className={cn(
+            "absolute left-0 right-0 border-b",
+            i === rowCount - 1 ? "border-border" : "border-border/30",
+          )}
           style={{ top: (i + 1) * ROW_HEIGHT - 1 }}
         />
       ))}
