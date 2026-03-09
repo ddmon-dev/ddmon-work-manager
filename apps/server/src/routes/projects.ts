@@ -7,7 +7,7 @@ import { requireAuth } from "../middleware/auth";
 import { projectWriteSchema } from "@packages/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { searchFilter, softDeleteFilter, softDeletePayload } from "../lib/query-helpers";
+import { searchFilter, softDeleteFilter, softDeletePayload, reorderSchema, executeReorder } from "../lib/query-helpers";
 import { generateProjectNumber } from "../lib/number-generator";
 import type { AppVariables } from "../lib/types";
 
@@ -52,24 +52,18 @@ app.get("/", async (c) => {
 });
 
 // PUT /projects/reorder — 프로젝트 순서 일괄 변경
-const projectReorderSchema = z.object({
-  items: z.array(z.object({ id: z.string().uuid(), sortOrder: z.number().int() })),
-});
-
 app.put("/reorder", async (c) => {
-  const parsed = projectReorderSchema.safeParse(await c.req.json());
+  const parsed = reorderSchema.safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
   const user = c.get("user");
-  await Promise.all(
-    parsed.data.items.map(({ id, sortOrder }) =>
-      db.update(projects)
-        .set({ sortOrder, updatedBy: user.id, updatedAt: new Date() })
-        .where(eq(projects.id, id))
-    )
+  const result = await executeReorder(parsed.data.items, (id, sortOrder) =>
+    db.update(projects)
+      .set({ sortOrder, updatedBy: user.id, updatedAt: new Date() })
+      .where(eq(projects.id, id))
   );
 
-  return successResponse(c, { updated: parsed.data.items.length });
+  return successResponse(c, result);
 });
 
 // 서브 리소스 직접 라우트 — /:id 전에 등록

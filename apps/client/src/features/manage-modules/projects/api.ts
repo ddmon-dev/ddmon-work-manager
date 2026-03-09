@@ -2,9 +2,9 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tansta
 import { toast } from "sonner";
 import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
-import { useAuth } from "@/features/auth/hooks/use-auth";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
+import { createMemoHooks } from "../_base/hooks/use-memo-mutations";
 import type {
   ProjectDTO,
   ProjectWithDetails,
@@ -317,106 +317,13 @@ export function useDeletePayment() {
 
 // ── 메모 ────────────────────────────────────────────────────
 
-export function useCreateProjectMemo() {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
+const {
+  useCreateMemo: useCreateProjectMemo,
+  useUpdateMemo: useUpdateProjectMemo,
+  useDeleteMemo: useDeleteProjectMemo,
+} = createMemoHooks<ProjectWithDetails>({
+  basePath: "/projects",
+  detailQueryKey: (parentId) => queryKeys.projects.detail(parentId),
+});
 
-  return useMutation({
-    mutationFn: ({ projectId, content }: { projectId: string; content: string }) =>
-      api.post(`/projects/${projectId}/memos`, { content }),
-    onMutate: async ({ projectId, content }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
-      const previous = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId));
-      const optimisticAuthor = user ? `${user.name}(${user.username ?? ""})` : null;
-      queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId), (old) =>
-        old
-          ? {
-              ...old,
-              memos: [
-                {
-                  id: crypto.randomUUID(),
-                  content,
-                  author: optimisticAuthor,
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                },
-                ...old.memos,
-              ],
-            }
-          : old
-      );
-      return { previous };
-    },
-    onError: (_err, { projectId }, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKeys.projects.detail(projectId), context.previous);
-      toast.error(CRUD_ERRORS.CREATE_FAILED("메모"));
-    },
-    onSettled: (_data, _err, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
-    },
-  });
-}
-
-export function useUpdateProjectMemo() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      projectId,
-      memoId,
-      content,
-    }: {
-      projectId: string;
-      memoId: string;
-      content: string;
-    }) => api.patch(`/projects/memos/${memoId}`, { content }),
-    onMutate: async ({ projectId, memoId, content }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
-      const previous = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId));
-      queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId), (old) =>
-        old
-          ? {
-              ...old,
-              memos: old.memos.map((m) =>
-                m.id === memoId ? { ...m, content } : m
-              ),
-            }
-          : old
-      );
-      return { previous };
-    },
-    onError: (_err, { projectId }, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKeys.projects.detail(projectId), context.previous);
-      toast.error(CRUD_ERRORS.UPDATE_FAILED("메모"));
-    },
-    onSettled: (_data, _err, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
-    },
-  });
-}
-
-export function useDeleteProjectMemo() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ projectId, memoId }: { projectId: string; memoId: string }) =>
-      api.delete(`/projects/memos/${memoId}`),
-    onMutate: async ({ projectId, memoId }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
-      const previous = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId));
-      queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId), (old) =>
-        old
-          ? { ...old, memos: old.memos.filter((m) => m.id !== memoId) }
-          : old
-      );
-      return { previous };
-    },
-    onError: (_err, { projectId }, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKeys.projects.detail(projectId), context.previous);
-      toast.error(CRUD_ERRORS.DELETE_FAILED("메모"));
-    },
-    onSettled: (_data, _err, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
-    },
-  });
-}
+export { useCreateProjectMemo, useUpdateProjectMemo, useDeleteProjectMemo };

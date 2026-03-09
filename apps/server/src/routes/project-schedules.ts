@@ -6,6 +6,7 @@ import { requireAuth } from "../middleware/auth";
 import { z } from "zod";
 import { projectScheduleWriteSchema, projectScheduleLaneWriteSchema } from "@packages/schemas";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
+import { reorderSchema, executeReorder } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -164,46 +165,34 @@ app.delete("/lanes/:id", async (c) => {
 });
 
 // PUT /project-schedules/lanes/reorder
-const laneReorderSchema = z.object({
-  items: z.array(z.object({ id: z.string().uuid(), sortOrder: z.number().int() })),
-});
-
 app.put("/lanes/reorder", async (c) => {
-  const parsed = laneReorderSchema.safeParse(await c.req.json());
+  const parsed = reorderSchema.safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
-  await Promise.all(
-    parsed.data.items.map(({ id, sortOrder }) =>
-      db.update(projectScheduleLanes)
-        .set({ sortOrder, updatedAt: new Date() })
-        .where(eq(projectScheduleLanes.id, id))
-    )
+  const result = await executeReorder(parsed.data.items, (id, sortOrder) =>
+    db.update(projectScheduleLanes)
+      .set({ sortOrder, updatedAt: new Date() })
+      .where(eq(projectScheduleLanes.id, id))
   );
 
-  return successResponse(c, { updated: parsed.data.items.length });
+  return successResponse(c, result);
 });
 
 // ── 일정 CRUD ────────────────────────────────────────────────
 
 // PUT /project-schedules/reorder
-const reorderSchema = z.object({
-  items: z.array(z.object({ id: z.string().uuid(), sortOrder: z.number().int() })),
-});
-
 app.put("/reorder", async (c) => {
   const parsed = reorderSchema.safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
   const user = c.get("user");
-  await Promise.all(
-    parsed.data.items.map(({ id, sortOrder }) =>
-      db.update(projectSchedules)
-        .set({ sortOrder, updatedBy: user.id, updatedAt: new Date() })
-        .where(eq(projectSchedules.id, id))
-    )
+  const result = await executeReorder(parsed.data.items, (id, sortOrder) =>
+    db.update(projectSchedules)
+      .set({ sortOrder, updatedBy: user.id, updatedAt: new Date() })
+      .where(eq(projectSchedules.id, id))
   );
 
-  return successResponse(c, { updated: parsed.data.items.length });
+  return successResponse(c, result);
 });
 
 // GET /project-schedules
