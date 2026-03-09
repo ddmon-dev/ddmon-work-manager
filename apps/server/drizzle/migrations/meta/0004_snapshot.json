@@ -1,5 +1,5 @@
 {
-  "id": "8eaaf9e7-627f-4ccc-a287-9126121429b0",
+  "id": "dc0e313b-da40-4bb5-a2dd-0d898b543c63",
   "prevId": "c0a71521-8d4a-4881-94c2-1782711d1777",
   "version": "7",
   "dialect": "postgresql",
@@ -1211,7 +1211,7 @@
           "type": "date",
           "primaryKey": false,
           "notNull": true,
-          "default": "'2026-03-07'"
+          "default": "'2026-03-09'"
         },
         "created_at": {
           "name": "created_at",
@@ -1311,6 +1311,13 @@
           "type": "date",
           "primaryKey": false,
           "notNull": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "completed_date": {
           "name": "completed_date",
@@ -1579,6 +1586,74 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.project_schedule_lanes": {
+      "name": "project_schedule_lanes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "project_schedule_lanes_project_id_projects_id_fk": {
+          "name": "project_schedule_lanes_project_id_projects_id_fk",
+          "tableFrom": "project_schedule_lanes",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.project_schedules": {
       "name": "project_schedules",
       "schema": "",
@@ -1596,12 +1671,24 @@
           "primaryKey": false,
           "notNull": true
         },
+        "lane_id": {
+          "name": "lane_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
         "category": {
           "name": "category",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "default": "'development'"
+        },
+        "category_color": {
+          "name": "category_color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "title": {
           "name": "title",
@@ -1669,6 +1756,19 @@
           "tableTo": "projects",
           "columnsFrom": [
             "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "project_schedules_lane_id_project_schedule_lanes_id_fk": {
+          "name": "project_schedules_lane_id_project_schedule_lanes_id_fk",
+          "tableFrom": "project_schedules",
+          "tableTo": "project_schedule_lanes",
+          "columnsFrom": [
+            "lane_id"
           ],
           "columnsTo": [
             "id"

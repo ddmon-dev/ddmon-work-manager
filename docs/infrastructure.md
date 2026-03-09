@@ -198,13 +198,13 @@ Drizzle Kit 사용. 설정 파일: `apps/server/drizzle.config.ts`
 출력:  apps/server/drizzle/migrations/
 ```
 
-`0000_initial.sql` (스쿼시) ~ `0007_nosy_katie_power.sql`.
+`0000_initial` ~ `0004_add_project_schedules` (5개).
 
 ### 새 마이그레이션 생성
 
 ```bash
-npm run db:generate    # 스키마 변경 감지 → 마이그레이션 파일 생성
-npm run db:migrate     # 마이그레이션 실행
+npm run db:generate -- --name "add_xxx"    # --name으로 의미 있는 이름 부여
+npm run db:migrate                          # 마이그레이션 실행
 ```
 
 ### 운영환경 마이그레이션

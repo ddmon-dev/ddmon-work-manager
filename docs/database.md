@@ -155,14 +155,14 @@ user ─────┬── todos (1:N, CASCADE)
 
 ## 마이그레이션 관리
 
-마이그레이션 파일: `0000_initial.sql` (스쿼시) ~ `0007_nosy_katie_power.sql`. 0004~0007은 project_schedule_lanes/project_schedules 테이블 추가 및 관련 변경.
+마이그레이션 파일: `0000_initial` ~ `0004_add_project_schedules` (5개). 0000~0003은 초기 스키마, 0004는 프로젝트 일정 관련 테이블 추가.
 
 ### 스키마 변경 절차
 
 ```bash
 # 1. 스키마 파일 수정 (apps/server/src/db/schema/*.ts)
-# 2. 마이그레이션 파일 생성
-npm run db:generate
+# 2. 마이그레이션 파일 생성 (--name 필수)
+npm run db:generate -- --name "add_xxx"
 
 # 3. 마이그레이션 실행
 npm run db:migrate
