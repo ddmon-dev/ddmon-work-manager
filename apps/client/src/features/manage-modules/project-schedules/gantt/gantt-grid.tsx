@@ -5,6 +5,7 @@ import {
   ROW_HEIGHT,
   BAR_HEIGHT,
   BAR_Y_OFFSET,
+  BAR_INSET,
   CLICK_THRESHOLD,
   TODAY,
   getDaysInRange,
@@ -158,13 +159,17 @@ export function GanttGrid({
 
       {/* 드래그 프리뷰 바 */}
       {dragState?.active && (() => {
-        const left = Math.min(dragState.startX, dragState.currentX);
-        const width = Math.abs(dragState.currentX - dragState.startX);
+        const x1 = Math.min(dragState.startX, dragState.currentX);
+        const x2 = Math.max(dragState.startX, dragState.currentX);
+        const startCol = Math.floor(x1 / DAY_WIDTH);
+        const endCol = Math.floor(x2 / DAY_WIDTH);
+        const snappedLeft = startCol * DAY_WIDTH + BAR_INSET;
+        const snappedWidth = (endCol - startCol + 1) * DAY_WIDTH - BAR_INSET * 2;
         const top = dragState.rowIndex * ROW_HEIGHT + BAR_Y_OFFSET;
         return (
           <div
             className="absolute rounded-md bg-primary/15 border border-primary/30 pointer-events-none z-10"
-            style={{ left, width: Math.max(width, DAY_WIDTH), top, height: BAR_HEIGHT }}
+            style={{ left: snappedLeft, width: Math.max(snappedWidth, DAY_WIDTH - BAR_INSET * 2), top, height: BAR_HEIGHT }}
           />
         );
       })()}

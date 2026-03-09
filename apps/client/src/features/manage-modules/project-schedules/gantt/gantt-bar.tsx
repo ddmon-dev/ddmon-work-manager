@@ -5,6 +5,7 @@ import {
   ROW_HEIGHT,
   BAR_HEIGHT,
   BAR_Y_OFFSET,
+  BAR_INSET,
   CLICK_THRESHOLD,
   dateToX,
   xToDate,
@@ -204,8 +205,8 @@ export const GanttBar = memo(function GanttBar({
     prevPosRef.current = { left, width, top };
   }
 
-  const displayLeft = left + preview.left;
-  const displayWidth = width + preview.width;
+  const displayLeft = left + preview.left + BAR_INSET;
+  const displayWidth = width + preview.width - BAR_INSET * 2;
   const displayTop = top + preview.top;
   const isDragging = dragMode !== null && dragStart.current.moved;
 
@@ -221,7 +222,7 @@ export const GanttBar = memo(function GanttBar({
       )}
       style={{
         left: displayLeft,
-        width: Math.max(displayWidth, DAY_WIDTH),
+        width: Math.max(displayWidth, DAY_WIDTH - BAR_INSET * 2),
         top: displayTop,
         height: BAR_HEIGHT,
         backgroundColor: `color-mix(in srgb, ${color} 10%, var(--background))`,
