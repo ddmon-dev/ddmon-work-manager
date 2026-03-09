@@ -443,10 +443,10 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
         >
           {/* 헤더 */}
           <div className="sticky top-0 z-40 h-12 border-b border-border flex bg-background">
-            <div className="flex items-center px-2 border-r border-border/30" style={{ width: COMPANY_COL_WIDTH }}>
+            <div className="flex items-center px-2 border-r border-border/50" style={{ width: COMPANY_COL_WIDTH }}>
               <span className="text-xs font-medium text-foreground">업체명</span>
             </div>
-            <div className="flex items-center px-2 border-r border-border/30" style={{ width: PROJECT_COL_WIDTH }}>
+            <div className="flex items-center px-2 border-r border-border/50" style={{ width: PROJECT_COL_WIDTH }}>
               <span className="text-xs font-medium text-foreground">프로젝트</span>
             </div>
             <div className="flex items-center justify-between px-2 flex-1">
@@ -468,7 +468,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
           {/* 본문: 정보 열들 + 레인 열 */}
           <div className="flex" style={{ height: contentHeight }}>
             {/* 정보 열들 (업체명 + 프로젝트 + 작업단계 + 상태) */}
-            <div className="shrink-0 border-r border-border/30" style={{ width: INFO_PANEL_WIDTH }}>
+            <div className="shrink-0 border-r border-border/50" style={{ width: INFO_PANEL_WIDTH }}>
               {projectBlocks.map((block) => {
                 const isDragging = projectDrag?.moved && projectDrag.fromIndex === block.projectIdx;
                 const showDropBefore = projectDrag?.moved && dropIndex === block.projectIdx && dropIndex < projectDrag.fromIndex;
@@ -488,7 +488,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                       onPointerDown={(e) => handleProjectPointerDown(e, block.project.id, block.projectIdx)}
                     >
                       {/* 업체명 */}
-                      <div className="shrink-0 flex items-center px-2 border-r border-border/30" style={{ width: COMPANY_COL_WIDTH }}>
+                      <div className="shrink-0 flex items-center px-2 border-r border-border/50" style={{ width: COMPANY_COL_WIDTH }}>
                         <p className="text-xs text-foreground/75 truncate">{block.project.companyName}</p>
                       </div>
                       {/* 프로젝트명 + 설명 */}
@@ -512,7 +512,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
               {rows.map((row, rowIdx) => {
                 const isLastRow = rowIdx === rows.length - 1;
                 const isProjectBoundary = isLastRow || rows[rowIdx + 1]?.project.id !== row.project.id;
-                const borderClass = isProjectBoundary ? "border-border" : "border-border/30";
+                const borderClass = isProjectBoundary ? "border-border" : "border-border/50";
 
                 if (row.type === "collapsed") {
                   return (

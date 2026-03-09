@@ -193,7 +193,7 @@ const GridLines = memo(function GridLines({ days, rowCount, projectBoundaryRows 
           <div
             key={i}
             className={cn(
-              "absolute top-0 bottom-0 border-r border-border/50",
+              "absolute top-0 bottom-0 border-r border-border/30",
               weekend && "bg-red-500/[0.04] dark:bg-red-400/[0.03]",
               isLastOfMonth && "border-r-border"
             )}
@@ -206,7 +206,7 @@ const GridLines = memo(function GridLines({ days, rowCount, projectBoundaryRows 
           key={`row-${i}`}
           className={cn(
             "absolute left-0 right-0 border-b",
-            (i === rowCount - 1 || projectBoundaryRows?.has(i)) ? "border-border" : "border-border/30",
+            (i === rowCount - 1 || projectBoundaryRows?.has(i)) ? "border-border" : "border-border/50",
           )}
           style={{ top: (i + 1) * ROW_HEIGHT - 1 }}
         />

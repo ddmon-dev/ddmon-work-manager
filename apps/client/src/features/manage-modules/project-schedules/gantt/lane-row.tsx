@@ -54,7 +54,7 @@ export const LaneRow = memo(function LaneRow({
       <div
         className={cn(
           "group flex items-center gap-1 pl-2 pr-1 border-b",
-          isLast ? "border-border" : "border-border/30",
+          isLast ? "border-border" : "border-border/50",
           isHovered && "bg-foreground/[0.02]",
           isDragging && "opacity-50",
           className,
