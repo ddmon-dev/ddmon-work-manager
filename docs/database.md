@@ -171,6 +171,24 @@ npm run db:migrate
 npm run db:reset
 ```
 
+### 마이그레이션 통합 규칙
+
+- **운영 DB에 적용된 마이그레이션은 절대 수정/통합/삭제하지 않는다**
+- 피쳐 개발 중 여러 개 생긴 마이그레이션은 main 머지 전에 순효과로 통합한다
+- 통합 대상은 운영 DB에 아직 적용되지 않은 마이그레이션만 해당한다
+- 통합 시 중간 과정의 무의미한 변경(컬럼 추가 후 삭제, paid_date 기본값 변경 등)을 제거한다
+- 통합 후 journal, snapshot도 함께 정리한다
+
+### 네이밍 컨벤션
+
+`--name` 플래그로 의미 있는 이름을 부여한다. snake_case, 영문 사용.
+
+| 접두사 | 용도 | 예시 |
+|--------|------|------|
+| `add_xxx` | 테이블/컬럼 추가 | `add_project_schedules` |
+| `drop_xxx` | 테이블/컬럼 삭제 | `drop_legacy_column` |
+| `alter_xxx` | 컬럼 변경 | `alter_status_type` |
+
 ### 시드 데이터
 
 `apps/server/src/db/seed.ts` — 기존 Next.js 운영 DB 이관 데이터. `.gitignore`에 포함.
