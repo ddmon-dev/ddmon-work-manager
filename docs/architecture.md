@@ -125,6 +125,13 @@ features/manage-modules/{module}/
 | `ExportDataButton` | 엑셀 내보내기 |
 | `DetailSectionTitle` / `DetailInfoRow` | 상세뷰 레이아웃 |
 
+#### _base 훅
+
+| 훅 | 역할 |
+|---|------|
+| `useFormGuard` | RHF isDirty 감지 → 닫기/모드 변경 시 확인 다이얼로그 |
+| `createMemoHooks` | 메모 CRUD mutation 팩토리 (optimistic update 포함, clients/projects 공유) |
+
 #### ManageSheet 상태 머신
 
 ```
@@ -230,7 +237,7 @@ src/
 ├── lib/                  # 유틸리티
 │   ├── errors.ts         # ERRORS 상수, successResponse, errorResponse
 │   ├── pagination.ts     # parsePagination, calcOffset
-│   ├── query-helpers.ts  # softDeleteFilter, softDeletePayload, searchFilter
+│   ├── query-helpers.ts  # softDeleteFilter, softDeletePayload, searchFilter, getBilledAmount, reorderSchema, executeReorder
 │   ├── number-generator.ts # 견적서/프로젝트 번호 생성
 │   ├── types.ts          # AppVariables (AuthUser, AuthSession)
 │   └── constants.ts      # SERVER_PAGE_SIZE_DEFAULT

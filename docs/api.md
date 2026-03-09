@@ -282,7 +282,7 @@ where(softDeleteFilter(table.deleted))
 
 예외: schedules, todos, todo_time_blocks, mindnotes → 하드 삭제 (`db.delete()`)
 
-헬퍼: `apps/server/src/lib/query-helpers.ts`
+헬퍼: `apps/server/src/lib/query-helpers.ts` — `softDeleteFilter`, `softDeletePayload`, `searchFilter`, `getBilledAmount`, `reorderSchema`, `executeReorder`
 
 ### author 변환
 
