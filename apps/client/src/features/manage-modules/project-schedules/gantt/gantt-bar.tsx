@@ -225,7 +225,7 @@ export const GanttBar = memo(function GanttBar({
         width: Math.max(displayWidth, DAY_WIDTH - BAR_INSET * 2),
         top: displayTop,
         height: BAR_HEIGHT,
-        backgroundColor: `color-mix(in srgb, ${color} 10%, var(--background))`,
+        backgroundColor: `color-mix(in srgb, ${color} 18%, var(--background))`,
       }}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -270,7 +270,7 @@ export const GanttBar = memo(function GanttBar({
       {duplicateOffset !== null && (
         <div
           className="absolute flex items-center gap-1.5 px-2 rounded-md pointer-events-none opacity-50 border border-dashed border-foreground/30"
-          style={{ left: duplicateOffset, top: 0, width: displayWidth, height: BAR_HEIGHT, backgroundColor: `color-mix(in srgb, ${color} 10%, var(--background))` }}
+          style={{ left: duplicateOffset, top: 0, width: displayWidth, height: BAR_HEIGHT, backgroundColor: `color-mix(in srgb, ${color} 18%, var(--background))` }}
         >
           <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-md" style={{ backgroundColor: color }} />
           <span className="text-xs truncate font-medium text-foreground">{schedule.title}</span>
