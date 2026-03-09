@@ -36,6 +36,7 @@ Admins = Better Auth user 테이블 (별도 admins 테이블 없음).
 | `todos` | 투두 | uuid | **하드** |
 | `todo_time_blocks` | 타임블록 (30분 단위) | uuid | **하드** |
 | `mindnotes` | 마인드노트 | uuid | **하드** |
+| `memos` | 메모 (개인 메모장) | uuid | **하드** |
 | `business_info` | 사업자 정보 | uuid | — |
 
 ## 관계 구조
@@ -59,6 +60,7 @@ projects ─────┬── project_payments (1:N, CASCADE)
 user ─────┬── todos (1:N, CASCADE)
           │    └── todo_time_blocks (1:N, CASCADE)
           ├── mindnotes (1:N, CASCADE)
+          ├── memos (1:N, CASCADE)
           └── session, account (1:N, CASCADE)
 ```
 
@@ -100,11 +102,12 @@ user ─────┬── todos (1:N, CASCADE)
 
 ### 하드 삭제
 
-대상: project_schedules, schedules, todos, todo_time_blocks, mindnotes
+대상: project_schedules, project_schedule_lanes, schedules, todos, todo_time_blocks, mindnotes, memos
 
-- schedules: 마이그레이션 스쿼시 시 deleted 컬럼 제거
+- project_schedules/project_schedule_lanes: 프로젝트 삭제 시 CASCADE
+- schedules: deleted 컬럼 없음
 - todos/todo_time_blocks: 사용자 소유 데이터, 복원 불필요
-- mindnotes: 사용자 소유 데이터, 복원 불필요
+- mindnotes/memos: 사용자 소유 데이터, 복원 불필요
 
 ## 주요 컬럼 설명
 

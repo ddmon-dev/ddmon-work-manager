@@ -187,6 +187,17 @@ userId 필터링: 모든 투두 API는 `user.id`로 자동 필터링 (사용자�
 
 userId 필터링: 모든 마인드노트 API는 `user.id`로 자동 필터링 (사용자별 데이터 분리).
 
+### Memos (`/api/memos`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/memos` | 전체 목록 (createdAt desc, 비페이지네이션) |
+| POST | `/memos` | 생성 |
+| PATCH | `/memos/:id` | 수정 |
+| DELETE | `/memos/:id` | **하드 삭제** |
+
+userId 필터링: 모든 메모 API는 `user.id`로 자동 필터링 (사용자별 데이터 분리).
+
 ### Admins (`/api/admins`)
 
 | Method | Path | 설명 | 권한 |
