@@ -198,7 +198,7 @@ Drizzle Kit 사용. 설정 파일: `apps/server/drizzle.config.ts`
 출력:  apps/server/drizzle/migrations/
 ```
 
-현재 스쿼시 완료 — 단일 `0000_initial.sql`로 통합.
+`0000_initial.sql` (스쿼시) ~ `0007_nosy_katie_power.sql`.
 
 ### 새 마이그레이션 생성
 

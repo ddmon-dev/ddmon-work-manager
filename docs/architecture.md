@@ -71,22 +71,28 @@ project-schedules/
     ├── project-gantt.tsx      # 단일 프로젝트 간트 (프로젝트 상세용, 좌측 레인 패널)
     ├── overview.tsx           # 멀티 프로젝트 오버뷰 (진행중/완료 탭)
     ├── timeline-header.tsx    # 날짜 축 (월/일 레이블, 월 sticky)
-    ├── gantt-grid.tsx         # 배경 그리드 (날짜 세로줄, 주말 배경, 오늘선)
+    ├── gantt-grid.tsx         # 배경 그리드 (날짜 세로줄, 주말 배경, 오늘선, 호버 크로스헤어)
     ├── gantt-bar.tsx          # 개별 바 (드래그/리사이즈/복제, inline style 색상)
+    ├── ghost-bar.tsx          # 생성 중인 일정의 고스트 바
+    ├── lane-row.tsx           # 좌측 패널 레인 행 (인라인 편집, 드래그 리오더)
     ├── schedule-popover.tsx   # 바 클릭 팝오버 (제목 편집, 카테고리 변경, 커스텀 카테고리, 삭제)
     ├── use-gantt.ts           # 범위 계산
-    └── utils.ts               # dateToX, xToDate, computeTimelineRange 등
+    ├── use-lane-actions.ts    # 레인 CRUD 액션 훅
+    ├── use-lane-drag.ts       # 레인 드래그 앤 드롭 훅
+    ├── use-scroll-to-today.ts # 오늘 날짜로 자동 스크롤 훅
+    └── utils.ts               # dateToX, xToDate, computeTimelineRange, TODAY 등
 ```
 
-- DAY_WIDTH=36px, ROW_HEIGHT=36px, absolute 포지셔닝 기반
+- DAY_WIDTH=40px, ROW_HEIGHT=40px, absolute 포지셔닝 기반
 - Pointer Events API로 드래그 (픽셀 단위 이동, 놓을 때 스냅)
 - 클릭 vs 드래그 판별 (4px threshold)
 - 드래그 축 잠금: 초기 이동 방향에 따라 수직/수평 분리 (동시 이동 불가)
 - 레인 기반 행 렌더링: 1행 = 1레인, 한 레인 내 겹치는 일정 허용
 - Alt+드래그: 같은 레인에 일정 복제 (고스트 바 프리뷰, 일반 생성 API 사용)
 - Y축 드래그: 다른 레인으로 일정 이동 (`laneId` 변경)
-- 좌측 패널: 레인 제목 인라인 편집, 레인 삭제, 레인 추가
-- 오버뷰: 프로젝트별 접기/펼치기, 접힌 상태에서 요약 바 표시, 프로젝트 드래그 리오더
+- 좌측 패널: 레인 제목 인라인 편집, 레인 삭제, 레인 추가, 레인 드래그 리오더
+- 오버뷰: 프로젝트별 접기/펼치기, 접힌 상태에서 요약 바 표시, 프로젝트/레인 드래그 리오더
+- GanttGrid: 제어 컴포넌트 패턴 (hoverCell prop, 부모가 상태 소유)
 
 #### 모듈 파일 구성
 

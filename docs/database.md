@@ -155,7 +155,7 @@ user ─────┬── todos (1:N, CASCADE)
 
 ## 마이그레이션 관리
 
-마이그레이션 파일: `0000_initial.sql` (스쿼시) + `0003_lively_mariko_yashida.sql` (schedules.sort_order 추가).
+마이그레이션 파일: `0000_initial.sql` (스쿼시) ~ `0007_nosy_katie_power.sql`. 0004~0007은 project_schedule_lanes/project_schedules 테이블 추가 및 관련 변경.
 
 ### 스키마 변경 절차
 
