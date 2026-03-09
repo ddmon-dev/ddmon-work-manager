@@ -18,7 +18,7 @@ import { GanttBar } from "./gantt-bar";
 import { GhostBar } from "./ghost-bar";
 import { LaneRow } from "./lane-row";
 import { SchedulePopover } from "./schedule-popover";
-import { format, ROW_HEIGHT, LEFT_PANEL_WIDTH } from "./utils";
+import { format, ROW_HEIGHT, LANE_COL_WIDTH } from "./utils";
 
 interface ProjectGanttProps {
   projectId: string;
@@ -176,11 +176,11 @@ export function ProjectGantt({
           ref={scrollRef}
           className="overflow-auto hide-scrollbar"
         >
-          <div className="flex" style={{ width: LEFT_PANEL_WIDTH + totalWidth }}>
+          <div className="flex" style={{ width: LANE_COL_WIDTH + totalWidth }}>
             {/* 좌측 고정 패널 */}
             <div
-              className="sticky left-0 z-20 shrink-0 border-r border-border bg-background"
-              style={{ width: LEFT_PANEL_WIDTH }}
+              className="sticky left-0 z-30 shrink-0 border-r border-border bg-background"
+              style={{ width: LANE_COL_WIDTH }}
             >
               <div className="h-12 border-b border-border flex items-center px-3 bg-background">
                 <span className="text-xs font-medium text-muted-foreground">행</span>
