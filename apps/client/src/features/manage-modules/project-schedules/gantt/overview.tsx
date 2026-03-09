@@ -28,6 +28,8 @@ import {
   BAR_HEIGHT,
   BAR_Y_OFFSET,
   LEFT_PANEL_WIDTH,
+  PROJECT_COL_WIDTH,
+  LANE_COL_WIDTH,
   CLICK_THRESHOLD,
 } from "./utils";
 import { useScrollToToday } from "./use-scroll-to-today";
@@ -96,8 +98,8 @@ export function ProjectScheduleOverview() {
 // ── 오버뷰 간트 본체 ──────────────────────────────────────────
 
 type OverviewRow =
-  | { type: "project"; project: OverviewProject; globalRow: number }
-  | { type: "lane"; project: OverviewProject; lane: LaneWithSchedules; localIndex: number; globalRow: number }
+  | { type: "collapsed"; project: OverviewProject; globalRow: number }
+  | { type: "lane"; project: OverviewProject; lane: LaneWithSchedules; localIndex: number; globalRow: number; isFirstOfProject: boolean; projectLaneCount: number }
   | { type: "empty"; project: OverviewProject; globalRow: number };
 
 function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProject[]; defaultExpanded?: boolean }) {
@@ -175,17 +177,21 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     const result: OverviewRow[] = [];
     let row = 0;
     for (const p of projects) {
-      result.push({ type: "project", project: p, globalRow: row });
-      row++;
-      if (expandedProjects.has(p.id)) {
-        if (p.lanes.length === 0) {
-          result.push({ type: "empty", project: p, globalRow: row });
+      if (!expandedProjects.has(p.id)) {
+        result.push({ type: "collapsed", project: p, globalRow: row });
+        row++;
+      } else if (p.lanes.length === 0) {
+        result.push({ type: "empty", project: p, globalRow: row });
+        row++;
+      } else {
+        for (let i = 0; i < p.lanes.length; i++) {
+          result.push({
+            type: "lane", project: p, lane: p.lanes[i],
+            localIndex: i, globalRow: row,
+            isFirstOfProject: i === 0,
+            projectLaneCount: p.lanes.length,
+          });
           row++;
-        } else {
-          for (let i = 0; i < p.lanes.length; i++) {
-            result.push({ type: "lane", project: p, lane: p.lanes[i], localIndex: i, globalRow: row });
-            row++;
-          }
         }
       }
     }
@@ -194,13 +200,17 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
 
   const totalRows = rows.length;
 
-  // 프로젝트 행 인덱스
-  const projectRowIndices = useMemo(() =>
-    rows
-      .map((r, i) => (r.type === "project" ? { index: i, globalRow: r.globalRow } : null))
-      .filter(Boolean) as { index: number; globalRow: number }[],
-    [rows]
-  );
+  // 프로젝트 행 인덱스 (각 프로젝트의 첫 번째 행)
+  const projectRowIndices = useMemo(() => {
+    const seen = new Set<string>();
+    return rows
+      .map((r, i) => {
+        if (seen.has(r.project.id)) return null;
+        seen.add(r.project.id);
+        return { index: i, globalRow: r.globalRow, projectId: r.project.id };
+      })
+      .filter(Boolean) as { index: number; globalRow: number; projectId: string }[];
+  }, [rows]);
 
   const dropIndex = useMemo(() => {
     if (!projectDrag?.moved) return -1;
@@ -230,6 +240,21 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     return rangeMap;
   }, [rows]);
 
+  // 프로젝트 블록 (좌측 프로젝트 열 렌더링용)
+  const projectBlocks = useMemo(() => {
+    const blocks: { project: OverviewProject; startRow: number; rowSpan: number; isExpanded: boolean; projectIdx: number }[] = [];
+    let pIdx = 0;
+    for (const p of projects) {
+      const isExpanded = expandedProjects.has(p.id);
+      const projectRows = rows.filter(r => r.project.id === p.id);
+      if (projectRows.length > 0) {
+        blocks.push({ project: p, startRow: projectRows[0].globalRow, rowSpan: projectRows.length, isExpanded, projectIdx: pIdx });
+      }
+      pIdx++;
+    }
+    return blocks;
+  }, [projects, expandedProjects, rows]);
+
   const toggleProject = (id: string) => {
     setExpandedProjects((prev) => {
       const next = new Set(prev);
@@ -248,7 +273,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     if (rowIndex < 0 || rowIndex >= rows.length) return;
     const row = rows[rowIndex];
 
-    if (row.type === "project") {
+    if (row.type === "collapsed") {
       toggleProject(row.project.id);
       return;
     }
@@ -401,119 +426,146 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   return (
     <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto border-b border-border">
       <div className="flex" style={{ width: LEFT_PANEL_WIDTH + totalWidth }}>
-        {/* 좌측 고정 패널 */}
+        {/* 좌측 고정 패널 (2열: 프로젝트 + 레인) */}
         <div
           className="sticky left-0 z-20 shrink-0 border-r border-border bg-background"
           style={{ width: LEFT_PANEL_WIDTH }}
         >
-          <div className="sticky top-0 z-30 h-12 border-b border-border flex items-center justify-between px-3 bg-background">
-            <span className="text-xs font-medium text-muted-foreground">프로젝트</span>
-            <button
-              type="button"
-              className="p-1 rounded hover:bg-accent text-muted-foreground"
-              onClick={() => {
-                const allExpanded = projects.every((p) => expandedProjects.has(p.id));
-                setExpandedProjects(allExpanded ? new Set() : new Set(projects.map((p) => p.id)));
-              }}
-              title={projects.every((p) => expandedProjects.has(p.id)) ? "모두 닫기" : "모두 열기"}
-            >
-              <ChevronsUpDownIcon className="size-3.5" />
-            </button>
+          {/* 헤더 */}
+          <div className="sticky top-0 z-30 h-12 border-b border-border flex bg-background">
+            <div className="flex items-center px-2 border-r border-border/30" style={{ width: PROJECT_COL_WIDTH }}>
+              <span className="text-xs font-medium text-muted-foreground">프로젝트</span>
+            </div>
+            <div className="flex items-center justify-between px-2 flex-1">
+              <span className="text-xs font-medium text-muted-foreground">일정</span>
+              <button
+                type="button"
+                className="p-1 rounded hover:bg-accent text-muted-foreground"
+                onClick={() => {
+                  const allExpanded = projects.every((p) => expandedProjects.has(p.id));
+                  setExpandedProjects(allExpanded ? new Set() : new Set(projects.map((p) => p.id)));
+                }}
+                title={projects.every((p) => expandedProjects.has(p.id)) ? "모두 닫기" : "모두 열기"}
+              >
+                <ChevronsUpDownIcon className="size-3.5" />
+              </button>
+            </div>
           </div>
 
-          <div style={{ height: contentHeight }}>
-            {rows.map((row, rowIdx) => {
-              const isLastRow = rowIdx === rows.length - 1;
-              if (row.type === "project") {
-                const isExpanded = expandedProjects.has(row.project.id);
-                const projectIdx = projectRowIndices.findIndex((p) => p.globalRow === row.globalRow);
-                const isDragging = projectDrag?.moved && projectDrag.fromIndex === projectIdx;
-                const showDropBefore = projectDrag?.moved && dropIndex === projectIdx && dropIndex < projectDrag.fromIndex;
-                const showDropAfter = projectDrag?.moved && dropIndex === projectIdx && dropIndex > projectDrag.fromIndex;
+          {/* 본문: 프로젝트 열 + 레인 열 */}
+          <div className="flex" style={{ height: contentHeight }}>
+            {/* 프로젝트 열 */}
+            <div className="shrink-0 border-r border-border/30" style={{ width: PROJECT_COL_WIDTH }}>
+              {projectBlocks.map((block) => {
+                const isDragging = projectDrag?.moved && projectDrag.fromIndex === block.projectIdx;
+                const showDropBefore = projectDrag?.moved && dropIndex === block.projectIdx && dropIndex < projectDrag.fromIndex;
+                const showDropAfter = projectDrag?.moved && dropIndex === block.projectIdx && dropIndex > projectDrag.fromIndex;
+                const isLastBlock = block.startRow + block.rowSpan >= totalRows;
                 return (
-                  <div key={`p-${row.project.id}`}>
+                  <div key={`pb-${block.project.id}`}>
                     {showDropBefore && (
                       <div className="h-0.5 bg-primary" style={{ marginTop: -1 }} />
                     )}
                     <div
                       className={cn(
-                        "sticky z-10 flex items-center gap-1 px-2 border-b cursor-pointer hover:bg-accent bg-background select-none",
-                        isLastRow ? "border-border" : "border-border/30",
-                        hoverCell?.row === row.globalRow && "bg-accent/50",
+                        "flex flex-col items-start justify-center gap-0.5 px-2 border-b cursor-pointer hover:bg-accent bg-background select-none",
+                        isLastBlock ? "border-border" : "border-border/30",
                         isDragging && "opacity-50"
                       )}
-                      style={{ height: ROW_HEIGHT, top: HEADER_HEIGHT }}
-                      onPointerDown={(e) => handleProjectPointerDown(e, row.project.id, projectIdx)}
+                      style={{ height: block.rowSpan * ROW_HEIGHT }}
+                      onPointerDown={(e) => handleProjectPointerDown(e, block.project.id, block.projectIdx)}
                     >
-                      <ChevronRightIcon
-                        className={cn(
-                          "size-3.5 shrink-0 transition-transform",
-                          isExpanded && "rotate-90"
-                        )}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-medium truncate">{row.project.name}</p>
-                          <StatusBadge projectId={row.project.id} status={row.project.status as any} readonly className="text-[10px] h-4 min-w-0 px-1.5 shrink-0 ml-auto" />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground truncate">{row.project.companyName}</p>
+                      <div className="flex items-center gap-1 w-full min-w-0">
+                        <ChevronRightIcon
+                          className={cn(
+                            "size-3 shrink-0 transition-transform",
+                            block.isExpanded && "rotate-90"
+                          )}
+                        />
+                        <p className="text-xs font-medium truncate flex-1 min-w-0">{block.project.name}</p>
                       </div>
+                      <StatusBadge projectId={block.project.id} status={block.project.status as any} readonly className="text-[10px] h-4 min-w-0 px-1.5 shrink-0 ml-4" />
                     </div>
                     {showDropAfter && (
                       <div className="h-0.5 bg-primary" style={{ marginTop: -1 }} />
                     )}
                   </div>
                 );
-              }
+              })}
+            </div>
 
-              if (row.type === "empty") {
+            {/* 레인 열 */}
+            <div className="flex-1 min-w-0">
+              {rows.map((row, rowIdx) => {
+                const isLastRow = rowIdx === rows.length - 1;
+
+                if (row.type === "collapsed") {
+                  return (
+                    <div
+                      key={`collapsed-${row.project.id}`}
+                      className={cn(
+                        "flex items-center px-2 border-b",
+                        isLastRow ? "border-border" : "border-border/30",
+                        hoverCell?.row === row.globalRow && "bg-accent/50"
+                      )}
+                      style={{ height: ROW_HEIGHT }}
+                    >
+                      <span className="text-[10px] text-muted-foreground">
+                        {row.project.lanes.length}개 레인
+                      </span>
+                    </div>
+                  );
+                }
+
+                if (row.type === "empty") {
+                  return (
+                    <div
+                      key={`empty-${row.project.id}`}
+                      className={cn(
+                        "flex items-center px-2 border-b",
+                        isLastRow ? "border-border" : "border-border/30",
+                        hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
+                      )}
+                      style={{ height: ROW_HEIGHT }}
+                    >
+                      <span className="text-[10px] text-muted-foreground/50">행 없음</span>
+                    </div>
+                  );
+                }
+
+                // lane row
+                const isLaneDragging = !!(laneDrag?.moved && laneDrag.laneId === row.lane.id);
+                const showLaneDropIndicator = !!(laneDrag?.moved
+                  && laneDrag.projectId === row.project.id
+                  && laneDropLocal === row.localIndex
+                  && laneDropLocal !== laneDrag.fromLocal);
+                const isEditingThis = editingLaneId === row.lane.id;
+
                 return (
-                  <div
-                    key={`empty-${row.project.id}`}
-                    className={cn(
-                      "flex items-center pl-6 pr-2 border-b",
-                      isLastRow ? "border-border" : "border-border/30",
-                      hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
-                    )}
-                    style={{ height: ROW_HEIGHT }}
-                  >
-                    <span className="text-[10px] text-muted-foreground/50">행 없음</span>
-                  </div>
+                  <LaneRow
+                    key={`l-${row.lane.id}`}
+                    laneId={row.lane.id}
+                    title={row.lane.title}
+                    localIndex={row.localIndex}
+                    scheduleCount={row.lane.schedules.length}
+                    isHovered={hoverCell?.row === row.globalRow}
+                    isEditing={isEditingThis}
+                    editingTitle={isEditingThis ? editingLaneTitle : ""}
+                    isDragging={isLaneDragging}
+                    showDropBefore={showLaneDropIndicator && laneDropLocal < laneDrag!.fromLocal}
+                    showDropAfter={showLaneDropIndicator && laneDropLocal > laneDrag!.fromLocal}
+                    onEditingTitleChange={setEditingLaneTitle}
+                    onStartEdit={startEdit}
+                    onSaveEdit={saveEdit}
+                    onCancelEdit={cancelEdit}
+                    onDelete={laneDelete}
+                    onAddBelow={handleLaneAddBelow}
+                    onPointerDown={handleLanePointerDown}
+                    isLast={isLastRow}
+                  />
                 );
-              }
-
-              // lane row
-              const isLaneDragging = !!(laneDrag?.moved && laneDrag.laneId === row.lane.id);
-              const showLaneDropIndicator = !!(laneDrag?.moved
-                && laneDrag.projectId === row.project.id
-                && laneDropLocal === row.localIndex
-                && laneDropLocal !== laneDrag.fromLocal);
-              const isEditingThis = editingLaneId === row.lane.id;
-
-              return (
-                <LaneRow
-                  key={`l-${row.lane.id}`}
-                  laneId={row.lane.id}
-                  title={row.lane.title}
-                  localIndex={row.localIndex}
-                  scheduleCount={row.lane.schedules.length}
-                  isHovered={hoverCell?.row === row.globalRow}
-                  isEditing={isEditingThis}
-                  editingTitle={isEditingThis ? editingLaneTitle : ""}
-                  isDragging={isLaneDragging}
-                  showDropBefore={showLaneDropIndicator && laneDropLocal < laneDrag!.fromLocal}
-                  showDropAfter={showLaneDropIndicator && laneDropLocal > laneDrag!.fromLocal}
-                  onEditingTitleChange={setEditingLaneTitle}
-                  onStartEdit={startEdit}
-                  onSaveEdit={saveEdit}
-                  onCancelEdit={cancelEdit}
-                  onDelete={laneDelete}
-                  onAddBelow={handleLaneAddBelow}
-                  onPointerDown={handleLanePointerDown}
-                  isLast={isLastRow}
-                />
-              );
-            })}
+              })}
+            </div>
           </div>
         </div>
 
@@ -538,9 +590,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
             onHoverCell={setHoverCell}
           >
             {rows.map((row) => {
-              if (row.type === "project") {
-                const isExpanded = expandedProjects.has(row.project.id);
-                if (isExpanded) return null;
+              if (row.type === "collapsed") {
                 return (
                   <SummaryBar
                     key={`summary-${row.project.id}`}

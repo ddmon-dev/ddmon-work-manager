@@ -132,7 +132,9 @@ export function getTotalWidth(start: Date, end: Date): number {
 
 // ── 공유 상수 ────────────────────────────────────────────────
 
-export const LEFT_PANEL_WIDTH = 220;
+export const PROJECT_COL_WIDTH = 200;
+export const LANE_COL_WIDTH = 150;
+export const LEFT_PANEL_WIDTH = PROJECT_COL_WIDTH + LANE_COL_WIDTH;
 export const CLICK_THRESHOLD = 4;
 
 export { isWeekend, isSameDay, startOfDay, format, addDays, differenceInCalendarDays, parseISO };
