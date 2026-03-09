@@ -13,21 +13,21 @@
       "idx": 1,
       "version": "7",
       "when": 1772428586221,
-      "tag": "0001_empty_punisher",
+      "tag": "0001_add_mindnotes",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "7",
       "when": 1772583972974,
-      "tag": "0002_shocking_nemesis",
+      "tag": "0002_add_memos",
       "breakpoints": true
     },
     {
       "idx": 3,
       "version": "7",
       "when": 1772624176298,
-      "tag": "0003_lively_mariko_yashida",
+      "tag": "0003_add_schedule_sort_order",
       "breakpoints": true
     },
     {
