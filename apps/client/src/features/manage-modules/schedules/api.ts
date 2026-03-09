@@ -7,47 +7,10 @@ import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
 import type { ScheduleDTO, ScheduleListResponse, CalendarSchedule } from "./types";
 import type { ScheduleWriteInput } from "@packages/schemas";
 
-type ClientOption = { value: string; label: string };
-type ProjectOption = { value: string; label: string; clientId: string };
-
-// ── 선택 옵션 (폼용) ─────────────────────────────────────────
-
-export function useClientOptions() {
-  return useQuery({
-    queryKey: ["clients", "options"] as const,
-    queryFn: () =>
-      api.get<{ items: { id: string; companyName: string }[] }>("/clients", {
-        pageSize: 999,
-      }),
-    select: (data): ClientOption[] =>
-      data.items.map((c) => ({ value: c.id, label: c.companyName })),
-    staleTime: 30_000,
-  });
-}
-
-export function useProjectOptions() {
-  return useQuery({
-    queryKey: ["projects", "options"] as const,
-    queryFn: () =>
-      api.get<{ items: { id: string; name: string; clientId: string }[] }>(
-        "/projects",
-        { pageSize: 999 }
-      ),
-    select: (data): ProjectOption[] =>
-      data.items.map((p) => ({
-        value: p.id,
-        label: p.name,
-        clientId: p.clientId,
-      })),
-    staleTime: 30_000,
-  });
-}
-
 type ListParams = {
   page?: number;
   pageSize?: number;
   search?: string;
-  projectId?: string;
 };
 
 // ── 월별 캘린더 조회 ─────────────────────────────────────────
@@ -70,7 +33,6 @@ export function useScheduleList(params: ListParams = {}) {
         page: params.page,
         pageSize: params.pageSize,
         search: params.search,
-        projectId: params.projectId,
       }),
     placeholderData: keepPreviousData,
   });

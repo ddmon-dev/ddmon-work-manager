@@ -13,9 +13,6 @@ interface FormValues {
   startTime: string;
   endTime: string;
   color: string;
-  clientId: string;
-  projectId: string;
-  location: string;
   recurrenceType: RecurrenceType;
   recurrenceEndDate: Date | null;
 }
@@ -29,9 +26,6 @@ function toFormValues(data: ScheduleDTO): FormValues {
     startTime: data.startTime ?? "",
     endTime: data.endTime ?? "",
     color: data.color ?? "default",
-    clientId: data.clientId ?? "",
-    projectId: data.projectId ?? "",
-    location: data.location ?? "",
     recurrenceType: (data.recurrenceType ?? "none") as RecurrenceType,
     recurrenceEndDate: data.recurrenceEndDate
       ? new Date(data.recurrenceEndDate + "T00:00:00")
@@ -55,9 +49,6 @@ function toSubmitValues(values: FormValues) {
     startTime: values.startTime || undefined,
     endTime: values.endTime || undefined,
     color: values.color,
-    clientId: values.clientId || undefined,
-    projectId: values.projectId || undefined,
-    location: values.location || undefined,
     recurrenceType: values.recurrenceType,
     recurrenceEndDate: values.recurrenceEndDate
       ? formatDate(values.recurrenceEndDate)

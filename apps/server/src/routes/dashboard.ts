@@ -6,7 +6,6 @@ import {
   projects,
   projectPayments,
   schedules,
-  clients,
 } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { successResponse } from "../lib/errors";
@@ -172,12 +171,8 @@ app.get("/schedules", async (c) => {
       startTime: schedules.startTime,
       endTime: schedules.endTime,
       color: schedules.color,
-      clientName: clients.companyName,
-      projectName: projects.name,
     })
     .from(schedules)
-    .leftJoin(clients, eq(schedules.clientId, clients.id))
-    .leftJoin(projects, eq(schedules.projectId, projects.id))
     .where(
       or(
         and(

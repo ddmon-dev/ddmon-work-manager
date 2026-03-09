@@ -7,9 +7,6 @@ export interface ScheduleDTO {
   startTime: string | null;
   endTime: string | null;
   color: string;
-  location: string | null;
-  clientId: string | null;
-  projectId: string | null;
   sortOrder: number;
   recurrenceType: "none" | "daily" | "weekly" | "monthly";
   recurrenceEndDate: string | null;
@@ -36,11 +33,6 @@ export interface CalendarSchedule {
   startTime: string | null;
   endTime: string | null;
   color: string;
-  location: string | null;
-  clientId: string | null;
-  clientName?: string;
-  projectId: string | null;
-  projectName?: string;
   recurrenceType: string;
   sourceId?: string;
   isOccurrence?: boolean;

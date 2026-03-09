@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, asc, count, desc, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import { db } from "../db";
 import { schedules } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
@@ -24,20 +24,12 @@ interface CalendarSchedule {
   startTime: string | null;
   endTime: string | null;
   color: string;
-  location: string | null;
-  clientId: string | null;
-  clientName?: string;
-  projectId: string | null;
-  projectName?: string;
   recurrenceType: string;
   sourceId?: string;
   isOccurrence?: boolean;
 }
 
-type ScheduleRow = typeof schedules.$inferSelect & {
-  client: { companyName: string } | null;
-  project: { name: string } | null;
-};
+type ScheduleRow = typeof schedules.$inferSelect;
 
 function toCalendarSchedule(row: ScheduleRow): CalendarSchedule {
   return {
@@ -49,11 +41,6 @@ function toCalendarSchedule(row: ScheduleRow): CalendarSchedule {
     startTime: row.startTime ?? null,
     endTime: row.endTime ?? null,
     color: row.color,
-    location: row.location ?? null,
-    clientId: row.clientId ?? null,
-    clientName: row.client?.companyName,
-    projectId: row.projectId ?? null,
-    projectName: row.project?.name,
     recurrenceType: row.recurrenceType,
   };
 }
@@ -121,11 +108,6 @@ function generateOccurrences(
         startTime: row.startTime ?? null,
         endTime: row.endTime ?? null,
         color: row.color,
-        location: row.location ?? null,
-        clientId: row.clientId ?? null,
-        clientName: row.client?.companyName,
-        projectId: row.projectId ?? null,
-        projectName: row.project?.name,
         recurrenceType: row.recurrenceType,
         sourceId: row.id,
         isOccurrence: true,
@@ -156,7 +138,6 @@ app.get("/month", async (c) => {
   // 단발 일정: start_date <= monthEnd AND (end_date >= monthStart OR start_date >= monthStart)
   const singleSchedules = await db.query.schedules.findMany({
     where: eq(schedules.recurrenceType, "none"),
-    with: { client: true, project: true },
     orderBy: [desc(schedules.startDate)],
   });
 
@@ -168,17 +149,15 @@ app.get("/month", async (c) => {
   });
 
   // 반복 일정: start_date <= monthEnd
-  const recurringSchedules = await db.query.schedules.findMany({
-    with: { client: true, project: true },
-  });
+  const recurringSchedules = await db.query.schedules.findMany();
 
   const filtered = recurringSchedules.filter(
     (s) => s.recurrenceType !== "none" && s.startDate <= rangeEnd
   );
 
-  const singles = filteredSingles.map((s) => toCalendarSchedule(s as ScheduleRow));
+  const singles = filteredSingles.map((s) => toCalendarSchedule(s));
   const recurrences = filtered.flatMap((s) =>
-    generateOccurrences(s as ScheduleRow, monthStart, monthEnd)
+    generateOccurrences(s, monthStart, monthEnd)
   );
 
   return successResponse(c, { items: [...singles, ...recurrences] });
@@ -188,16 +167,10 @@ app.get("/month", async (c) => {
 app.get("/", async (c) => {
   const { page, pageSize, search } = parsePagination(c.req.query());
   const offset = calcOffset(page, pageSize);
-  const projectId = c.req.query("projectId");
 
-  const where = and(
-    search ? searchFilter([schedules.title], search) : undefined,
-    projectId ? eq(schedules.projectId, projectId) : undefined,
-  );
+  const where = search ? searchFilter([schedules.title], search) : undefined;
 
-  const orderBy = projectId
-    ? [asc(schedules.sortOrder), asc(schedules.createdAt)]
-    : [desc(schedules.startDate)];
+  const orderBy = [desc(schedules.startDate)];
 
   const [items, [{ total }]] = await Promise.all([
     db.select().from(schedules).where(where).orderBy(...orderBy).limit(pageSize).offset(offset),
@@ -212,7 +185,6 @@ app.get("/:id", async (c) => {
   const id = c.req.param("id");
   const schedule = await db.query.schedules.findFirst({
     where: eq(schedules.id, id),
-    with: { client: true, project: true },
   });
 
   if (!schedule) return errorResponse(c, ERRORS.NOT_FOUND, 404);

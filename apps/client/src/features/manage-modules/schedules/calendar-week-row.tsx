@@ -256,15 +256,8 @@ function renderSlot(
   return cells;
 }
 
-const CLIENT_NAME_MAX = 6;
-
 function formatEventLabel(schedule: CalendarSchedule) {
-  if (!schedule.clientName) return schedule.title;
-  const name =
-    schedule.clientName.length > CLIENT_NAME_MAX
-      ? schedule.clientName.slice(0, CLIENT_NAME_MAX) + ".."
-      : schedule.clientName;
-  return `${name} | ${schedule.title}`;
+  return schedule.title;
 }
 
 function getDaySchedules(date: Date, schedules: CalendarSchedule[]) {

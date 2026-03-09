@@ -2,12 +2,9 @@ import { Input } from "@/shared/ui/input";
 import { Textarea } from "@/shared/ui/textarea";
 import { DatePicker } from "@/shared/ui/date-picker";
 import { TimePicker } from "@/shared/ui/time-picker";
-import { Combobox } from "@/shared/ui/combobox";
 import { SheetFooter, SheetBody, SheetContainer } from "@/shared/ui/sheet";
 import { cn } from "@/shared/utils/classnames";
 import { ManageSheetClose, DeleteButton, useManageSheet } from "../_base/ui";
-import { useClientList } from "../clients/api";
-import { useProjectList } from "../projects/api";
 import { useDeleteSchedule } from "./api";
 import { ColorSelect } from "./color-select";
 import { RecurrencePopover } from "./recurrence-popover";
@@ -18,25 +15,6 @@ import type { ScheduleDTO } from "./types";
 export function DetailView({ data }: { data: ScheduleDTO; refetch: () => void }) {
   const manageSheet = useManageSheet();
   const deleteSchedule = useDeleteSchedule();
-
-  // 클라이언트/프로젝트 옵션
-  const { data: clientData } = useClientList({ pageSize: 200 });
-  const { data: projectData } = useProjectList({ pageSize: 200 });
-
-  const clientOptions =
-    clientData?.items.map((c) => ({ value: c.id, label: c.companyName })) ?? [];
-  const clientSelectOptions = [{ value: "", label: "연결 안함" }, ...clientOptions];
-
-  const projectOptions =
-    projectData?.items.map((p) => ({
-      value: p.id,
-      label: p.name,
-      clientId: p.clientId,
-    })) ?? [];
-  const projectSelectOptions = [
-    { value: "", label: "연결 안함" },
-    ...projectOptions.map((p) => ({ value: p.value, label: p.label })),
-  ];
 
   const { saveField, saveFields, savingField, getValue } = useInlineSave({
     data,
@@ -54,63 +32,6 @@ export function DetailView({ data }: { data: ScheduleDTO; refetch: () => void })
                 onChange={(v) => saveField("color", v)}
               />
             </div>
-          </InlineRow>
-
-          <InlineRow label="클라이언트" saving={savingField === "clientId"}>
-            <Combobox
-              value={getValue("clientId")}
-              onValueChange={async (clientId) => {
-                const currentProjectId = getValue("projectId");
-                if (currentProjectId && clientId && projectOptions) {
-                  const project = projectOptions.find(
-                    (p) => p.value === currentProjectId
-                  );
-                  if (project?.clientId && project.clientId !== clientId) {
-                    await saveField("projectId", "");
-                  }
-                }
-                saveField("clientId", clientId);
-              }}
-              options={clientSelectOptions}
-              placeholder="클라이언트 연결"
-              searchPlaceholder="클라이언트 검색"
-              className="!border-transparent bg-input/30 hover:bg-muted/50 h-8 shadow-none"
-            />
-          </InlineRow>
-
-          <InlineRow label="프로젝트" saving={savingField === "projectId"}>
-            {(() => {
-              const selectedClientId = getValue("clientId");
-              const filteredOptions = selectedClientId
-                ? [
-                    { value: "", label: "연결 안함" },
-                    ...projectOptions
-                      .filter((p) => p.clientId === selectedClientId)
-                      .map((p) => ({ value: p.value, label: p.label })),
-                  ]
-                : projectSelectOptions;
-
-              return (
-                <Combobox
-                  value={getValue("projectId")}
-                  onValueChange={(projectId) => {
-                    if (projectId && projectOptions) {
-                      const project = projectOptions.find(
-                        (p) => p.value === projectId
-                      );
-                      if (project?.clientId) {
-                        saveField("clientId", project.clientId);
-                      }
-                    }
-                    saveField("projectId", projectId);
-                  }}
-                  options={filteredOptions}
-                  placeholder="프로젝트 연결"
-                  searchPlaceholder="프로젝트 검색"
-                  className="!border-transparent bg-input/30 hover:bg-muted/50 h-8 shadow-none"
-                />
-              );
-            })()}
           </InlineRow>
 
           {/* 핵심 정보 */}
@@ -214,21 +135,6 @@ export function DetailView({ data }: { data: ScheduleDTO; refetch: () => void })
             />
           </InlineRow>
 
-          {/* 장소 */}
-          <InlineRow label="장소" saving={savingField === "location"}>
-            <Input
-              defaultValue={getValue("location")}
-              placeholder="장소 입력"
-              className={cn(INLINE_INPUT, "h-8")}
-              onBlur={(e) => saveField("location", e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  e.currentTarget.blur();
-                }
-              }}
-            />
-          </InlineRow>
         </SheetContainer>
       </SheetBody>
 

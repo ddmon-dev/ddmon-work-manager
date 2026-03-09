@@ -42,9 +42,6 @@ function ScheduleRow({
 }) {
   const colorClass = COLOR_MAP[item.color] ?? "bg-primary";
   const timeStr = formatTimeRange(item.startTime, item.endTime);
-  const context = [item.clientName, item.projectName]
-    .filter(Boolean)
-    .join(" / ");
 
   return (
     <div className="flex items-start gap-3 py-2.5">
@@ -57,12 +54,6 @@ function ScheduleRow({
             <span>{timeStr}</span>
           ) : (
             !showDate && <span>종일</span>
-          )}
-          {context && (
-            <>
-              <span aria-hidden>·</span>
-              <span className="truncate">{context}</span>
-            </>
           )}
         </div>
       </div>

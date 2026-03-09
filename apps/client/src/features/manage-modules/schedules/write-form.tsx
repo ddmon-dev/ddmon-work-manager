@@ -8,7 +8,6 @@ import { Input } from "@/shared/ui/input";
 import { Textarea } from "@/shared/ui/textarea";
 import { DatePicker } from "@/shared/ui/date-picker";
 import { TimePicker } from "@/shared/ui/time-picker";
-import { Combobox } from "@/shared/ui/combobox";
 import { SheetFooter, SheetBody, SheetContainer } from "@/shared/ui/sheet";
 import { cn } from "@/shared/utils/classnames";
 import {
@@ -18,7 +17,7 @@ import {
   ManageSheetModeChange,
 } from "../_base/ui";
 import { useFormGuard } from "../_base/hooks";
-import { useCreateSchedule, useUpdateSchedule, useClientOptions, useProjectOptions } from "./api";
+import { useCreateSchedule, useUpdateSchedule } from "./api";
 import { ColorSelect } from "./color-select";
 import { RecurrencePopover } from "./recurrence-popover";
 import { InlineRow, INLINE_INPUT } from "./inline-row";
@@ -40,9 +39,6 @@ const formDefaultValues: FormValues = {
   startTime: "",
   endTime: "",
   color: "default",
-  clientId: null,
-  projectId: null,
-  location: "",
   recurrenceType: "none",
   recurrenceEndDate: null,
 };
@@ -56,9 +52,6 @@ function toFormValues(data: ScheduleDTO): FormValues {
     startTime: data.startTime ?? "",
     endTime: data.endTime ?? "",
     color: data.color,
-    clientId: data.clientId ?? null,
-    projectId: data.projectId ?? null,
-    location: data.location ?? "",
     recurrenceType: data.recurrenceType,
     recurrenceEndDate: data.recurrenceEndDate
       ? parseISO(data.recurrenceEndDate)
@@ -75,8 +68,6 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
   const sheet = useManageSheet();
   const createSchedule = useCreateSchedule();
   const updateSchedule = useUpdateSchedule();
-  const { data: clientOptions } = useClientOptions();
-  const { data: projectOptions } = useProjectOptions();
 
   const createDate = sheet.data?.meta?.createDate as string | undefined;
 
@@ -103,7 +94,6 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prevValues, createDate]);
 
-  const selectedClientId = useWatch({ control: form.control, name: "clientId" });
   const watchedEndDate = useWatch({ control: form.control, name: "endDate" });
 
   const { errors } = form.formState;
@@ -145,81 +135,6 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                   )}
                 />
               </div>
-            </InlineRow>
-
-            {/* 클라이언트 */}
-            <InlineRow label="클라이언트" error={errors.clientId?.message}>
-              <Controller
-                control={form.control}
-                name="clientId"
-                render={({ field }) => (
-                  <Combobox
-                    value={field.value ?? ""}
-                    onValueChange={(clientId) => {
-                      field.onChange(clientId || null);
-                      const currentProjectId = form.getValues("projectId");
-                      if (currentProjectId && clientId && projectOptions) {
-                        const project = projectOptions.find(
-                          (p) => p.value === currentProjectId
-                        );
-                        if (
-                          project?.clientId &&
-                          project.clientId !== clientId
-                        ) {
-                          form.setValue("projectId", null);
-                        }
-                      }
-                    }}
-                    options={clientOptions ?? []}
-                    placeholder={
-                      clientOptions ? "클라이언트 연결" : "불러오는 중..."
-                    }
-                    searchPlaceholder="클라이언트 검색"
-                    disabled={!clientOptions}
-                    className="!border-transparent bg-input/30 hover:bg-muted/50 h-8 shadow-none"
-                  />
-                )}
-              />
-            </InlineRow>
-
-            {/* 프로젝트 */}
-            <InlineRow label="프로젝트" error={errors.projectId?.message}>
-              <Controller
-                control={form.control}
-                name="projectId"
-                render={({ field }) => {
-                  const filteredOptions = selectedClientId
-                    ? (projectOptions ?? []).filter(
-                        (o) =>
-                          !o.value || o.clientId === selectedClientId
-                      )
-                    : projectOptions ?? [];
-
-                  return (
-                    <Combobox
-                      value={field.value ?? ""}
-                      onValueChange={(projectId) => {
-                        field.onChange(projectId || null);
-                        if (projectId && projectOptions) {
-                          const project = projectOptions.find(
-                            (p) => p.value === projectId
-                          );
-                          if (project?.clientId) {
-                            form.setValue("clientId", project.clientId);
-                          }
-                        }
-                      }}
-                      options={filteredOptions}
-                      placeholder={
-                        projectOptions ? "프로젝트 연결" : "불러오는 중..."
-                      }
-                      searchPlaceholder="프로젝트 검색"
-                      disabled={!projectOptions}
-                      className="!border-transparent bg-input/30 hover:bg-muted/50 h-8 shadow-none"
-                    />
-                  );
-                }}
-              />
             </InlineRow>
 
             {/* 제목 */}
@@ -327,14 +242,6 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
               />
             </InlineRow>
 
-            {/* 장소 */}
-            <InlineRow label="장소" error={errors.location?.message}>
-              <Input
-                {...form.register("location")}
-                placeholder="장소 입력"
-                className={cn(INLINE_INPUT, "h-8")}
-              />
-            </InlineRow>
           </SheetContainer>
         </SheetBody>
 

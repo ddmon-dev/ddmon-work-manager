@@ -26,8 +26,6 @@ export interface ScheduleItem {
   startTime: string | null;
   endTime: string | null;
   color: string;
-  clientName: string | null;
-  projectName: string | null;
 }
 
 export interface ScheduleData {

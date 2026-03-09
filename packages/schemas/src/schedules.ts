@@ -8,9 +8,6 @@ export const scheduleWriteSchema = z.object({
   startTime: z.string().optional(), // HH:mm, 없으면 종일
   endTime: z.string().optional(),
   color: z.string().default("default"),
-  clientId: z.string().uuid().nullable().optional(),
-  projectId: z.string().uuid().nullable().optional(),
-  location: z.string().optional(),
   sortOrder: z.number().int().optional(),
   recurrenceType: z
     .enum(["none", "daily", "weekly", "monthly"])
