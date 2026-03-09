@@ -30,6 +30,8 @@ app.get("/overview", async (c) => {
       contractDate: projects.contractDate,
       deliveredDate: projects.deliveredDate,
       completedDate: projects.completedDate,
+      workPhase: projects.workPhase,
+      description: projects.description,
       companyName: clients.companyName,
       sortOrder: projects.sortOrder,
     })

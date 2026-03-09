@@ -1,5 +1,5 @@
 import { useRef, useEffect, useMemo, useState, useCallback } from "react";
-import { ChevronRightIcon, ChevronsUpDownIcon } from "lucide-react";
+import { ChevronsUpDownIcon } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { Container } from "@/shared/ui/container";
 import { Separator } from "@/shared/ui/separator";
@@ -28,7 +28,11 @@ import {
   BAR_HEIGHT,
   BAR_Y_OFFSET,
   LEFT_PANEL_WIDTH,
+  COMPANY_COL_WIDTH,
   PROJECT_COL_WIDTH,
+  WORK_PHASE_COL_WIDTH,
+  STATUS_COL_WIDTH,
+  INFO_PANEL_WIDTH,
   LANE_COL_WIDTH,
   CLICK_THRESHOLD,
 } from "./utils";
@@ -42,6 +46,8 @@ import { GhostBar } from "./ghost-bar";
 import { LaneRow } from "./lane-row";
 import { SchedulePopover } from "./schedule-popover";
 import { StatusBadge } from "../../projects/status-badge";
+import { WorkPhaseBadge } from "../../projects/work-phase-badge";
+import type { WorkPhase } from "../../projects/types";
 
 export function ProjectScheduleOverview() {
   const [status, setStatus] = useState<"active" | "completed">("active");
@@ -433,8 +439,17 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
         >
           {/* 헤더 */}
           <div className="sticky top-0 z-30 h-12 border-b border-border flex bg-background">
+            <div className="flex items-center px-2 border-r border-border/30" style={{ width: COMPANY_COL_WIDTH }}>
+              <span className="text-xs font-medium text-muted-foreground">업체명</span>
+            </div>
             <div className="flex items-center px-2 border-r border-border/30" style={{ width: PROJECT_COL_WIDTH }}>
               <span className="text-xs font-medium text-muted-foreground">프로젝트</span>
+            </div>
+            <div className="flex items-center justify-center px-1 border-r border-border/30" style={{ width: WORK_PHASE_COL_WIDTH }}>
+              <span className="text-xs font-medium text-muted-foreground">작업단계</span>
+            </div>
+            <div className="flex items-center justify-center px-1 border-r border-border/30" style={{ width: STATUS_COL_WIDTH }}>
+              <span className="text-xs font-medium text-muted-foreground">상태</span>
             </div>
             <div className="flex items-center justify-between px-2 flex-1">
               <span className="text-xs font-medium text-muted-foreground">일정</span>
@@ -452,10 +467,10 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
             </div>
           </div>
 
-          {/* 본문: 프로젝트 열 + 레인 열 */}
+          {/* 본문: 정보 열들 + 레인 열 */}
           <div className="flex" style={{ height: contentHeight }}>
-            {/* 프로젝트 열 */}
-            <div className="shrink-0 border-r border-border/30" style={{ width: PROJECT_COL_WIDTH }}>
+            {/* 정보 열들 (업체명 + 프로젝트 + 작업단계 + 상태) */}
+            <div className="shrink-0 border-r border-border/30" style={{ width: INFO_PANEL_WIDTH }}>
               {projectBlocks.map((block) => {
                 const isDragging = projectDrag?.moved && projectDrag.fromIndex === block.projectIdx;
                 const showDropBefore = projectDrag?.moved && dropIndex === block.projectIdx && dropIndex < projectDrag.fromIndex;
@@ -468,23 +483,32 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                     )}
                     <div
                       className={cn(
-                        "flex flex-col items-start justify-center gap-0.5 px-2 border-b cursor-pointer hover:bg-accent bg-background select-none",
+                        "flex border-b cursor-pointer hover:bg-accent bg-background select-none",
                         isLastBlock ? "border-border" : "border-border/30",
                         isDragging && "opacity-50"
                       )}
                       style={{ height: block.rowSpan * ROW_HEIGHT }}
                       onPointerDown={(e) => handleProjectPointerDown(e, block.project.id, block.projectIdx)}
                     >
-                      <div className="flex items-center gap-1 w-full min-w-0">
-                        <ChevronRightIcon
-                          className={cn(
-                            "size-3 shrink-0 transition-transform",
-                            block.isExpanded && "rotate-90"
-                          )}
-                        />
-                        <p className="text-xs font-medium truncate flex-1 min-w-0">{block.project.name}</p>
+                      {/* 업체명 */}
+                      <div className="shrink-0 flex items-center px-2 border-r border-border/30" style={{ width: COMPANY_COL_WIDTH }}>
+                        <p className="text-[11px] text-muted-foreground truncate">{block.project.companyName}</p>
                       </div>
-                      <StatusBadge projectId={block.project.id} status={block.project.status as any} readonly className="text-[10px] h-4 min-w-0 px-1.5 shrink-0 ml-4" />
+                      {/* 프로젝트명 + 설명 */}
+                      <div className="shrink-0 flex flex-col justify-center gap-0.5 px-2 border-r border-border/30 min-w-0" style={{ width: PROJECT_COL_WIDTH }}>
+                        <p className="text-xs font-medium truncate">{block.project.name}</p>
+                        {block.project.description && (
+                          <p className="text-[10px] text-muted-foreground/70 truncate">{block.project.description}</p>
+                        )}
+                      </div>
+                      {/* 작업단계 */}
+                      <div className="shrink-0 flex items-center justify-center border-r border-border/30" style={{ width: WORK_PHASE_COL_WIDTH }}>
+                        <WorkPhaseBadge workPhase={block.project.workPhase as WorkPhase} className="text-[10px] h-4 min-w-0 px-1.5" />
+                      </div>
+                      {/* 상태 */}
+                      <div className="shrink-0 flex items-center justify-center" style={{ width: STATUS_COL_WIDTH }}>
+                        <StatusBadge projectId={block.project.id} status={block.project.status as any} readonly className="text-[10px] h-4 min-w-0 px-1.5" />
+                      </div>
                     </div>
                     {showDropAfter && (
                       <div className="h-0.5 bg-primary" style={{ marginTop: -1 }} />

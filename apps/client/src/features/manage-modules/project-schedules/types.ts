@@ -36,6 +36,8 @@ export interface OverviewProject {
   id: string;
   name: string;
   status: string;
+  workPhase: string;
+  description: string | null;
   contractDate: string;
   deliveredDate: string | null;
   completedDate: string | null;
