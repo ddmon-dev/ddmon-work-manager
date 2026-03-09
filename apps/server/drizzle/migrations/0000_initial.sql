@@ -158,7 +158,7 @@ CREATE TABLE "project_payments" (
 	"project_id" uuid NOT NULL,
 	"description" text NOT NULL,
 	"amount" numeric(15, 2) DEFAULT '0' NOT NULL,
-	"paid_date" date DEFAULT '2026-03-01' NOT NULL,
+	"paid_date" date DEFAULT '2026-03-09' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"deleted" boolean DEFAULT false NOT NULL
@@ -173,6 +173,7 @@ CREATE TABLE "projects" (
 	"status" text DEFAULT 'pending' NOT NULL,
 	"work_phase" text DEFAULT 'preparing' NOT NULL,
 	"contract_date" date NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
 	"completed_date" date,
 	"delivered_date" date,
 	"description" text,
@@ -199,8 +200,35 @@ CREATE TABLE "schedules" (
 	"color" text DEFAULT 'default' NOT NULL,
 	"project_id" uuid,
 	"client_id" uuid,
+	"sort_order" integer DEFAULT 0 NOT NULL,
 	"recurrence_type" text DEFAULT 'none' NOT NULL,
 	"recurrence_end_date" date,
+	"author" text,
+	"updated_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "project_schedule_lanes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"project_id" uuid NOT NULL,
+	"title" text DEFAULT '' NOT NULL,
+	"sort_order" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "project_schedules" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"project_id" uuid NOT NULL,
+	"lane_id" uuid NOT NULL,
+	"category" text DEFAULT 'development' NOT NULL,
+	"category_color" text,
+	"title" text NOT NULL,
+	"description" text,
+	"start_date" date NOT NULL,
+	"end_date" date,
+	"sort_order" integer DEFAULT 0 NOT NULL,
 	"author" text,
 	"updated_by" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -231,6 +259,22 @@ CREATE TABLE "todos" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "mindnotes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" text NOT NULL,
+	"content" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "memos" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" text NOT NULL,
+	"content" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "client_memos" ADD CONSTRAINT "client_memos_parent_id_clients_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."clients"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -247,9 +291,14 @@ ALTER TABLE "projects" ADD CONSTRAINT "projects_client_id_clients_id_fk" FOREIGN
 ALTER TABLE "projects" ADD CONSTRAINT "projects_estimate_number_estimate_series_estimate_number_fk" FOREIGN KEY ("estimate_number") REFERENCES "public"."estimate_series"("estimate_number") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "schedules" ADD CONSTRAINT "schedules_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "schedules" ADD CONSTRAINT "schedules_client_id_clients_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "project_schedule_lanes" ADD CONSTRAINT "project_schedule_lanes_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "project_schedules" ADD CONSTRAINT "project_schedules_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "project_schedules" ADD CONSTRAINT "project_schedules_lane_id_project_schedule_lanes_id_fk" FOREIGN KEY ("lane_id") REFERENCES "public"."project_schedule_lanes"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "todo_time_blocks" ADD CONSTRAINT "todo_time_blocks_todo_id_todos_id_fk" FOREIGN KEY ("todo_id") REFERENCES "public"."todos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "todo_time_blocks" ADD CONSTRAINT "todo_time_blocks_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "todos" ADD CONSTRAINT "todos_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "mindnotes" ADD CONSTRAINT "mindnotes_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "memos" ADD CONSTRAINT "memos_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "idx_estimate_item_groups_estimate_id" ON "estimate_item_groups" USING btree ("estimate_id");--> statement-breakpoint
 CREATE INDEX "idx_estimate_items_group_id" ON "estimate_items" USING btree ("group_id");--> statement-breakpoint
 CREATE INDEX "idx_estimates_client_id" ON "estimates" USING btree ("client_id");--> statement-breakpoint

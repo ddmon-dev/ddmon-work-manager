@@ -1,1 +1,0 @@
-ALTER TABLE "project_schedules" ADD COLUMN "group_id" uuid;

@@ -8,55 +8,6 @@
       "when": 1772384286731,
       "tag": "0000_initial",
       "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1772428586221,
-      "tag": "0001_empty_punisher",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1772583972974,
-      "tag": "0002_shocking_nemesis",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1772624176298,
-      "tag": "0003_lively_mariko_yashida",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1772869082033,
-      "tag": "0004_sticky_energizer",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1772894700000,
-      "tag": "0005_open_riptide",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1772897164719,
-      "tag": "0006_productive_loa",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1772976720536,
-      "tag": "0007_nosy_katie_power",
-      "breakpoints": true
     }
   ]
 }
