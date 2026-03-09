@@ -187,7 +187,7 @@ const GridLines = memo(function GridLines({ days, rowCount }: { days: Date[]; ro
             key={i}
             className={cn(
               "absolute top-0 bottom-0 border-r border-border/50",
-              weekend && "bg-destructive/4",
+              weekend && "bg-red-500/[0.04] dark:bg-red-400/[0.03]",
               isLastOfMonth && "border-r-border"
             )}
             style={{ left: i * DAY_WIDTH, width: DAY_WIDTH }}

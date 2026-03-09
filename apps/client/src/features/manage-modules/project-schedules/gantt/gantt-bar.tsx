@@ -214,16 +214,17 @@ export const GanttBar = memo(function GanttBar({
       ref={barRef}
       data-gantt-bar
       className={cn(
-        "absolute flex items-center gap-1.5 px-2 rounded-md select-none",
-        "hover:shadow-sm",
-        isDragging && "shadow-md z-10 opacity-90",
+        "absolute flex items-center gap-1.5 px-2 rounded-md select-none z-[6]",
+        "hover:shadow-sm transition-shadow duration-100",
+        showTooltip && "z-20",
+        isDragging && "!z-10 shadow-md opacity-90",
       )}
       style={{
         left: displayLeft,
         width: Math.max(displayWidth, DAY_WIDTH),
         top: displayTop,
         height: BAR_HEIGHT,
-        backgroundColor: `${color}35`,
+        backgroundColor: `color-mix(in srgb, ${color} 10%, var(--background))`,
       }}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -238,9 +239,15 @@ export const GanttBar = memo(function GanttBar({
       }}
       onMouseLeave={() => setShowTooltip(false)}
     >
+      {/* 좌측 카테고리 스트라이프 */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-md"
+        style={{ backgroundColor: color }}
+      />
+
       {/* 좌측 리사이즈 핸들 */}
       <div
-        className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize rounded-l-md hover:bg-foreground/10"
+        className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize rounded-l-md hover:bg-foreground/10 z-10"
         onPointerDown={(e) => handlePointerDown(e, "resize-left")}
       />
 
@@ -249,7 +256,7 @@ export const GanttBar = memo(function GanttBar({
         className="flex items-center gap-1.5 flex-1 min-w-0 cursor-grab active:cursor-grabbing"
         onPointerDown={(e) => handlePointerDown(e, "move")}
       >
-        <span ref={titleRef} className="text-xs truncate">{schedule.title}</span>
+        <span ref={titleRef} className="text-xs truncate font-medium" style={{ color }}>{schedule.title}</span>
       </div>
 
       {/* 우측 리사이즈 핸들 */}
@@ -262,9 +269,10 @@ export const GanttBar = memo(function GanttBar({
       {duplicateOffset !== null && (
         <div
           className="absolute flex items-center gap-1.5 px-2 rounded-md pointer-events-none opacity-50 border border-dashed border-foreground/30"
-          style={{ left: duplicateOffset, top: 0, width: displayWidth, height: BAR_HEIGHT, backgroundColor: `${color}35` }}
+          style={{ left: duplicateOffset, top: 0, width: displayWidth, height: BAR_HEIGHT, backgroundColor: `color-mix(in srgb, ${color} 10%, var(--background))` }}
         >
-          <span className="text-xs truncate">{schedule.title}</span>
+          <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-md" style={{ backgroundColor: color }} />
+          <span className="text-xs truncate font-medium" style={{ color }}>{schedule.title}</span>
         </div>
       )}
 
