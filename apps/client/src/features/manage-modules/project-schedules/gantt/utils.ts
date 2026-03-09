@@ -14,8 +14,8 @@ import {
 
 // ── 상수 ──────────────────────────────────────────────────────
 
-export const DAY_WIDTH = 40;
-export const ROW_HEIGHT = 40;
+export const DAY_WIDTH = 42;
+export const ROW_HEIGHT = 42;
 export const HEADER_HEIGHT = 48;
 export const BAR_HEIGHT = 26;
 export const BAR_Y_OFFSET = Math.floor((ROW_HEIGHT - 1 - BAR_HEIGHT) / 2);

@@ -49,7 +49,7 @@ export const LaneRow = memo(function LaneRow({
   return (
     <div className="relative">
       {showDropBefore && (
-        <div className="absolute top-0 left-2 right-1 h-0.5 bg-primary z-10" />
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary z-10" />
       )}
       <div
         className={cn(
@@ -65,7 +65,7 @@ export const LaneRow = memo(function LaneRow({
           className="shrink-0 cursor-grab p-0.5 touch-none"
           onPointerDown={(e) => onPointerDown(e, laneId, localIndex)}
         >
-          <GripVerticalIcon className="size-3 text-muted-foreground" />
+          <GripVerticalIcon className="size-3.5 text-foreground/50" />
         </div>
         {isEditing ? (
           <input
@@ -83,7 +83,7 @@ export const LaneRow = memo(function LaneRow({
           />
         ) : (
           <span
-            className="flex-1 min-w-0 text-xs truncate text-muted-foreground cursor-text hover:text-foreground"
+            className="flex-1 min-w-0 text-xs truncate text-foreground/80 cursor-text hover:text-foreground"
             onClick={() => onStartEdit(laneId, title)}
           >
             {title || "제목 없음"}
@@ -94,7 +94,7 @@ export const LaneRow = memo(function LaneRow({
           className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 transition-opacity shrink-0"
           onClick={() => onDelete(laneId, scheduleCount)}
         >
-          <Trash2Icon className="size-3 text-destructive" />
+          <Trash2Icon className="size-3.5 text-destructive" />
         </button>
         <button
           type="button"
@@ -102,11 +102,11 @@ export const LaneRow = memo(function LaneRow({
           title="아래에 행 추가"
           onClick={() => onAddBelow(laneId, localIndex)}
         >
-          <PlusIcon className="size-3 text-muted-foreground" />
+          <PlusIcon className="size-3.5 text-foreground/60" />
         </button>
       </div>
       {showDropAfter && (
-        <div className="absolute bottom-0 left-2 right-1 h-0.5 bg-primary z-10" />
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary z-10" />
       )}
     </div>
   );

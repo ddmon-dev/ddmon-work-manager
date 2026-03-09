@@ -25,6 +25,7 @@ interface GanttGridProps {
   onDragCreate?: (startDate: Date, endDate: Date, rowIndex: number, anchorRect: DOMRect) => void;
   canDragRow?: (rowIndex: number) => boolean;
   onHoverCell?: (cell: { col: number; row: number } | null) => void;
+  projectBoundaryRows?: Set<number>;
   children: React.ReactNode;
 }
 
@@ -38,6 +39,7 @@ export function GanttGrid({
   onDragCreate,
   canDragRow,
   onHoverCell,
+  projectBoundaryRows,
   children,
 }: GanttGridProps) {
   const days = useMemo(() => getDaysInRange(rangeStart, rangeEnd), [rangeStart, rangeEnd]);
@@ -133,7 +135,7 @@ export function GanttGrid({
       onMouseMove={handleMouseMove}
       onMouseLeave={() => { lastHoverRef.current = null; onHoverCell?.(null); }}
     >
-      <GridLines days={days} rowCount={rowCount} />
+      <GridLines days={days} rowCount={rowCount} projectBoundaryRows={projectBoundaryRows} />
 
       {/* 호버 크로스헤어 */}
       {hoverCell && !dragState?.active && (
@@ -152,7 +154,7 @@ export function GanttGrid({
       {/* 오늘 표시선 */}
       {showTodayLine && (
         <div
-          className="absolute top-0 bottom-0 w-px bg-destructive/60 z-[5]"
+          className="absolute top-0 bottom-0 w-px bg-primary/60 z-[5]"
           style={{ left: todayX + DAY_WIDTH / 2 }}
         />
       )}
@@ -181,7 +183,7 @@ export function GanttGrid({
 }
 
 // 세로/가로 그리드 줄 — days와 rowCount에만 의존
-const GridLines = memo(function GridLines({ days, rowCount }: { days: Date[]; rowCount: number }) {
+const GridLines = memo(function GridLines({ days, rowCount, projectBoundaryRows }: { days: Date[]; rowCount: number; projectBoundaryRows?: Set<number> }) {
   return (
     <>
       {days.map((day, i) => {
@@ -204,7 +206,7 @@ const GridLines = memo(function GridLines({ days, rowCount }: { days: Date[]; ro
           key={`row-${i}`}
           className={cn(
             "absolute left-0 right-0 border-b",
-            i === rowCount - 1 ? "border-border" : "border-border/30",
+            (i === rowCount - 1 || projectBoundaryRows?.has(i)) ? "border-border" : "border-border/30",
           )}
           style={{ top: (i + 1) * ROW_HEIGHT - 1 }}
         />

@@ -206,6 +206,15 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
 
   const totalRows = rows.length;
 
+  // 프로젝트 경계 행 (각 프로젝트의 마지막 행 인덱스)
+  const projectBoundaryRows = useMemo(() => {
+    const boundaries = new Set<number>();
+    for (let i = 0; i < rows.length - 1; i++) {
+      if (rows[i].project.id !== rows[i + 1].project.id) boundaries.add(i);
+    }
+    return boundaries;
+  }, [rows]);
+
   // 프로젝트 행 인덱스 (각 프로젝트의 첫 번째 행)
   const projectRowIndices = useMemo(() => {
     const seen = new Set<string>();
@@ -440,22 +449,22 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
           {/* 헤더 */}
           <div className="sticky top-0 z-30 h-12 border-b border-border flex bg-background">
             <div className="flex items-center px-2 border-r border-border/30" style={{ width: COMPANY_COL_WIDTH }}>
-              <span className="text-xs font-medium text-muted-foreground">업체명</span>
+              <span className="text-xs font-medium text-foreground">업체명</span>
             </div>
             <div className="flex items-center px-2 border-r border-border/30" style={{ width: PROJECT_COL_WIDTH }}>
-              <span className="text-xs font-medium text-muted-foreground">프로젝트</span>
+              <span className="text-xs font-medium text-foreground">프로젝트</span>
             </div>
             <div className="flex items-center justify-center px-1 border-r border-border/30" style={{ width: WORK_PHASE_COL_WIDTH }}>
-              <span className="text-xs font-medium text-muted-foreground">작업단계</span>
+              <span className="text-xs font-medium text-foreground">작업단계</span>
             </div>
             <div className="flex items-center justify-center px-1 border-r border-border/30" style={{ width: STATUS_COL_WIDTH }}>
-              <span className="text-xs font-medium text-muted-foreground">상태</span>
+              <span className="text-xs font-medium text-foreground">상태</span>
             </div>
             <div className="flex items-center justify-between px-2 flex-1">
-              <span className="text-xs font-medium text-muted-foreground">일정</span>
+              <span className="text-xs font-medium text-foreground">일정</span>
               <button
                 type="button"
-                className="p-1 rounded hover:bg-accent text-muted-foreground"
+                className="p-1 rounded hover:bg-accent text-foreground/60"
                 onClick={() => {
                   const allExpanded = projects.every((p) => expandedProjects.has(p.id));
                   setExpandedProjects(allExpanded ? new Set() : new Set(projects.map((p) => p.id)));
@@ -477,14 +486,13 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                 const showDropAfter = projectDrag?.moved && dropIndex === block.projectIdx && dropIndex > projectDrag.fromIndex;
                 const isLastBlock = block.startRow + block.rowSpan >= totalRows;
                 return (
-                  <div key={`pb-${block.project.id}`}>
+                  <div key={`pb-${block.project.id}`} className="relative">
                     {showDropBefore && (
-                      <div className="h-0.5 bg-primary" style={{ marginTop: -1 }} />
+                      <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary z-10" />
                     )}
                     <div
                       className={cn(
-                        "flex border-b cursor-pointer hover:bg-accent bg-background select-none",
-                        isLastBlock ? "border-border" : "border-border/30",
+                        "flex border-b border-border cursor-pointer hover:bg-foreground/[0.02] bg-background select-none",
                         isDragging && "opacity-50"
                       )}
                       style={{ height: block.rowSpan * ROW_HEIGHT }}
@@ -492,26 +500,26 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                     >
                       {/* 업체명 */}
                       <div className="shrink-0 flex items-center px-2 border-r border-border/30" style={{ width: COMPANY_COL_WIDTH }}>
-                        <p className="text-[11px] text-muted-foreground truncate">{block.project.companyName}</p>
+                        <p className="text-xs text-foreground/75 truncate">{block.project.companyName}</p>
                       </div>
                       {/* 프로젝트명 + 설명 */}
-                      <div className="shrink-0 flex flex-col justify-center gap-0.5 px-2 border-r border-border/30 min-w-0" style={{ width: PROJECT_COL_WIDTH }}>
-                        <p className="text-xs font-medium truncate">{block.project.name}</p>
+                      <div className="shrink-0 flex flex-col justify-center px-2 border-r border-border/30 min-w-0" style={{ width: PROJECT_COL_WIDTH }}>
+                        <p className="text-xs font-medium text-foreground truncate">{block.project.name}</p>
                         {block.project.description && (
-                          <p className="text-[10px] text-muted-foreground/70 truncate">{block.project.description}</p>
+                          <p className="text-[11px] text-foreground/60 truncate">{block.project.description}</p>
                         )}
                       </div>
                       {/* 작업단계 */}
-                      <div className="shrink-0 flex items-center justify-center border-r border-border/30" style={{ width: WORK_PHASE_COL_WIDTH }}>
-                        <WorkPhaseBadge workPhase={block.project.workPhase as WorkPhase} className="text-[10px] h-4 min-w-0 px-1.5" />
+                      <div className="shrink-0 flex items-center justify-center px-2 border-r border-border/30" style={{ width: WORK_PHASE_COL_WIDTH }}>
+                        <WorkPhaseBadge workPhase={block.project.workPhase as WorkPhase} className="text-xs h-5 w-full px-1.5" />
                       </div>
                       {/* 상태 */}
-                      <div className="shrink-0 flex items-center justify-center" style={{ width: STATUS_COL_WIDTH }}>
-                        <StatusBadge projectId={block.project.id} status={block.project.status as any} readonly className="text-[10px] h-4 min-w-0 px-1.5" />
+                      <div className="shrink-0 flex items-center justify-center px-2" style={{ width: STATUS_COL_WIDTH }}>
+                        <StatusBadge projectId={block.project.id} status={block.project.status as any} readonly className="text-xs h-5 w-full min-w-0 px-1.5" />
                       </div>
                     </div>
                     {showDropAfter && (
-                      <div className="h-0.5 bg-primary" style={{ marginTop: -1 }} />
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary z-10" />
                     )}
                   </div>
                 );
@@ -522,6 +530,8 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
             <div className="flex-1 min-w-0">
               {rows.map((row, rowIdx) => {
                 const isLastRow = rowIdx === rows.length - 1;
+                const isProjectBoundary = isLastRow || rows[rowIdx + 1]?.project.id !== row.project.id;
+                const borderClass = isProjectBoundary ? "border-border" : "border-border/30";
 
                 if (row.type === "collapsed") {
                   return (
@@ -529,12 +539,12 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                       key={`collapsed-${row.project.id}`}
                       className={cn(
                         "flex items-center px-2 border-b",
-                        isLastRow ? "border-border" : "border-border/30",
-                        hoverCell?.row === row.globalRow && "bg-accent/50"
+                        borderClass,
+                        hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
                       )}
                       style={{ height: ROW_HEIGHT }}
                     >
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-xs text-foreground/80">
                         {row.project.lanes.length}개 레인
                       </span>
                     </div>
@@ -547,12 +557,12 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                       key={`empty-${row.project.id}`}
                       className={cn(
                         "flex items-center px-2 border-b",
-                        isLastRow ? "border-border" : "border-border/30",
+                        borderClass,
                         hoverCell?.row === row.globalRow && "bg-foreground/[0.02]"
                       )}
                       style={{ height: ROW_HEIGHT }}
                     >
-                      <span className="text-[10px] text-muted-foreground/50">행 없음</span>
+                      <span className="text-xs text-foreground/40">행 없음</span>
                     </div>
                   );
                 }
@@ -585,7 +595,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                     onDelete={laneDelete}
                     onAddBelow={handleLaneAddBelow}
                     onPointerDown={handleLanePointerDown}
-                    isLast={isLastRow}
+                    isLast={isProjectBoundary}
                   />
                 );
               })}
@@ -612,6 +622,7 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
             onDragCreate={handleDragCreate}
             canDragRow={canDragRow}
             onHoverCell={setHoverCell}
+            projectBoundaryRows={projectBoundaryRows}
           >
             {rows.map((row) => {
               if (row.type === "collapsed") {

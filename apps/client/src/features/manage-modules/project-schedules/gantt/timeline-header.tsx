@@ -35,7 +35,7 @@ export function TimelineHeader({ rangeStart, rangeEnd, totalWidth, hoverCol, sti
             className={cn("shrink-0", i < months.length - 1 && "border-r border-border")}
             style={{ width: month.width }}
           >
-            <div className="sticky w-fit text-xs font-medium text-muted-foreground flex items-center h-full px-2" style={{ left: stickyLeft }}>
+            <div className="sticky w-fit text-xs font-medium text-foreground/70 flex items-center h-full px-2" style={{ left: stickyLeft }}>
               {month.label}
             </div>
           </div>
@@ -54,7 +54,7 @@ export function TimelineHeader({ rangeStart, rangeEnd, totalWidth, hoverCol, sti
             <div
               key={i}
               className={cn(
-                "flex items-center justify-center text-[10px] tabular-nums shrink-0",
+                "flex items-center justify-center text-[11px] tabular-nums shrink-0",
                 weekend && "text-destructive",
                 isToday && "text-primary font-bold",
                 isLastOfMonth && "border-r border-border",

@@ -257,7 +257,7 @@ export const GanttBar = memo(function GanttBar({
         className="flex items-center gap-1.5 flex-1 min-w-0 cursor-grab active:cursor-grabbing"
         onPointerDown={(e) => handlePointerDown(e, "move")}
       >
-        <span ref={titleRef} className="text-xs truncate font-medium" style={{ color }}>{schedule.title}</span>
+        <span ref={titleRef} className="text-xs truncate font-medium text-foreground">{schedule.title}</span>
       </div>
 
       {/* 우측 리사이즈 핸들 */}
@@ -273,7 +273,7 @@ export const GanttBar = memo(function GanttBar({
           style={{ left: duplicateOffset, top: 0, width: displayWidth, height: BAR_HEIGHT, backgroundColor: `color-mix(in srgb, ${color} 10%, var(--background))` }}
         >
           <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-md" style={{ backgroundColor: color }} />
-          <span className="text-xs truncate font-medium" style={{ color }}>{schedule.title}</span>
+          <span className="text-xs truncate font-medium text-foreground">{schedule.title}</span>
         </div>
       )}
 
