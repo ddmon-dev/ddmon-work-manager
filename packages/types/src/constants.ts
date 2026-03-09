@@ -64,6 +64,7 @@ export const RECURRENCE_TYPE = {
   DAILY: 'daily',
   WEEKLY: 'weekly',
   MONTHLY: 'monthly',
+  YEARLY: 'yearly',
 } as const;
 
 export type RecurrenceType =

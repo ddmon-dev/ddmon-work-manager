@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef } from "react";
 import { useUpdateSchedule } from "./api";
 import type { ScheduleDTO } from "./types";
+import type { RecurrenceType } from "@packages/types";
 
-type RecurrenceType = "none" | "daily" | "weekly" | "monthly" | "yearly";
 type FieldName = keyof FormValues;
 
 interface FormValues {

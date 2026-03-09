@@ -1,3 +1,5 @@
+import type { RecurrenceType } from "@packages/types";
+
 export interface ScheduleDTO {
   id: string;
   title: string;
@@ -8,7 +10,7 @@ export interface ScheduleDTO {
   endTime: string | null;
   color: string;
   sortOrder: number;
-  recurrenceType: "none" | "daily" | "weekly" | "monthly" | "yearly";
+  recurrenceType: RecurrenceType;
   recurrenceEndDate: string | null;
   author: string;
   updatedBy: string | null;
