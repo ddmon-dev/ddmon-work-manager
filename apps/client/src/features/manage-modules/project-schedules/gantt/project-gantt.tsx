@@ -1,24 +1,22 @@
 import { useRef, useCallback, useState, useMemo } from "react";
-import { cn } from "@/shared/utils/classnames";
 import { DetailSectionTitle } from "../../_base/ui";
 import {
   useProjectScheduleList,
   useLaneList,
-  useCreateProjectSchedule,
-  useUpdateProjectSchedule,
 } from "../api";
 import type { ProjectScheduleDTO } from "../types";
 import { useGantt } from "./use-gantt";
 import { useScrollToToday } from "./use-scroll-to-today";
 import { useLaneDrag } from "./use-lane-drag";
 import { useLaneActions } from "./use-lane-actions";
+import { useGanttActions } from "./use-gantt-actions";
 import { TimelineHeader } from "./timeline-header";
 import { GanttGrid } from "./gantt-grid";
 import { GanttBar } from "./gantt-bar";
 import { GhostBar } from "./ghost-bar";
 import { LaneRow } from "./lane-row";
 import { SchedulePopover } from "./schedule-popover";
-import { format, ROW_HEIGHT, LANE_COL_WIDTH } from "./utils";
+import { ROW_HEIGHT, LANE_COL_WIDTH } from "./utils";
 
 interface ProjectGanttProps {
   projectId: string;
@@ -55,9 +53,6 @@ export function ProjectGantt({
     return map;
   }, [lanes, items]);
 
-  const createSchedule = useCreateProjectSchedule();
-  const updateSchedule = useUpdateProjectSchedule();
-
   const { range, totalWidth } = useGantt({
     schedules: items,
     contractDate,
@@ -66,14 +61,6 @@ export function ProjectGantt({
   });
 
   const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
-  const [popover, setPopover] = useState<{ schedule: ProjectScheduleDTO; rect: DOMRect } | null>(null);
-  const [createState, setCreateState] = useState<{
-    laneId: string;
-    startDate: string;
-    endDate?: string;
-    rowIndex: number;
-    anchorRect: DOMRect;
-  } | null>(null);
 
   // 공유 훅
   useScrollToToday(scrollRef, range.start);
@@ -94,71 +81,20 @@ export function ProjectGantt({
     onReorder: handleLaneReorder,
   });
 
-  const handleEmptyClick = useCallback((date: Date, rowIndex: number, anchorRect: DOMRect) => {
-    if (rowIndex < 0 || rowIndex >= lanes.length) return;
-    const lane = lanes[rowIndex];
-    setPopover(null);
-    setCreateState({
-      laneId: lane.id,
-      startDate: format(date, "yyyy-MM-dd"),
-      rowIndex,
-      anchorRect,
-    });
-  }, [lanes]);
+  // 간트 액션 훅
+  const resolveLane = useCallback((rowIndex: number) => {
+    if (rowIndex < 0 || rowIndex >= lanes.length) return null;
+    return { laneId: lanes[rowIndex].id, projectId };
+  }, [lanes, projectId]);
 
-  const handleDragCreate = useCallback((startDate: Date, endDate: Date, rowIndex: number, anchorRect: DOMRect) => {
-    if (rowIndex < 0 || rowIndex >= lanes.length) return;
-    const lane = lanes[rowIndex];
-    setPopover(null);
-    setCreateState({
-      laneId: lane.id,
-      startDate: format(startDate, "yyyy-MM-dd"),
-      endDate: format(endDate, "yyyy-MM-dd"),
-      rowIndex,
-      anchorRect,
-    });
-  }, [lanes]);
-
-  const handleCreateSubmit = useCallback((title: string, category: string, categoryColor: string | null) => {
-    if (!createState) return;
-    createSchedule.mutate({
-      title,
-      startDate: createState.startDate,
-      endDate: createState.endDate,
-      projectId,
-      laneId: createState.laneId,
-      category,
-      categoryColor,
-    });
-    setCreateState(null);
-  }, [createState, projectId, createSchedule]);
-
-  const handleDateChange = useCallback((id: string, newStartDate: string, newEndDate: string | null) => {
-    updateSchedule.mutate({ id, data: { startDate: newStartDate, endDate: newEndDate } });
-  }, [updateSchedule]);
-
-  const handleRowChange = useCallback((scheduleId: string, fromRow: number, toRow: number) => {
-    if (fromRow !== toRow && toRow >= 0 && toRow < lanes.length) {
-      updateSchedule.mutate({ id: scheduleId, data: { laneId: lanes[toRow].id } });
-    }
-  }, [lanes, updateSchedule]);
-
-  const handleBarClick = useCallback((schedule: ProjectScheduleDTO, rect: DOMRect) => {
-    setCreateState(null);
-    setPopover({ schedule, rect });
-  }, []);
-
-  const handleDuplicate = useCallback((schedule: ProjectScheduleDTO, newStartDate: string, newEndDate: string | null) => {
-    createSchedule.mutate({
-      title: schedule.title,
-      startDate: newStartDate,
-      endDate: newEndDate,
-      projectId,
-      laneId: schedule.laneId,
-      category: schedule.category,
-      categoryColor: schedule.categoryColor,
-    });
-  }, [projectId, createSchedule]);
+  const {
+    popover, setPopover,
+    createState, setCreateState,
+    handleEmptyClick, handleDragCreate,
+    handleBarClick, handleDuplicate,
+    handleDateChange, handleRowChange,
+    handleCreateSubmit,
+  } = useGanttActions({ resolveLane });
 
   const handleLaneAddBelow = useCallback((_laneId: string, localIndex: number) => {
     laneAddBelow(projectId, localIndex, lanes);

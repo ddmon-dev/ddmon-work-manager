@@ -13,7 +13,21 @@ import type {
   OverviewResponse,
 } from "./types";
 
-// ── 오버뷰 캐시 업데이트 헬퍼 ─────────────────────────────────────
+// ── 캐시 업데이트 헬퍼 ──────────────────────────────────────────
+
+function updateListCache(
+  queryClient: QueryClient,
+  updater: (items: ProjectScheduleDTO[]) => ProjectScheduleDTO[],
+) {
+  const listQueries = queryClient.getQueriesData<ProjectScheduleListResponse>({
+    queryKey: queryKeys.projectSchedules.lists,
+  });
+  for (const [key, old] of listQueries) {
+    if (!old) continue;
+    queryClient.setQueryData(key, { ...old, items: updater(old.items) });
+  }
+  return listQueries;
+}
 
 function updateOverviewCache(
   queryClient: QueryClient,
@@ -162,16 +176,9 @@ export function useCreateProjectSchedule() {
         updatedAt: new Date().toISOString(),
       };
 
-      const listQueries = queryClient.getQueriesData<ProjectScheduleListResponse>({
-        queryKey: queryKeys.projectSchedules.lists,
-      });
-      for (const [key, old] of listQueries) {
-        if (!old) continue;
-        queryClient.setQueryData(key, {
-          ...old,
-          items: [...old.items, tempItem].sort((a, b) => a.sortOrder - b.sortOrder),
-        });
-      }
+      const listQueries = updateListCache(queryClient, (items) =>
+        [...items, tempItem].sort((a, b) => a.sortOrder - b.sortOrder)
+      );
 
       const overviewQueries = updateOverviewCache(
         queryClient,
@@ -210,18 +217,9 @@ export function useUpdateProjectSchedule() {
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.projectSchedules.all });
 
-      const listQueries = queryClient.getQueriesData<ProjectScheduleListResponse>({
-        queryKey: queryKeys.projectSchedules.lists,
-      });
-      for (const [key, old] of listQueries) {
-        if (!old) continue;
-        queryClient.setQueryData(key, {
-          ...old,
-          items: old.items.map((item) =>
-            item.id === id ? { ...item, ...data } : item
-          ),
-        });
-      }
+      const listQueries = updateListCache(queryClient, (items) =>
+        items.map((item) => item.id === id ? { ...item, ...data } : item)
+      );
 
       const overviewQueries = updateOverviewCache(
         queryClient,
@@ -270,19 +268,11 @@ export function useReorderProjectSchedules() {
       await queryClient.cancelQueries({ queryKey: queryKeys.projectSchedules.all });
       const orderMap = new Map(reorderedItems.map((item) => [item.id, item.sortOrder]));
 
-      const listQueries = queryClient.getQueriesData<ProjectScheduleListResponse>({
-        queryKey: queryKeys.projectSchedules.lists,
-      });
-      for (const [key, old] of listQueries) {
-        if (!old) continue;
-        const updated = old.items
-          .map((item) => ({
-            ...item,
-            sortOrder: orderMap.get(item.id) ?? item.sortOrder,
-          }))
-          .sort((a, b) => a.sortOrder - b.sortOrder);
-        queryClient.setQueryData(key, { ...old, items: updated });
-      }
+      const listQueries = updateListCache(queryClient, (items) =>
+        items
+          .map((item) => ({ ...item, sortOrder: orderMap.get(item.id) ?? item.sortOrder }))
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+      );
 
       const overviewQueries = updateOverviewCache(
         queryClient,
@@ -355,16 +345,9 @@ export function useDeleteProjectSchedule() {
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.projectSchedules.all });
 
-      const listQueries = queryClient.getQueriesData<ProjectScheduleListResponse>({
-        queryKey: queryKeys.projectSchedules.lists,
-      });
-      for (const [key, old] of listQueries) {
-        if (!old) continue;
-        queryClient.setQueryData(key, {
-          ...old,
-          items: old.items.filter((item) => item.id !== id),
-        });
-      }
+      const listQueries = updateListCache(queryClient, (items) =>
+        items.filter((item) => item.id !== id)
+      );
 
       const overviewQueries = updateOverviewCache(
         queryClient,

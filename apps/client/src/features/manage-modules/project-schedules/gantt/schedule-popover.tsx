@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Trash2Icon } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { Button } from "@/shared/ui/button";
@@ -53,7 +53,7 @@ export function SchedulePopover(props: SchedulePopoverProps) {
     const handleClickOutside = (e: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
         if (isEdit) {
-          handleSave();
+          handleSaveRef.current();
         } else {
           onClose();
         }
@@ -64,12 +64,12 @@ export function SchedulePopover(props: SchedulePopoverProps) {
       clearTimeout(timer);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [title, category, categoryColor, customName, props.schedule]);
+  }, []);
 
   const [titleError, setTitleError] = useState(false);
   const [customNameError, setCustomNameError] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     const trimmed = title.trim();
     if (!trimmed) {
       setTitleError(true);
@@ -100,7 +100,10 @@ export function SchedulePopover(props: SchedulePopoverProps) {
     } else {
       props.onCreate(trimmed, effectiveCategory, effectiveColor);
     }
-  };
+  }, [title, category, categoryColor, showCustom, customName, isEdit, props.schedule, onClose, updateSchedule]);
+
+  const handleSaveRef = useRef(handleSave);
+  handleSaveRef.current = handleSave;
 
   const handlePresetSelect = (cat: TaskCategory) => {
     setCategory(cat);

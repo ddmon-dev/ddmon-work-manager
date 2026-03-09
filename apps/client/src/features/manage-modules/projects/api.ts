@@ -91,6 +91,7 @@ export function useCreateProject() {
       api.post<ProjectDTO>("/projects", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.overviews });
       toast.success(SUCCESS_MESSAGES.CREATE_SUCCESS("프로젝트"));
     },
     onError: (error: Error) => {
@@ -110,6 +111,7 @@ export function useUpdateProject() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.overviews });
       toast.success(SUCCESS_MESSAGES.UPDATE_SUCCESS("프로젝트"));
     },
     onError: (error: Error) => {
@@ -128,6 +130,7 @@ export function useDeleteProject() {
       api.delete<{ id: string }>(`/projects/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.all });
       toast.success(SUCCESS_MESSAGES.DELETE_SUCCESS("프로젝트"));
     },
     onError: (error: Error) => {
@@ -189,7 +192,7 @@ export function useUpdateProjectStatus() {
     onSettled: (_data, _err, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      queryClient.invalidateQueries({ queryKey: ["project-schedules", "overview"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.overviews });
     },
   });
 }

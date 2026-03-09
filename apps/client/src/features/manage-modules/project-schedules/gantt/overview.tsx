@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useState, useCallback } from "react";
+import { useRef, useMemo, useState, useCallback } from "react";
 import { ChevronsUpDownIcon } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { Container } from "@/shared/ui/container";
@@ -8,8 +8,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { TASK_CATEGORIES } from "@packages/schemas";
 import {
   useProjectScheduleOverview,
-  useCreateProjectSchedule,
-  useUpdateProjectSchedule,
   useReorderProjects,
   useReorderLanes,
 } from "../api";
@@ -24,7 +22,6 @@ import {
   format,
   DAY_WIDTH,
   ROW_HEIGHT,
-  HEADER_HEIGHT,
   BAR_HEIGHT,
   BAR_Y_OFFSET,
   LEFT_PANEL_WIDTH,
@@ -32,11 +29,12 @@ import {
   PROJECT_COL_WIDTH,
   INFO_PANEL_WIDTH,
   LANE_COL_WIDTH,
-  CLICK_THRESHOLD,
 } from "./utils";
 import { useScrollToToday } from "./use-scroll-to-today";
 import { useLaneDrag } from "./use-lane-drag";
 import { useLaneActions } from "./use-lane-actions";
+import { useGanttActions } from "./use-gantt-actions";
+import { useProjectDrag } from "./use-project-drag";
 import { TimelineHeader } from "./timeline-header";
 import { GanttGrid } from "./gantt-grid";
 import { GanttBar } from "./gantt-bar";
@@ -109,8 +107,6 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     () => defaultExpanded ? new Set(projects.map((p) => p.id)) : new Set()
   );
 
-  const createSchedule = useCreateProjectSchedule();
-  const updateSchedule = useUpdateProjectSchedule();
   const reorderProjects = useReorderProjects();
   const reorderLanes = useReorderLanes();
   const {
@@ -120,24 +116,6 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   } = useLaneActions();
 
   const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
-  const [popover, setPopover] = useState<{ schedule: ProjectScheduleDTO; rect: DOMRect } | null>(null);
-  const [createState, setCreateState] = useState<{
-    projectId: string;
-    laneId: string;
-    startDate: string;
-    endDate?: string;
-    rowIndex: number;
-    anchorRect: DOMRect;
-  } | null>(null);
-  const [projectDrag, setProjectDrag] = useState<{
-    projectId: string;
-    startY: number;
-    currentY: number;
-    fromIndex: number;
-    moved: boolean;
-  } | null>(null);
-  const projectDragRef = useRef(projectDrag);
-  projectDragRef.current = projectDrag;
 
   // 레인 드래그
   const getLaneCount = useCallback((projectId?: string) => {
@@ -222,19 +200,6 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
       .filter(Boolean) as { index: number; globalRow: number; projectId: string }[];
   }, [rows]);
 
-  const dropIndex = useMemo(() => {
-    if (!projectDrag?.moved) return -1;
-    const fromGlobalRow = projectRowIndices[projectDrag.fromIndex]?.globalRow ?? 0;
-    const targetGlobalRow = fromGlobalRow + Math.round((projectDrag.currentY - projectDrag.startY) / ROW_HEIGHT);
-    let closest = projectDrag.fromIndex;
-    let minDist = Infinity;
-    for (let i = 0; i < projectRowIndices.length; i++) {
-      const dist = Math.abs(projectRowIndices[i].globalRow - targetGlobalRow);
-      if (dist < minDist) { minDist = dist; closest = i; }
-    }
-    return closest;
-  }, [projectDrag, projectRowIndices]);
-
   // 프로젝트별 레인 행 범위
   const projectLaneRange = useMemo(() => {
     const rangeMap = new Map<string, { startRow: number; count: number }>();
@@ -265,85 +230,42 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     return blocks;
   }, [projects, expandedProjects, rows]);
 
-  const toggleProject = (id: string) => {
+  const toggleProject = useCallback((id: string) => {
     setExpandedProjects((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, []);
 
   const canDragRow = useCallback((rowIndex: number) => {
     if (rowIndex < 0 || rowIndex >= rows.length) return false;
     return rows[rowIndex].type === "lane";
   }, [rows]);
 
-  const handleEmptyClick = useCallback((date: Date, rowIndex: number, anchorRect: DOMRect) => {
-    if (rowIndex < 0 || rowIndex >= rows.length) return;
+  // 간트 액션 훅
+  const resolveLane = useCallback((rowIndex: number) => {
+    if (rowIndex < 0 || rowIndex >= rows.length) return null;
     const row = rows[rowIndex];
-
-    if (row.type === "collapsed") {
-      toggleProject(row.project.id);
-      return;
-    }
-
-    if (row.type !== "lane") return;
-
-    setPopover(null);
-    setCreateState({
-      projectId: row.project.id,
-      laneId: row.lane.id,
-      startDate: format(date, "yyyy-MM-dd"),
-      rowIndex,
-      anchorRect,
-    });
+    if (row.type !== "lane") return null;
+    return { laneId: row.lane.id, projectId: row.project.id };
   }, [rows]);
 
-  const handleDragCreate = useCallback((startDate: Date, endDate: Date, rowIndex: number, anchorRect: DOMRect) => {
-    if (rowIndex < 0 || rowIndex >= rows.length) return;
+  const isCollapsedRow = useCallback((rowIndex: number) => {
+    if (rowIndex < 0 || rowIndex >= rows.length) return null;
     const row = rows[rowIndex];
-    if (row.type !== "lane") return;
-
-    setPopover(null);
-    setCreateState({
-      projectId: row.project.id,
-      laneId: row.lane.id,
-      startDate: format(startDate, "yyyy-MM-dd"),
-      endDate: format(endDate, "yyyy-MM-dd"),
-      rowIndex,
-      anchorRect,
-    });
+    return row.type === "collapsed" ? row.project.id : null;
   }, [rows]);
 
-  const handleBarClick = useCallback((schedule: ProjectScheduleDTO, rect: DOMRect) => {
-    setCreateState(null);
-    setPopover({ schedule, rect });
-  }, []);
-
-  const handleDuplicate = useCallback((schedule: ProjectScheduleDTO, newStartDate: string, newEndDate: string | null) => {
-    createSchedule.mutate({
-      title: schedule.title,
-      startDate: newStartDate,
-      endDate: newEndDate,
-      projectId: schedule.projectId,
-      laneId: schedule.laneId,
-      category: schedule.category,
-      categoryColor: schedule.categoryColor,
-    });
-  }, [createSchedule]);
-
-  const handleDateChange = useCallback((id: string, newStartDate: string, newEndDate: string | null) => {
-    updateSchedule.mutate({ id, data: { startDate: newStartDate, endDate: newEndDate } });
-  }, [updateSchedule]);
-
-  const handleRowChange = useCallback((scheduleId: string, fromRow: number, toRow: number) => {
-    if (fromRow === toRow) return;
-    const toRowData = rows[toRow];
-    if (toRowData?.type === "lane") {
-      updateSchedule.mutate({ id: scheduleId, data: { laneId: toRowData.lane.id } });
-    }
-  }, [rows, updateSchedule]);
+  const {
+    popover, setPopover,
+    createState, setCreateState,
+    handleEmptyClick, handleDragCreate,
+    handleBarClick, handleDuplicate,
+    handleDateChange, handleRowChange,
+    handleCreateSubmit,
+  } = useGanttActions({ resolveLane, isCollapsedRow, onToggle: toggleProject });
 
   // 레인 콜백 (안정적 참조)
   const handleLaneAddBelow = useCallback((laneId: string, localIndex: number) => {
@@ -368,67 +290,12 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
     reorderProjects.mutate(reordered.map((p, i) => ({ id: p.id, sortOrder: i })));
   }, [projects, reorderProjects]);
 
-  const handleProjectPointerDown = useCallback((e: React.PointerEvent, projectId: string, fromIndex: number) => {
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    setProjectDrag({ projectId, startY: e.clientY, currentY: e.clientY, fromIndex, moved: false });
-  }, []);
-
-  useEffect(() => {
-    if (!projectDrag) return;
-
-    const handleMove = (e: PointerEvent) => {
-      setProjectDrag((prev) => {
-        if (!prev) return null;
-        const moved = prev.moved || Math.abs(e.clientY - prev.startY) > CLICK_THRESHOLD;
-        return { ...prev, currentY: e.clientY, moved };
-      });
-    };
-
-    const handleUp = () => {
-      const prev = projectDragRef.current;
-      if (!prev) return;
-
-      if (prev.moved) {
-        const fromGlobalRow = projectRowIndices[prev.fromIndex]?.globalRow ?? 0;
-        const targetGlobalRow = fromGlobalRow + Math.round((prev.currentY - prev.startY) / ROW_HEIGHT);
-        let closest = prev.fromIndex;
-        let minDist = Infinity;
-        for (let i = 0; i < projectRowIndices.length; i++) {
-          const dist = Math.abs(projectRowIndices[i].globalRow - targetGlobalRow);
-          if (dist < minDist) { minDist = dist; closest = i; }
-        }
-        if (closest !== prev.fromIndex) {
-          handleProjectReorder(prev.fromIndex, closest);
-        }
-      } else {
-        toggleProject(prev.projectId);
-      }
-
-      setProjectDrag(null);
-    };
-
-    window.addEventListener("pointermove", handleMove);
-    window.addEventListener("pointerup", handleUp);
-    return () => {
-      window.removeEventListener("pointermove", handleMove);
-      window.removeEventListener("pointerup", handleUp);
-    };
-  }, [!!projectDrag, projectRowIndices, handleProjectReorder]);
-
-  const handleCreateSubmit = useCallback((title: string, category: string, categoryColor: string | null) => {
-    if (!createState) return;
-
-    createSchedule.mutate({
-      title,
-      startDate: createState.startDate,
-      endDate: createState.endDate,
-      projectId: createState.projectId,
-      laneId: createState.laneId,
-      category,
-      categoryColor,
-    });
-    setCreateState(null);
-  }, [createState, createSchedule]);
+  // 프로젝트 드래그 훅
+  const { projectDrag, dropIndex, handleProjectPointerDown } = useProjectDrag({
+    projectRowIndices,
+    onReorder: handleProjectReorder,
+    onToggle: toggleProject,
+  });
 
   // 좌측 패널 높이 동기화
   const contentHeight = Math.max(totalRows, 1) * ROW_HEIGHT;
@@ -473,7 +340,6 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                 const isDragging = projectDrag?.moved && projectDrag.fromIndex === block.projectIdx;
                 const showDropBefore = projectDrag?.moved && dropIndex === block.projectIdx && dropIndex < projectDrag.fromIndex;
                 const showDropAfter = projectDrag?.moved && dropIndex === block.projectIdx && dropIndex > projectDrag.fromIndex;
-                const isLastBlock = block.startRow + block.rowSpan >= totalRows;
                 return (
                   <div key={`pb-${block.project.id}`} className="relative">
                     {showDropBefore && (

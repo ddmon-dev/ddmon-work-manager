@@ -17,6 +17,52 @@ import {
 import { getCategoryConfig } from "../constants";
 import type { ProjectScheduleDTO } from "../types";
 
+// ── 드래그 결과 계산 (순수 함수) ──────────────────────────────
+
+function snapPreview(preview: { left: number; width: number; top: number }) {
+  return {
+    left: Math.round(preview.left / DAY_WIDTH) * DAY_WIDTH,
+    width: Math.round(preview.width / DAY_WIDTH) * DAY_WIDTH,
+    top: Math.round(preview.top / ROW_HEIGHT) * ROW_HEIGHT,
+  };
+}
+
+function computeMoveDates(
+  left: number, snappedLeft: number, rangeStart: Date, span: number, endDate: Date | null,
+) {
+  const finalLeft = left + snappedLeft;
+  const newStart = xToDate(finalLeft, rangeStart);
+  return {
+    startDate: format(newStart, "yyyy-MM-dd"),
+    endDate: endDate ? format(addDays(newStart, span - 1), "yyyy-MM-dd") : null,
+  };
+}
+
+function computeResizeDates(
+  left: number, width: number, snappedLeft: number, snappedWidth: number, rangeStart: Date,
+) {
+  const finalLeft = left + snappedLeft;
+  const finalWidth = width + snappedWidth;
+  const newStart = xToDate(finalLeft, rangeStart);
+  const days = Math.max(1, Math.round(finalWidth / DAY_WIDTH));
+  const newEnd = days > 1 ? addDays(newStart, days - 1) : null;
+  return {
+    startDate: format(newStart, "yyyy-MM-dd"),
+    endDate: newEnd ? format(newEnd, "yyyy-MM-dd") : null,
+  };
+}
+
+function computeDuplicateDates(
+  left: number, duplicateOffset: number, rangeStart: Date, span: number, endDate: Date | null,
+) {
+  const dupLeft = left + Math.round(duplicateOffset / DAY_WIDTH) * DAY_WIDTH;
+  const dupStart = xToDate(dupLeft, rangeStart);
+  return {
+    startDate: format(dupStart, "yyyy-MM-dd"),
+    endDate: endDate ? format(addDays(dupStart, span - 1), "yyyy-MM-dd") : null,
+  };
+}
+
 interface GanttBarProps {
   schedule: ProjectScheduleDTO;
   rowIndex: number;
@@ -126,69 +172,50 @@ export const GanttBar = memo(function GanttBar({
       if (!wasDragged) {
         setDragMode(null);
         setPreview({ left: 0, width: 0, top: 0 });
-        
+
         if (dragMode === "move" && barRef.current) {
           onBarClick(schedule, barRef.current.getBoundingClientRect());
         }
         return;
       }
 
-      const snappedLeft = Math.round(preview.left / DAY_WIDTH) * DAY_WIDTH;
-      const snappedWidth = Math.round(preview.width / DAY_WIDTH) * DAY_WIDTH;
-      const snappedTop = Math.round(preview.top / ROW_HEIGHT) * ROW_HEIGHT;
+      const snapped = snapPreview(preview);
 
       // 스냅 위치로 preview 고정 — optimistic update가 반영될 때까지 유지
-      setPreview({ left: snappedLeft, width: snappedWidth, top: snappedTop });
+      setPreview(snapped);
       setDragMode(null);
       setDuplicateOffset(null);
-      
 
       if (dragMode === "move") {
-        const newRow = rowIndex + Math.round(snappedTop / ROW_HEIGHT);
+        const newRow = rowIndex + Math.round(snapped.top / ROW_HEIGHT);
         const rowChanged = newRow !== rowIndex;
         if (rowChanged) {
           onRowChange(schedule.id, rowIndex, newRow);
         }
 
-        const finalLeft = left + snappedLeft;
-        const newStart = xToDate(finalLeft, rangeStart);
-        const newStartStr = format(newStart, "yyyy-MM-dd");
-        const newEndStr = endDate
-          ? format(addDays(newStart, span - 1), "yyyy-MM-dd")
-          : null;
-
         if (e.altKey && onDuplicate && duplicateOffset !== null) {
-          const dupLeft = left + Math.round(duplicateOffset / DAY_WIDTH) * DAY_WIDTH;
-          const dupStart = xToDate(dupLeft, rangeStart);
-          const dupStartStr = format(dupStart, "yyyy-MM-dd");
-          const dupEndStr = endDate ? format(addDays(dupStart, span - 1), "yyyy-MM-dd") : null;
-          onDuplicate(schedule, dupStartStr, dupEndStr);
-          // 복제 시 원본은 제자리 — preview 리셋
+          const dupDates = computeDuplicateDates(left, duplicateOffset, rangeStart, span, endDate);
+          onDuplicate(schedule, dupDates.startDate, dupDates.endDate);
           setPreview({ left: 0, width: 0, top: 0 });
-        } else if (newStartStr !== schedule.startDate || newEndStr !== schedule.endDate) {
-          onDateChange(schedule.id, newStartStr, newEndStr);
-        } else if (!rowChanged) {
-          // 행도 날짜도 변경 없음 — preview 리셋
-          setPreview({ left: 0, width: 0, top: 0 });
+        } else {
+          const moveDates = computeMoveDates(left, snapped.left, rangeStart, span, endDate);
+          if (moveDates.startDate !== schedule.startDate || moveDates.endDate !== schedule.endDate) {
+            onDateChange(schedule.id, moveDates.startDate, moveDates.endDate);
+          } else if (!rowChanged) {
+            setPreview({ left: 0, width: 0, top: 0 });
+          }
         }
         // rowChanged인 경우: 낙관적 업데이트 후 보정 코드가 preview를 정리
       } else {
-        const finalLeft = left + snappedLeft;
-        const finalWidth = width + snappedWidth;
-        const newStart = xToDate(finalLeft, rangeStart);
-        const days = Math.max(1, Math.round(finalWidth / DAY_WIDTH));
-        const newEnd = days > 1 ? addDays(newStart, days - 1) : null;
-
-        const newStartStr = format(newStart, "yyyy-MM-dd");
-        const newEndStr = newEnd ? format(newEnd, "yyyy-MM-dd") : null;
-        if (newStartStr !== schedule.startDate || newEndStr !== schedule.endDate) {
-          onDateChange(schedule.id, newStartStr, newEndStr);
+        const resizeDates = computeResizeDates(left, width, snapped.left, snapped.width, rangeStart);
+        if (resizeDates.startDate !== schedule.startDate || resizeDates.endDate !== schedule.endDate) {
+          onDateChange(schedule.id, resizeDates.startDate, resizeDates.endDate);
         } else {
           setPreview({ left: 0, width: 0, top: 0 });
         }
       }
     },
-    [dragMode, preview, left, width, rangeStart, schedule, startDate, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick, onDuplicate, duplicateOffset]
+    [dragMode, preview, left, width, rangeStart, schedule, endDate, span, rowIndex, onDateChange, onRowChange, onBarClick, onDuplicate, duplicateOffset]
   );
 
   // optimistic update로 데이터 위치가 변하면 preview를 보정하여 점프 방지
