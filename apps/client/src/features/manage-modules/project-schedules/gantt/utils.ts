@@ -134,10 +134,8 @@ export function getTotalWidth(start: Date, end: Date): number {
 // ── 공유 상수 ────────────────────────────────────────────────
 
 export const COMPANY_COL_WIDTH = 100;
-export const PROJECT_COL_WIDTH = 160;
-export const WORK_PHASE_COL_WIDTH = 70;
-export const STATUS_COL_WIDTH = 70;
-export const INFO_PANEL_WIDTH = COMPANY_COL_WIDTH + PROJECT_COL_WIDTH + WORK_PHASE_COL_WIDTH + STATUS_COL_WIDTH;
+export const PROJECT_COL_WIDTH = 200;
+export const INFO_PANEL_WIDTH = COMPANY_COL_WIDTH + PROJECT_COL_WIDTH;
 export const LANE_COL_WIDTH = 150;
 export const LEFT_PANEL_WIDTH = INFO_PANEL_WIDTH + LANE_COL_WIDTH;
 export const CLICK_THRESHOLD = 4;

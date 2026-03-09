@@ -30,8 +30,6 @@ import {
   LEFT_PANEL_WIDTH,
   COMPANY_COL_WIDTH,
   PROJECT_COL_WIDTH,
-  WORK_PHASE_COL_WIDTH,
-  STATUS_COL_WIDTH,
   INFO_PANEL_WIDTH,
   LANE_COL_WIDTH,
   CLICK_THRESHOLD,
@@ -45,9 +43,6 @@ import { GanttBar } from "./gantt-bar";
 import { GhostBar } from "./ghost-bar";
 import { LaneRow } from "./lane-row";
 import { SchedulePopover } from "./schedule-popover";
-import { StatusBadge } from "../../projects/status-badge";
-import { WorkPhaseBadge } from "../../projects/work-phase-badge";
-import type { WorkPhase } from "../../projects/types";
 
 export function ProjectScheduleOverview() {
   const [status, setStatus] = useState<"active" | "completed">("active");
@@ -454,12 +449,6 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
             <div className="flex items-center px-2 border-r border-border/30" style={{ width: PROJECT_COL_WIDTH }}>
               <span className="text-xs font-medium text-foreground">프로젝트</span>
             </div>
-            <div className="flex items-center justify-center px-1 border-r border-border/30" style={{ width: WORK_PHASE_COL_WIDTH }}>
-              <span className="text-xs font-medium text-foreground">작업단계</span>
-            </div>
-            <div className="flex items-center justify-center px-1 border-r border-border/30" style={{ width: STATUS_COL_WIDTH }}>
-              <span className="text-xs font-medium text-foreground">상태</span>
-            </div>
             <div className="flex items-center justify-between px-2 flex-1">
               <span className="text-xs font-medium text-foreground">일정</span>
               <button
@@ -503,19 +492,11 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
                         <p className="text-xs text-foreground/75 truncate">{block.project.companyName}</p>
                       </div>
                       {/* 프로젝트명 + 설명 */}
-                      <div className="shrink-0 flex flex-col justify-center px-2 border-r border-border/30 min-w-0" style={{ width: PROJECT_COL_WIDTH }}>
+                      <div className="shrink-0 flex flex-col justify-center px-2 min-w-0" style={{ width: PROJECT_COL_WIDTH }}>
                         <p className="text-xs font-medium text-foreground truncate">{block.project.name}</p>
                         {block.project.description && (
                           <p className="text-[11px] text-foreground/60 truncate">{block.project.description}</p>
                         )}
-                      </div>
-                      {/* 작업단계 */}
-                      <div className="shrink-0 flex items-center justify-center px-2 border-r border-border/30" style={{ width: WORK_PHASE_COL_WIDTH }}>
-                        <WorkPhaseBadge workPhase={block.project.workPhase as WorkPhase} className="text-xs h-5 w-full px-1.5" />
-                      </div>
-                      {/* 상태 */}
-                      <div className="shrink-0 flex items-center justify-center px-2" style={{ width: STATUS_COL_WIDTH }}>
-                        <StatusBadge projectId={block.project.id} status={block.project.status as any} readonly className="text-xs h-5 w-full min-w-0 px-1.5" />
                       </div>
                     </div>
                     {showDropAfter && (
