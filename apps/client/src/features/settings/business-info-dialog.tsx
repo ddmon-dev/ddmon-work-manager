@@ -11,7 +11,7 @@ import {
 } from "@/shared/ui/dialog";
 import { Button } from "@/shared/ui/button";
 import { FieldGroup } from "@/shared/ui/field";
-import { FormTextInput } from "@/shared/ui/form";
+import { FormTextInput, FormBizNumberInput } from "@/shared/ui/form";
 import { useBusinessInfo, useUpdateBusinessInfo } from "./api";
 
 const schema = z.object({
@@ -62,7 +62,7 @@ export function BusinessInfoDialog({ open, onOpenChange }: BusinessInfoDialogPro
           <FieldGroup className="py-2">
             <FormTextInput control={control} name="name" label="상호명" placeholder="회사명" />
             <FormTextInput control={control} name="ceo" label="대표자명" placeholder="홍길동" />
-            <FormTextInput
+            <FormBizNumberInput
               control={control}
               name="bizNumber"
               label="사업자번호"

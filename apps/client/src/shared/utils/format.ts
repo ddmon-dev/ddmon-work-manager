@@ -63,6 +63,17 @@ export function truncateFileName(fileName: string, maxLength: number = 40): stri
 }
 
 /**
+ * 사업자번호를 한국 형식으로 포맷팅합니다.
+ * ex) 1234567890 → 123-45-67890
+ */
+export function formatBizNumber(value: string): string {
+  const numbersOnly = value.replace(/\D/g, "").slice(0, 10);
+  return numbersOnly.replace(/(\d{3})(\d{0,2})(\d{0,5})/, (_, p1, p2, p3) =>
+    [p1, p2, p3].filter(Boolean).join("-")
+  );
+}
+
+/**
  * 전화번호를 한국 형식으로 포맷팅합니다.
  * ex) 01012345678 → 010-1234-5678
  */

@@ -2,6 +2,7 @@ export { FormField } from "./form-field";
 export { FormTextInput } from "./form-text-input";
 export { FormDatePicker } from "./form-date-picker";
 export { FormPhoneInput } from "./form-phone-input";
+export { FormBizNumberInput } from "./form-biz-number-input";
 export { FormPasswordInput } from "./form-password-input";
 export { FormTextarea } from "./form-textarea";
 export { FormSelect } from "./form-select";

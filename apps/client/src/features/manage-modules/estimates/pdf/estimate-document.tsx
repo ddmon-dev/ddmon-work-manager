@@ -5,7 +5,7 @@ import {
   Text,
   StyleSheet,
 } from '@react-pdf/renderer';
-import { formatCurrency, formatPhoneNumber } from '@/shared/utils/format';
+import { formatCurrency, formatPhoneNumber, formatBizNumber } from '@/shared/utils/format';
 import {
   calculateTotal,
   calculateGroupSubtotal,
@@ -522,20 +522,20 @@ export function EstimateDocument({ data }: { data: EstimateDocumentData }) {
         {/* -- Footer -- */}
         <View style={s.footer} fixed>
           <View style={{ gap: 2 }}>
-            {/* TODO: 사업자 정보 표기 임시 비활성 — 추후 복원 예정
             {(data.bizName || data.ceo || data.bizNumber) && (
               <Text style={s.footerText}>
-                {[data.bizName, data.ceo && `대표 ${data.ceo}`, data.bizNumber]
+                {[data.bizName, data.ceo && `대표 ${data.ceo}`, data.bizNumber && formatBizNumber(data.bizNumber)]
                   .filter(Boolean)
                   .join(' \u00B7 ')}
               </Text>
             )}
-            */}
-            <Text style={s.footerText}>
-              {[data.issuer, data.issuerPhone && formatPhoneNumber(data.issuerPhone), data.issuerEmail]
-                .filter(Boolean)
-                .join(' \u00B7 ')}
-            </Text>
+            {(data.issuerPhone || data.issuerEmail) && (
+              <Text style={s.footerText}>
+                {[data.issuerPhone && `TEL: ${formatPhoneNumber(data.issuerPhone)}`, data.issuerEmail && `EMAIL: ${data.issuerEmail}`]
+                  .filter(Boolean)
+                  .join('  ')}
+              </Text>
+            )}
           </View>
           <Text
             style={s.footerText}
