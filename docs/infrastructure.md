@@ -164,6 +164,7 @@ npm run build:production    # 클라이언트(dist-production) + 서버(tsup) �
 | `npm run production:migrate` | — | 마이그레이션만 (데이터 유지) |
 | `npm run production:seed` | — | 시드 데이터 적용 |
 | `npm run production:backup` | `backup-db.sh` | DB 백업 (최근 30개 유지) |
+| `npm run db:pull-seed` | `pull-seed.sh` | 운영 DB → 개발 DB 단방향 복사 |
 | `npm run production:install` | `install-service.sh` | LaunchAgent 등록 |
 | `npm run production:uninstall` | `uninstall-service.sh` | LaunchAgent 제거 |
 

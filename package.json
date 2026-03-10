@@ -29,7 +29,8 @@
     "production:seed": "npm run db:seed:production --workspace=apps/server",
     "production:backup": "./scripts/backup-db.sh",
     "production:install": "./scripts/install-service.sh",
-    "production:uninstall": "./scripts/uninstall-service.sh"
+    "production:uninstall": "./scripts/uninstall-service.sh",
+    "db:pull-seed": "./scripts/pull-seed.sh"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
