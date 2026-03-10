@@ -669,15 +669,6 @@ export function DetailView({ data, refetch }: DetailViewProps) {
             </SheetContainer>
           )}
           <SheetContainer>
-            <ProjectGantt
-              projectId={data.id}
-              clientId={data.clientId}
-              contractDate={data.contractDate}
-              deliveredDate={data.deliveredDate}
-              completedDate={data.completedDate}
-            />
-          </SheetContainer>
-          <SheetContainer>
             <MemoSection
               memos={data.memos}
               onAdd={handleAddMemo}
@@ -687,6 +678,17 @@ export function DetailView({ data, refetch }: DetailViewProps) {
           </SheetContainer>
         </SheetScrollColumn>
       </SheetBody>
+
+      {/* 간트 차트: full-width */}
+      <SheetContainer className="border-t border-border overflow-x-auto">
+        <ProjectGantt
+          projectId={data.id}
+          clientId={data.clientId}
+          contractDate={data.contractDate}
+          deliveredDate={data.deliveredDate}
+          completedDate={data.completedDate}
+        />
+      </SheetContainer>
 
       <SheetFooter>
         <ManageSheetClose />

@@ -16,7 +16,10 @@ import { GanttBar } from "./gantt-bar";
 import { GhostBar } from "./ghost-bar";
 import { LaneRow } from "./lane-row";
 import { SchedulePopover } from "./schedule-popover";
-import { ROW_HEIGHT, LANE_COL_WIDTH } from "./utils";
+import { ROW_HEIGHT } from "./utils";
+
+/** 프로젝트 상세 시트에서는 좁은 lane 너비 사용 (overview는 utils의 150px) */
+const LANE_COL_WIDTH = 120;
 
 interface ProjectGanttProps {
   projectId: string;
