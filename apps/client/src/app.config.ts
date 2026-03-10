@@ -2,8 +2,8 @@ import type { SidebarVariant } from '@/shared/ui/sidebar';
 
 export const APP_CONFIG = {
   META: {
-    TITLE: '리틀어썸 Work Manager',
-    DESCRIPTION: 'LittleAwesome 화이팅!',
+    TITLE: 'LittleAwesome WM',
+    DESCRIPTION: '리틀어썸 화이팅!',
   },
   AUTH: {
     PATHS: {
