@@ -5,8 +5,8 @@ import {
   CalendarDays,
   FileSpreadsheet,
   FolderKanban,
+  GanttChart,
 } from "lucide-react";
-import { APP_CONFIG } from "@/app.config";
 
 interface MenuConfig {
   navMain: MenuData[];
@@ -15,20 +15,22 @@ interface MenuConfig {
 export const navigationConfig: MenuConfig = {
   navMain: [
     {
-      title: APP_CONFIG.META.TITLE,
+      title: "프로젝트",
+      items: [
+        { title: "프로젝트 관리", url: "/projects", icon: FolderKanban },
+        {
+          title: "프로젝트 일정",
+          url: "/project-schedules",
+          icon: GanttChart,
+        },
+        { title: "캘린더", url: "/schedules", icon: CalendarDays },
+      ],
+    },
+    {
+      title: "영업",
       items: [
         { title: "클라이언트 관리", url: "/clients", icon: Briefcase },
         { title: "견적서 관리", url: "/estimates", icon: FileSpreadsheet },
-        {
-          title: "프로젝트 관리",
-          url: "/projects",
-          icon: FolderKanban,
-          items: [
-            { title: "프로젝트 관리", url: "/projects" },
-            { title: "프로젝트 일정", url: "/project-schedules" },
-          ],
-        },
-        { title: "일정 관리", url: "/schedules", icon: CalendarDays },
         { title: "매출/수금 통계", url: "/revenue", icon: BarChart3 },
       ],
     },

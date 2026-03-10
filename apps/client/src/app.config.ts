@@ -2,8 +2,8 @@ import type { SidebarVariant } from '@/shared/ui/sidebar';
 
 export const APP_CONFIG = {
   META: {
-    TITLE: 'Work Manager',
-    DESCRIPTION: 'DDLabs 화이팅!',
+    TITLE: '리틀어썸 Work Manager',
+    DESCRIPTION: 'LittleAwesome 화이팅!',
   },
   AUTH: {
     PATHS: {
