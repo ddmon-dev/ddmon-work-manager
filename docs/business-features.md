@@ -171,11 +171,11 @@ ManageContainer (전체 레이아웃)
 - 매출 기준: 프로젝트 contractDate (계약일)
 - 수금 기준: payment paidDate (입금일)
 
-### 4.4 위젯 (사이드바 하단)
+### 4.4 미니앱 (사이드바 하단)
 
-모든 위젯은 Context 기반 상태 관리를 사용하며, 사이드바 하단의 트리거 버튼으로 접근한다.
+모든 미니앱은 Context 기반 상태 관리를 사용하며, 사이드바 하단의 트리거 버튼으로 접근한다.
 
-| 위젯 | 형태 | 기능 |
+| 미니앱 | 형태 | 기능 |
 |------|------|------|
 | **Todo** | 사이드 시트 | 날짜별 투두 관리, DnD 정렬, 30분 단위 타임블록, 미완료 이월 |
 | **Calculator** | 드래그 가능 팝업 | 기본 사칙연산 계산기 |
@@ -242,7 +242,7 @@ AppSidebar
 │   ├── 일정 관리
 │   └── 매출/수금 통계
 └── Footer
-    ├── 위젯 트리거 (Todo, Calculator, Memo, MindNote)
+    ├── 미니앱 트리거 (Todo, Calculator, Memo, MindNote)
     ├── 다크모드 토글
     └── 사용자 메뉴 (프로필, 사업자 정보, 관리자 관리, 로그아웃)
 ```
@@ -259,9 +259,9 @@ AppSidebar
 4. 서버: 라우트 파일 생성 → DB 스키마 → Zod 스키마 (packages/schemas)
 5. 라우팅: `router.tsx`에 페이지 추가, 사이드바 `config.ts`에 메뉴 추가
 
-### 위젯 추가 패턴
+### 미니앱 추가 패턴
 
-1. `features/ui/` 하위에 위젯 폴더 생성
+1. `features/ui/` 하위에 미니앱 폴더 생성
 2. `context.tsx` (상태 관리) + `ui/` (컴포넌트) 구조
 3. `widget-trigger-group.tsx`에 트리거 버튼 추가
 4. `ProtectedLayout`에 Provider 및 UI 컴포넌트 렌더링 추가
