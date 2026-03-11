@@ -15,6 +15,7 @@ import {
   useRenameFile,
   useMoveFile,
 } from "./api";
+import { useDialog } from "@/shared/ui/app-dialog";
 import type { FileItem } from "./types";
 
 interface Breadcrumb {
@@ -52,6 +53,7 @@ export function useDrive() {
   const breadcrumbs: Breadcrumb[] = currentFolderId && folderPath
     ? [{ id: null, name: "전체 파일" }, ...folderPath]
     : [{ id: null, name: "전체 파일" }];
+  const { confirm } = useDialog();
   const createFolder = useCreateFolder();
   const deleteFile = useDeleteFile();
   const renameFile = useRenameFile();
@@ -84,9 +86,17 @@ export function useDrive() {
   };
 
   const handleDelete = useCallback(async (id: string) => {
-    await deleteFile.mutateAsync(id);
-    toast.success("휴지통으로 이동했습니다.");
-  }, [deleteFile]);
+    await confirm({
+      title: "휴지통으로 이동",
+      description: "선택한 항목을 휴지통으로 이동하시겠습니까?",
+      confirmText: "삭제",
+      variant: "destructive",
+      onConfirm: async () => {
+        await deleteFile.mutateAsync(id);
+        toast.success("휴지통으로 이동했습니다.");
+      },
+    });
+  }, [deleteFile, confirm]);
 
   const handleRename = async (id: string) => {
     if (!renameValue.trim()) return;
