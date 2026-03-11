@@ -1,0 +1,293 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/shared/lib/api-client";
+import { queryKeys } from "@/shared/lib/query-keys";
+import type {
+  LibraryBoard,
+  LibraryDocumentSummary,
+  LibraryDocument,
+  FileItem,
+  TrashItem,
+} from "./types";
+import type {
+  LibraryBoardWriteInput,
+  LibraryDocumentWriteInput,
+} from "@packages/schemas";
+
+// ─── 게시판 ───
+
+export function useBoardsQuery() {
+  return useQuery({
+    queryKey: queryKeys.libraryBoards.list(),
+    queryFn: () =>
+      api.get<{ items: LibraryBoard[] }>("/library-boards").then((d) => d.items),
+  });
+}
+
+export function useCreateBoard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: LibraryBoardWriteInput) =>
+      api.post<LibraryBoard>("/library-boards", data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.libraryBoards.all }),
+  });
+}
+
+export function useUpdateBoard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: LibraryBoardWriteInput }) =>
+      api.patch<LibraryBoard>(`/library-boards/${id}`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.libraryBoards.all }),
+  });
+}
+
+export function useDeleteBoard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/library-boards/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.libraryBoards.all }),
+  });
+}
+
+export function useReorderBoards() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      api.put("/library-boards/reorder", { ids }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.libraryBoards.all }),
+  });
+}
+
+// ─── 문서 ───
+
+export function useDocumentsQuery(boardId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.libraryDocuments.list(boardId ?? ""),
+    queryFn: () =>
+      api
+        .get<{ items: LibraryDocumentSummary[] }>("/library-documents", { boardId: boardId! })
+        .then((d) => d.items),
+    enabled: !!boardId,
+  });
+}
+
+export function useDocumentQuery(id: string | null) {
+  return useQuery({
+    queryKey: queryKeys.libraryDocuments.detail(id ?? ""),
+    queryFn: () => api.get<LibraryDocument>(`/library-documents/${id}`),
+    enabled: !!id,
+  });
+}
+
+export function useCreateDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: LibraryDocumentWriteInput) =>
+      api.post<LibraryDocument>("/library-documents", data),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: queryKeys.libraryDocuments.all }),
+  });
+}
+
+export function useUpdateDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<{ title: string; content: string }>;
+    }) => api.patch<LibraryDocument>(`/library-documents/${id}`, data),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: queryKeys.libraryDocuments.all });
+      qc.invalidateQueries({
+        queryKey: queryKeys.libraryDocuments.detail(variables.id),
+      });
+    },
+  });
+}
+
+export function useDeleteDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/library-documents/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.libraryDocuments.all });
+      qc.invalidateQueries({ queryKey: queryKeys.trash.all });
+    },
+  });
+}
+
+export function useMoveDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, boardId }: { id: string; boardId: string }) =>
+      api.patch(`/library-documents/${id}/move`, { boardId }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: queryKeys.libraryDocuments.all }),
+  });
+}
+
+export function useRestoreDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.patch(`/library-documents/${id}/restore`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.libraryDocuments.all });
+      qc.invalidateQueries({ queryKey: queryKeys.trash.all });
+    },
+  });
+}
+
+export function usePermanentDeleteDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.delete(`/library-documents/${id}/permanent`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.trash.all }),
+  });
+}
+
+// ─── 파일 ───
+
+export function useFilesQuery(
+  folderId: string | null,
+  sort?: string,
+  order?: string
+) {
+  return useQuery({
+    queryKey: queryKeys.files.list({ folderId, sort, order }),
+    queryFn: () =>
+      api
+        .get<{ items: FileItem[] }>("/files", {
+          folderId: folderId ?? undefined,
+          sort,
+          order,
+        })
+        .then((d) => d.items),
+  });
+}
+
+export function useUploadFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      file,
+      folderId,
+    }: {
+      file: File;
+      folderId: string | null;
+    }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (folderId) formData.append("folderId", folderId);
+
+      const res = await fetch("/api/files/upload", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      return json.data as FileItem;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.files.all }),
+  });
+}
+
+export function useCreateFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { name: string; folderId?: string | null }) =>
+      api.post<FileItem>("/files/folder", data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.files.all }),
+  });
+}
+
+export function useRenameFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      api.patch<FileItem>(`/files/${id}`, { name }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.files.all }),
+  });
+}
+
+export function useMoveFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, folderId }: { id: string; folderId: string | null }) =>
+      api.patch(`/files/${id}/move`, { folderId }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.files.all }),
+  });
+}
+
+export function useDeleteFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/files/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.files.all });
+      qc.invalidateQueries({ queryKey: queryKeys.trash.all });
+    },
+  });
+}
+
+export function useRestoreFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.patch(`/files/${id}/restore`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.files.all });
+      qc.invalidateQueries({ queryKey: queryKeys.trash.all });
+    },
+  });
+}
+
+export function usePermanentDeleteFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/files/${id}/permanent`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.trash.all }),
+  });
+}
+
+// ─── 휴지통 ───
+
+export function useTrashQuery() {
+  return useQuery({
+    queryKey: queryKeys.trash.list(),
+    queryFn: () =>
+      api.get<{ items: TrashItem[] }>("/trash").then((d) => d.items),
+  });
+}
+
+export function useEmptyTrash() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete("/trash/empty"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.trash.all });
+      qc.invalidateQueries({ queryKey: queryKeys.files.all });
+      qc.invalidateQueries({ queryKey: queryKeys.libraryDocuments.all });
+    },
+  });
+}
+
+// ─── 에디터 이미지 업로드 ───
+
+export async function uploadEditorImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch("/api/uploads", {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.message);
+  return json.data.url;
+}

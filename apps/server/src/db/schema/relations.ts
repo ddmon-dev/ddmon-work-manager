@@ -11,6 +11,8 @@ import { projectScheduleLanes, projectSchedules } from "./project-schedules";
 import { todos, todoTimeBlocks } from "./todos";
 import { mindnotes } from "./mindnotes";
 import { memos } from "./memos";
+import { libraryBoards, libraryDocuments } from "./library";
+import { files } from "./files";
 
 export const clientsRelations = relations(clients, ({ many }) => ({
   memos: many(clientMemos),
@@ -134,3 +136,23 @@ export const projectSchedulesRelations = relations(projectSchedules, ({ one }) =
 }));
 
 export const memosRelations = relations(memos, () => ({}));
+
+export const libraryBoardsRelations = relations(libraryBoards, ({ many }) => ({
+  documents: many(libraryDocuments),
+}));
+
+export const libraryDocumentsRelations = relations(libraryDocuments, ({ one }) => ({
+  board: one(libraryBoards, {
+    fields: [libraryDocuments.boardId],
+    references: [libraryBoards.id],
+  }),
+}));
+
+export const filesRelations = relations(files, ({ one, many }) => ({
+  parent: one(files, {
+    fields: [files.folderId],
+    references: [files.id],
+    relationName: "folderChildren",
+  }),
+  children: many(files, { relationName: "folderChildren" }),
+}));

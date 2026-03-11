@@ -1,6 +1,7 @@
 import { type MenuData } from "./types";
 import {
   BarChart3,
+  BookOpen,
   Briefcase,
   CalendarDays,
   FileSpreadsheet,
@@ -32,6 +33,12 @@ export const navigationConfig: MenuConfig = {
         { title: "클라이언트 관리", url: "/clients", icon: Briefcase },
         { title: "견적서 관리", url: "/estimates", icon: FileSpreadsheet },
         { title: "매출/수금 통계", url: "/revenue", icon: BarChart3 },
+      ],
+    },
+    {
+      title: "도구",
+      items: [
+        { title: "라이브러리", url: "/library", icon: BookOpen },
       ],
     },
   ],

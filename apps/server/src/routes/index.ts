@@ -11,6 +11,11 @@ import schedulesRouter from "./schedules";
 import todosRouter from "./todos";
 import mindnotesRouter from "./mindnotes";
 import memosRouter from "./memos";
+import libraryBoardsRouter from "./library-boards";
+import libraryDocumentsRouter from "./library-documents";
+import filesRouter from "./files";
+import trashRouter from "./trash";
+import uploadsRouter from "./uploads";
 import type { AppVariables } from "../lib/types";
 
 const api = new Hono<{ Variables: AppVariables }>();
@@ -27,5 +32,10 @@ api.route("/schedules", schedulesRouter);
 api.route("/todos", todosRouter);
 api.route("/mindnotes", mindnotesRouter);
 api.route("/memos", memosRouter);
+api.route("/library-boards", libraryBoardsRouter);
+api.route("/library-documents", libraryDocumentsRouter);
+api.route("/files", filesRouter);
+api.route("/trash", trashRouter);
+api.route("/uploads", uploadsRouter);
 
 export default api;

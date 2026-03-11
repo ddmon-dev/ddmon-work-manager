@@ -12,6 +12,7 @@ import { ProjectSchedulesPage } from "@/pages/project-schedules";
 import { SchedulesPage } from "@/pages/schedules";
 import { RevenuePage } from "@/pages/revenue";
 import { AdminsPage } from "@/pages/admins";
+import { LibraryPage } from "@/pages/library";
 import { NotFoundPage } from "@/pages/not-found";
 import { UnauthorizedPage } from "@/pages/unauthorized";
 
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
               { path: "/schedules", element: <SchedulesPage /> },
               { path: "/revenue", element: <RevenuePage /> },
               { path: "/admins", element: <AdminsPage /> },
+              { path: "/library", element: <LibraryPage /> },
               { path: "/unauthorized", element: <UnauthorizedPage /> },
               { path: "*", element: <NotFoundPage /> },
             ],

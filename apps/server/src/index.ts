@@ -6,6 +6,7 @@ import { auth } from "./auth";
 import apiRoutes from "./routes";
 import type { AppVariables } from "./lib/types";
 import { ERRORS, errorResponse } from "./lib/errors";
+import { ensureStorageDir } from "./lib/storage";
 
 const app = new Hono<{ Variables: AppVariables }>();
 
@@ -67,10 +68,15 @@ app.onError((err, c) => {
 });
 
 const port = Number(process.env.PORT) || 4001;
-serve({ fetch: app.fetch, port }, (info) => {
+serve({ fetch: app.fetch, port }, async (info) => {
   console.log(`Server running at http://localhost:${info.port}`);
   if (isServeStatic) {
     console.log(`Serving static files from: ${process.env.STATIC_DIR}`);
+  }
+  try {
+    await ensureStorageDir();
+  } catch (err) {
+    console.warn("[Storage] 디렉토리 초기화 실패:", (err as Error).message);
   }
 });
 

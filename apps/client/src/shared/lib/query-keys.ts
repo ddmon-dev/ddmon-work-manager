@@ -59,4 +59,21 @@ export const queryKeys = {
     all: ["mindnotes"] as const,
     random: ["mindnotes", "random"] as const,
   },
+  libraryBoards: {
+    all: ["library-boards"] as const,
+    list: () => ["library-boards", "list"] as const,
+  },
+  libraryDocuments: {
+    all: ["library-documents"] as const,
+    list: (boardId: string) => ["library-documents", "list", boardId] as const,
+    detail: (id: string) => ["library-documents", "detail", id] as const,
+  },
+  files: {
+    all: ["files"] as const,
+    list: (params: Params) => ["files", "list", params] as const,
+  },
+  trash: {
+    all: ["trash"] as const,
+    list: () => ["trash", "list"] as const,
+  },
 };
