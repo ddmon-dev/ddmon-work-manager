@@ -253,40 +253,6 @@ export function Drive() {
               </div>
             </div>
 
-            {/* 새 폴더 입력 */}
-            {showNewFolder && (
-              <div className="flex items-center gap-2 border-b bg-muted/30 px-4 py-2">
-                <Folder className="size-5 text-blue-500" />
-                <Input
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  placeholder="폴더 이름"
-                  className="h-8 max-w-xs"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.nativeEvent.isComposing) return;
-                    if (e.key === "Enter") handleCreateFolder();
-                    if (e.key === "Escape") setShowNewFolder(false);
-                  }}
-                />
-                <Button
-                  size="sm"
-                  className="h-8"
-                  onClick={handleCreateFolder}
-                >
-                  생성
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8"
-                  onClick={() => setShowNewFolder(false)}
-                >
-                  취소
-                </Button>
-              </div>
-            )}
-
             {/* 파일 목록 */}
             <div className="flex-1 overflow-y-auto">
               {/* ../ 상위 폴더 행 (하위 폴더에서는 항상 표시) */}
@@ -301,6 +267,40 @@ export function Drive() {
                     navigateToBreadcrumb(breadcrumbs.length - 2)
                   }
                 />
+              )}
+
+              {/* 새 폴더 입력 */}
+              {showNewFolder && (
+                <div className="flex items-center gap-2 border-b bg-muted/30 px-4 py-2">
+                  <Folder className="size-5 text-blue-500" />
+                  <Input
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="폴더 이름"
+                    className="h-8 max-w-xs"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing) return;
+                      if (e.key === "Enter") handleCreateFolder();
+                      if (e.key === "Escape") setShowNewFolder(false);
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    className="h-8"
+                    onClick={handleCreateFolder}
+                  >
+                    생성
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setShowNewFolder(false)}
+                  >
+                    취소
+                  </Button>
+                </div>
               )}
 
               {isLoading ? (
