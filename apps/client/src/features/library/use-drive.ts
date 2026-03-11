@@ -1,4 +1,4 @@
-import { useState, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import {
   File as FileIcon,
   Folder,
@@ -9,6 +9,7 @@ import { createElement } from "react";
 import { toast } from "sonner";
 import {
   useFilesQuery,
+  useFilePathQuery,
   useCreateFolder,
   useDeleteFile,
   useRenameFile,
@@ -19,6 +20,12 @@ import type { FileItem } from "./types";
 interface Breadcrumb {
   id: string | null;
   name: string;
+}
+
+export interface ContextMenuState {
+  x: number;
+  y: number;
+  item: FileItem | null;
 }
 
 export function useDrive() {
@@ -33,15 +40,19 @@ export function useDrive() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [moveTargetId, setMoveTargetId] = useState<string | null>(null);
-  const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([
-    { id: null, name: "전체 파일" },
-  ]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
   const { data: items, isLoading } = useFilesQuery(
     showTrash ? null : currentFolderId,
     sort,
     order
   );
+  const { data: folderPath } = useFilePathQuery(currentFolderId);
+
+  const breadcrumbs: Breadcrumb[] = currentFolderId && folderPath
+    ? [{ id: null, name: "전체 파일" }, ...folderPath]
+    : [{ id: null, name: "전체 파일" }];
   const createFolder = useCreateFolder();
   const deleteFile = useDeleteFile();
   const renameFile = useRenameFile();
@@ -54,24 +65,16 @@ export function useDrive() {
     : items;
 
   const handleNavigate = useCallback(
-    (folderId: string | null, folderName?: string) => {
+    (folderId: string | null) => {
       setCurrentFolderId(folderId);
       setShowTrash(false);
-
-      if (folderId === null) {
-        setBreadcrumbs([{ id: null, name: "전체 파일" }]);
-      } else if (folderName) {
-        setBreadcrumbs((prev) => [...prev, { id: folderId, name: folderName }]);
-      }
     },
     []
   );
 
   const navigateToBreadcrumb = useCallback(
     (index: number) => {
-      const crumb = breadcrumbs[index];
-      setCurrentFolderId(crumb.id);
-      setBreadcrumbs(breadcrumbs.slice(0, index + 1));
+      setCurrentFolderId(breadcrumbs[index].id);
       setShowTrash(false);
     },
     [breadcrumbs]
@@ -87,10 +90,10 @@ export function useDrive() {
     setShowNewFolder(false);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     await deleteFile.mutateAsync(id);
     toast.success("휴지통으로 이동했습니다.");
-  };
+  }, [deleteFile]);
 
   const handleRename = async (id: string) => {
     if (!renameValue.trim()) return;
@@ -98,9 +101,9 @@ export function useDrive() {
     setRenamingId(null);
   };
 
-  const handleFileClick = (file: FileItem) => {
+  const handleFileClick = useCallback((file: FileItem) => {
     if (file.isFolder) {
-      handleNavigate(file.id, file.name);
+      handleNavigate(file.id);
       return;
     }
     const isImage = file.mimeType?.startsWith("image/");
@@ -110,7 +113,7 @@ export function useDrive() {
     } else {
       window.open(`/api/files/${file.id}/download`, "_blank");
     }
-  };
+  }, [handleNavigate]);
 
   const toggleSort = (field: "name" | "date" | "size") => {
     if (sort === field) {
@@ -123,10 +126,93 @@ export function useDrive() {
 
   const handleMove = async (targetFolderId: string | null) => {
     if (!moveTargetId) return;
-    await moveFile.mutateAsync({ id: moveTargetId, folderId: targetFolderId });
-    toast.success("이동했습니다.");
+    try {
+      await moveFile.mutateAsync({ id: moveTargetId, folderId: targetFolderId });
+      toast.success("이동했습니다.");
+    } catch {
+      toast.error("이동에 실패했습니다.");
+    }
     setMoveTargetId(null);
   };
+
+  const handleDragDrop = async (itemId: string, targetFolderId: string | null) => {
+    if (itemId === targetFolderId) return;
+    try {
+      await moveFile.mutateAsync({ id: itemId, folderId: targetFolderId });
+      toast.success("이동했습니다.");
+    } catch {
+      toast.error("이동에 실패했습니다.");
+    }
+  };
+
+  const openContextMenu = useCallback(
+    (e: React.MouseEvent, item: FileItem | null) => {
+      e.preventDefault();
+      if (item) setSelectedId(item.id);
+      setContextMenu({ x: e.clientX, y: e.clientY, item });
+    },
+    []
+  );
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  // 키보드 단축키
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Input 포커스 중이거나 이름 변경 중이면 무시
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable ||
+        renamingId
+      ) {
+        return;
+      }
+
+      switch (e.key) {
+        case "Delete":
+        case "Backspace": {
+          if (selectedId) {
+            e.preventDefault();
+            handleDelete(selectedId);
+            setSelectedId(null);
+          }
+          break;
+        }
+        case "F2": {
+          if (selectedId) {
+            e.preventDefault();
+            const item = filteredItems?.find((i) => i.id === selectedId);
+            if (item) {
+              setRenamingId(item.id);
+              setRenameValue(item.name);
+            }
+          }
+          break;
+        }
+        case "Enter": {
+          if (selectedId) {
+            e.preventDefault();
+            const item = filteredItems?.find((i) => i.id === selectedId);
+            if (item) handleFileClick(item);
+          }
+          break;
+        }
+        case "Escape": {
+          e.preventDefault();
+          setSelectedId(null);
+          closeContextMenu();
+          break;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [selectedId, renamingId, filteredItems, handleDelete, handleFileClick, closeContextMenu]);
 
   return {
     // 상태
@@ -144,6 +230,8 @@ export function useDrive() {
     isLoading,
     moveTargetId,
     breadcrumbs,
+    selectedId,
+    contextMenu,
     // 세터
     setSearchTerm,
     setPreviewFile,
@@ -153,6 +241,7 @@ export function useDrive() {
     setRenameValue,
     setShowTrash,
     setMoveTargetId,
+    setSelectedId,
     // 핸들러
     handleNavigate,
     navigateToBreadcrumb,
@@ -162,6 +251,9 @@ export function useDrive() {
     handleFileClick,
     toggleSort,
     handleMove,
+    handleDragDrop,
+    openContextMenu,
+    closeContextMenu,
     // 유틸
     formatSize,
     getFileIcon,

@@ -1,4 +1,5 @@
-import { Fragment, useState, useCallback, useRef } from "react";
+import { Fragment, useState, useCallback, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import {
   File as FileIcon,
@@ -6,7 +7,10 @@ import {
   Image,
   FolderPlus,
   Folder,
+  FolderOpen,
+  Eye,
   Download,
+  Upload,
   MoreHorizontal,
   Pencil,
   Trash2,
@@ -55,9 +59,10 @@ import { FolderTree } from "./folder-tree";
 import { FilePreview } from "./file-preview";
 import { TrashView } from "./trash";
 import { toast } from "sonner";
-import { useDrive } from "./use-drive";
+import { useDrive, type ContextMenuState } from "./use-drive";
 import { useUploadFile } from "./api";
 import type { FileItem } from "./types";
+import type { LucideIcon } from "lucide-react";
 
 export function Drive() {
   const {
@@ -92,6 +97,11 @@ export function Drive() {
     toggleSort,
     handleMove,
     handleDragDrop,
+    openContextMenu,
+    closeContextMenu,
+    selectedId,
+    contextMenu,
+    setSelectedId,
     formatSize,
     getFileIcon,
   } = useDrive();
@@ -103,6 +113,7 @@ export function Drive() {
   const [dragRowWidth, setDragRowWidth] = useState<number | null>(null);
   const [movingId, setMovingId] = useState<string | null>(null);
   const uploadFile = useUploadFile();
+  const uploadInputRef = useRef<HTMLInputElement>(null);
 
   const handleDropUpload = useCallback(
     async (fileList: FileList, targetFolderId: string) => {
@@ -254,7 +265,15 @@ export function Drive() {
             </div>
 
             {/* 파일 목록 */}
-            <div className="flex-1 overflow-y-auto">
+            <div
+              className="flex-1 overflow-y-auto"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setSelectedId(null);
+              }}
+              onContextMenu={(e) => {
+                if (e.target === e.currentTarget) openContextMenu(e, null);
+              }}
+            >
               {/* ../ 상위 폴더 행 (하위 폴더에서는 항상 표시) */}
               {!isLoading && currentFolderId && (
                 <ParentFolderRow
@@ -342,7 +361,10 @@ export function Drive() {
                       renameValue={renameValue}
                       currentFolderId={currentFolderId}
                       isMoving={item.id === movingId}
+                      isSelected={selectedId === item.id}
+                      onSelect={setSelectedId}
                       onFileClick={handleFileClick}
+                      onContextMenu={openContextMenu}
                       onRenameStart={(id, name) => {
                         setRenamingId(id);
                         setRenameValue(name);
@@ -420,6 +442,71 @@ export function Drive() {
           </div>
         )}
       </DragOverlay>
+
+      {/* 빈 영역 컨텍스트 메뉴에서 파일 업로드용 hidden input */}
+      <input
+        ref={uploadInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={async (e) => {
+          const files = e.target.files;
+          if (!files || files.length === 0) return;
+          let successCount = 0;
+          for (const file of Array.from(files)) {
+            try {
+              await uploadFile.mutateAsync({
+                file,
+                folderId: currentFolderId,
+              });
+              successCount++;
+            } catch {
+              toast.error(`${file.name} 업로드 실패`);
+            }
+          }
+          if (successCount > 0) {
+            toast.success(`${successCount}개 파일 업로드 완료`);
+          }
+          e.target.value = "";
+        }}
+      />
+
+      {contextMenu && (
+        <FileContextMenu
+          contextMenu={contextMenu}
+          onClose={closeContextMenu}
+          onOpen={(item) => {
+            handleFileClick(item);
+            closeContextMenu();
+          }}
+          onDownload={(item) => {
+            window.open(`/api/files/${item.id}/download`, "_blank");
+            closeContextMenu();
+          }}
+          onRename={(item) => {
+            setRenamingId(item.id);
+            setRenameValue(item.name);
+            closeContextMenu();
+          }}
+          onMove={(item) => {
+            setMoveTargetId(item.id);
+            setSelectedMoveFolder(currentFolderId);
+            closeContextMenu();
+          }}
+          onDelete={(item) => {
+            handleDelete(item.id);
+            closeContextMenu();
+          }}
+          onNewFolder={() => {
+            setShowNewFolder(true);
+            closeContextMenu();
+          }}
+          onUpload={() => {
+            uploadInputRef.current?.click();
+            closeContextMenu();
+          }}
+        />
+      )}
     </div>
     </DndContext>
   );
@@ -440,6 +527,9 @@ function DraggableFileRow({
   onMoveStart,
   onDelete,
   isMoving,
+  isSelected,
+  onSelect,
+  onContextMenu,
   onDropUpload,
   formatSize,
   getFileIcon,
@@ -449,7 +539,10 @@ function DraggableFileRow({
   renameValue: string;
   currentFolderId: string | null;
   isMoving: boolean;
+  isSelected: boolean;
+  onSelect: (id: string) => void;
   onFileClick: (file: FileItem) => void;
+  onContextMenu: (e: React.MouseEvent, item: FileItem) => void;
   onRenameStart: (id: string, name: string) => void;
   onRenameChange: (value: string) => void;
   onRenameSubmit: (id: string) => void;
@@ -524,9 +617,16 @@ function DraggableFileRow({
         (isDragging || isMoving) && "opacity-30",
         (isOver || nativeDragOver) &&
           item.isFolder &&
-          "bg-primary/10 ring-1 ring-inset ring-primary"
+          "bg-primary/10 ring-1 ring-inset ring-primary",
+        isSelected && "bg-accent/50"
       )}
-      onClick={() => !isDragging && onFileClick(item)}
+      onClick={() => {
+        if (!isDragging) onSelect(item.id);
+      }}
+      onDoubleClick={() => {
+        if (!isDragging) onFileClick(item);
+      }}
+      onContextMenu={(e) => onContextMenu(e, item)}
     >
       {getFileIcon(item)}
 
@@ -654,4 +754,160 @@ function DragOverlayIcon({ item }: { item: FileItem }) {
   if (item.mimeType === "application/pdf")
     return <FileText className={cn(className, "text-red-500")} />;
   return <FileIcon className={cn(className, "text-muted-foreground")} />;
+}
+
+// ─── FileContextMenu (Portal) ───
+
+function FileContextMenu({
+  contextMenu,
+  onClose,
+  onOpen,
+  onDownload,
+  onRename,
+  onMove,
+  onDelete,
+  onNewFolder,
+  onUpload,
+}: {
+  contextMenu: ContextMenuState;
+  onClose: () => void;
+  onOpen: (item: FileItem) => void;
+  onDownload: (item: FileItem) => void;
+  onRename: (item: FileItem) => void;
+  onMove: (item: FileItem) => void;
+  onDelete: (item: FileItem) => void;
+  onNewFolder: () => void;
+  onUpload: () => void;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // 뷰포트 경계 보정
+  const [position, setPosition] = useState({ x: contextMenu.x, y: contextMenu.y });
+
+  useEffect(() => {
+    const el = menuRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = contextMenu.x + rect.width > window.innerWidth
+      ? window.innerWidth - rect.width - 8
+      : contextMenu.x;
+    const y = contextMenu.y + rect.height > window.innerHeight
+      ? window.innerHeight - rect.height - 8
+      : contextMenu.y;
+    setPosition({ x, y });
+  }, [contextMenu.x, contextMenu.y]);
+
+  // 바깥 클릭 닫기
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  // ESC 닫기
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const { item } = contextMenu;
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      className="fixed z-50 min-w-[180px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+      style={{ left: position.x, top: position.y }}
+    >
+      {item ? (
+        <>
+          <ContextMenuButton
+            icon={item.isFolder ? FolderOpen : Eye}
+            label="열기"
+            shortcut="Enter"
+            onClick={() => onOpen(item)}
+          />
+          {!item.isFolder && (
+            <ContextMenuButton
+              icon={Download}
+              label="다운로드"
+              onClick={() => onDownload(item)}
+            />
+          )}
+          <div className="my-1 h-px bg-border" />
+          <ContextMenuButton
+            icon={Pencil}
+            label="이름 변경"
+            shortcut="F2"
+            onClick={() => onRename(item)}
+          />
+          <ContextMenuButton
+            icon={FolderInput}
+            label="이동"
+            onClick={() => onMove(item)}
+          />
+          <div className="my-1 h-px bg-border" />
+          <ContextMenuButton
+            icon={Trash2}
+            label="삭제"
+            shortcut="Del"
+            variant="destructive"
+            onClick={() => onDelete(item)}
+          />
+        </>
+      ) : (
+        <>
+          <ContextMenuButton
+            icon={FolderPlus}
+            label="새 폴더"
+            onClick={onNewFolder}
+          />
+          <ContextMenuButton
+            icon={Upload}
+            label="파일 업로드"
+            onClick={onUpload}
+          />
+        </>
+      )}
+    </div>,
+    document.body
+  );
+}
+
+// ─── ContextMenuButton ───
+
+function ContextMenuButton({
+  icon: Icon,
+  label,
+  shortcut,
+  variant,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  shortcut?: string;
+  variant?: "destructive";
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={cn(
+        "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+        variant === "destructive" && "text-destructive hover:text-destructive"
+      )}
+      onClick={onClick}
+    >
+      <Icon className="size-3.5" />
+      <span className="flex-1 text-left">{label}</span>
+      {shortcut && (
+        <span className="ml-auto text-xs text-muted-foreground">{shortcut}</span>
+      )}
+    </button>
+  );
 }
