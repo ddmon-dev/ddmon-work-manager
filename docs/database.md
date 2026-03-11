@@ -38,6 +38,9 @@ Admins = Better Auth user 테이블 (별도 admins 테이블 없음).
 | `mindnotes` | 마인드노트 | uuid | **하드** |
 | `memos` | 메모 (개인 메모장) | uuid | **하드** |
 | `business_info` | 사업자 정보 | uuid | — |
+| `library_boards` | 라이브러리 게시판 | uuid | 소프트 |
+| `library_documents` | 라이브러리 문서 | uuid | 소프트 (휴지통) |
+| `files` | 드라이브 파일/폴더 | uuid | 소프트 (휴지통) |
 
 ## 관계 구조
 
@@ -62,6 +65,10 @@ user ─────┬── todos (1:N, CASCADE)
           ├── mindnotes (1:N, CASCADE)
           ├── memos (1:N, CASCADE)
           └── session, account (1:N, CASCADE)
+
+library_boards ─── library_documents (1:N, RESTRICT)
+
+files ─── files (self-ref, folderId → RESTRICT)
 ```
 
 ## FK 삭제 전략
@@ -98,7 +105,7 @@ user ─────┬── todos (1:N, CASCADE)
 `deleted` boolean 컬럼 + `updated_at` 타임스탬프.
 모든 SELECT에서 `softDeleteFilter(table.deleted)` 적용 필수.
 
-대상: clients, client_memos, estimates, projects, project_payments, project_memos, user
+대상: clients, client_memos, estimates, projects, project_payments, project_memos, user, library_boards, library_documents, files
 
 ### 하드 삭제
 
@@ -156,9 +163,33 @@ user ─────┬── todos (1:N, CASCADE)
 - `duration_slots`: 기본 2 (1시간)
 - `(todo_id, block_date)` UNIQUE → upsert 패턴
 
+### 라이브러리 게시판 (library_boards)
+
+- `name`: 게시판 이름 (NOT NULL)
+- `description`: 설명 (nullable)
+- `sort_order`: 수동 정렬 순서 (기본 0)
+- `deleted`: 소프트 삭제 플래그
+
+### 라이브러리 문서 (library_documents)
+
+- `board_id`: NOT NULL FK → library_boards(id) ON DELETE RESTRICT
+- `title`: 문서 제목 (NOT NULL)
+- `content`: 문서 본문 (BlockNote JSON, nullable)
+- `author`: 작성자, `updated_by`: 최종 수정자
+- `deleted` + `deleted_at`: 휴지통 (소프트 삭제)
+
+### 파일 (files)
+
+- `name`: 파일/폴더 이름 (NOT NULL)
+- `s3_key`: 스토리지 상대 경로 (예: `files/uuid.ext`). 폴더는 null
+- `mime_type`, `size`: 파일 메타데이터
+- `folder_id`: self-referencing FK → files(id) ON DELETE RESTRICT. null이면 루트
+- `is_folder`: 폴더 여부 (기본 false). 폴더는 DB에만 존재 (스토리지에 물리 디렉토리 없음)
+- `deleted` + `deleted_at`: 휴지통 (소프트 삭제)
+
 ## 마이그레이션 관리
 
-마이그레이션 파일: `0000_initial` ~ `0004_add_project_schedules` (5개). 0000~0003은 초기 스키마, 0004는 프로젝트 일정 관련 테이블 추가.
+마이그레이션 파일: `0000_initial` ~ `0006_add_library_and_files` (7개). 0000~0003은 초기 스키마, 0004는 프로젝트 일정, 0006은 라이브러리/드라이브 테이블 추가.
 
 ### 스키마 변경 절차
 

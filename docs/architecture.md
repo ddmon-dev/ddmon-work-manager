@@ -16,6 +16,7 @@ src/
 │   ├── auth/           # 인증
 │   ├── dashboard/      # 대시보드
 │   ├── revenue/        # 매출 현황
+│   ├── library/        # 라이브러리 (보드/문서/드라이브/휴지통)
 │   ├── settings/       # 설정
 │   └── ui/             # 글로벌 UI (app-sidebar, 미니앱: todo-widget, mindnote-widget, memo-widget, calculator-widget)
 └── shared/             # 공유 레이어
@@ -46,6 +47,7 @@ RootLayout (Toaster, ThemeContext)
     ├── /schedules           → SchedulesPage
     ├── /revenue       → RevenuePage
     ├── /admins        → AdminsPage
+    ├── /library       → LibraryPage
     ├── /unauthorized  → UnauthorizedPage
     └── *              → NotFoundPage
 ```
@@ -236,12 +238,14 @@ src/
 │   ├── index.ts          # 라우트 조합
 │   ├── clients.ts, estimates.ts, projects.ts, project-schedules.ts, schedules.ts
 │   ├── todos.ts, mindnotes.ts, admins.ts, dashboard.ts, revenue.ts
+│   ├── library-boards.ts, library-documents.ts, files.ts, uploads.ts, trash.ts
 │   └── business-info.ts
 ├── lib/                  # 유틸리티
 │   ├── errors.ts         # ERRORS 상수, successResponse, errorResponse
 │   ├── pagination.ts     # parsePagination, calcOffset
 │   ├── query-helpers.ts  # softDeleteFilter, softDeletePayload, searchFilter, getBilledAmount, reorderSchema, executeReorder
 │   ├── number-generator.ts # 견적서/프로젝트 번호 생성
+│   ├── storage.ts        # 로컬 파일시스템 스토리지 (uploadFile, deleteFile, getFile)
 │   ├── types.ts          # AppVariables (AuthUser, AuthSession)
 │   └── constants.ts      # SERVER_PAGE_SIZE_DEFAULT
 └── db/
@@ -269,7 +273,7 @@ src/
 
 모듈별 Zod 스키마. 클라이언트 폼 검증과 서버 입력 검증에 동시 사용.
 
-파일: `admins.ts`, `clients.ts`, `estimates.ts`, `mindnotes.ts`, `projects.ts`, `project-schedules.ts`, `schedules.ts`, `todos.ts`
+파일: `admins.ts`, `clients.ts`, `estimates.ts`, `library.ts`, `mindnotes.ts`, `projects.ts`, `project-schedules.ts`, `schedules.ts`, `todos.ts`
 
 ### types (`@packages/types`)
 

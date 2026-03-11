@@ -8,6 +8,7 @@ import {
   FolderPlus,
   Folder,
   FolderOpen,
+  CornerLeftUp,
   Eye,
   Download,
   Upload,
@@ -61,7 +62,7 @@ import { TrashView } from "./trash";
 import { toast } from "sonner";
 import { useDrive, type ContextMenuState } from "./use-drive";
 import { useUploadFile } from "./api";
-import type { FileItem, FileSearchItem } from "./types";
+import type { FileItem } from "./types";
 import type { LucideIcon } from "lucide-react";
 
 export function Drive() {
@@ -70,17 +71,15 @@ export function Drive() {
     showTrash,
     sort,
     order,
-    searchTerm,
     previewFile,
     newFolderName,
     showNewFolder,
     renamingId,
     renameValue,
-    filteredItems,
+    items,
     isLoading,
     moveTargetId,
     breadcrumbs,
-    setSearchTerm,
     setPreviewFile,
     setNewFolderName,
     setShowNewFolder,
@@ -101,7 +100,6 @@ export function Drive() {
     closeContextMenu,
     selectedId,
     contextMenu,
-    isSearchMode,
     setSelectedId,
     formatSize,
     getFileIcon,
@@ -141,14 +139,14 @@ export function Drive() {
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      const item = filteredItems?.find((i) => i.id === event.active.id);
+      const item = items?.find((i) => i.id === event.active.id);
       if (item) {
         setDraggedItem(item);
         const width = event.active.rect.current?.initial?.width;
         if (width) setDragRowWidth(width);
       }
     },
-    [filteredItems]
+    [items]
   );
 
   const handleDragEnd = useCallback(
@@ -198,8 +196,8 @@ export function Drive() {
       ) : (
         <FileUpload folderId={currentFolderId}>
           <div className="flex h-full flex-col">
-            {/* 브레드크럼 (검색 모드에서는 숨김) */}
-            {!isSearchMode && breadcrumbs.length > 1 && (
+            {/* 브레드크럼 */}
+            {breadcrumbs.length > 1 && (
               <div className="flex items-center gap-1 border-b px-4 py-1.5 text-sm">
                 {breadcrumbs.map((crumb, index) => (
                   <Fragment key={crumb.id ?? "root"}>
@@ -224,12 +222,6 @@ export function Drive() {
 
             {/* 상단 툴바 */}
             <div className="flex items-center gap-2 border-b px-4 py-2">
-              <Input
-                placeholder="파일 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-8 max-w-xs"
-              />
               <div className="ml-auto flex gap-1">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -275,14 +267,16 @@ export function Drive() {
                 if (e.target === e.currentTarget) openContextMenu(e, null);
               }}
             >
-              {/* ../ 상위 폴더 행 (검색 모드에서는 숨김) */}
-              {!isSearchMode && !isLoading && currentFolderId && (
+              {/* ../ 상위 폴더 행 */}
+              {!isLoading && currentFolderId && (
                 <ParentFolderRow
                   parentFolderId={
                     breadcrumbs.length >= 2
                       ? breadcrumbs[breadcrumbs.length - 2].id
                       : null
                   }
+                  isSelected={selectedId === "parent-folder"}
+                  onSelect={() => setSelectedId("parent-folder")}
                   onClick={() =>
                     navigateToBreadcrumb(breadcrumbs.length - 2)
                   }
@@ -329,7 +323,7 @@ export function Drive() {
                     <Skeleton key={i} className="h-10 w-full" />
                   ))}
                 </div>
-              ) : filteredItems?.length === 0 ? (
+              ) : items?.length === 0 ? (
                 <Empty className="h-full border-0">
                   <EmptyHeader>
                     <EmptyMedia variant="icon">
@@ -354,7 +348,7 @@ export function Drive() {
                 </Empty>
               ) : (
                 <div>
-                  {filteredItems?.map((item) => (
+                  {items?.map((item) => (
                     <DraggableFileRow
                       key={item.id}
                       item={item}
@@ -363,7 +357,6 @@ export function Drive() {
                       currentFolderId={currentFolderId}
                       isMoving={item.id === movingId}
                       isSelected={selectedId === item.id}
-                      isSearchMode={isSearchMode}
                       onSelect={setSelectedId}
                       onFileClick={handleFileClick}
                       onContextMenu={openContextMenu}
@@ -530,20 +523,18 @@ function DraggableFileRow({
   onDelete,
   isMoving,
   isSelected,
-  isSearchMode,
   onSelect,
   onContextMenu,
   onDropUpload,
   formatSize,
   getFileIcon,
 }: {
-  item: FileItem | FileSearchItem;
+  item: FileItem;
   renamingId: string | null;
   renameValue: string;
   currentFolderId: string | null;
   isMoving: boolean;
   isSelected: boolean;
-  isSearchMode: boolean;
   onSelect: (id: string) => void;
   onFileClick: (file: FileItem) => void;
   onContextMenu: (e: React.MouseEvent, item: FileItem) => void;
@@ -650,14 +641,7 @@ function DraggableFileRow({
             onBlur={() => onRenameSubmit(item.id)}
           />
         ) : (
-          <>
-            <p className="truncate text-sm">{item.name}</p>
-            {isSearchMode && "folderPath" in item && (
-              <p className="truncate text-xs text-muted-foreground">
-                {(item as FileSearchItem).folderPath}
-              </p>
-            )}
-          </>
+          <p className="truncate text-sm">{item.name}</p>
         )}
       </div>
 
@@ -730,9 +714,13 @@ function DraggableFileRow({
 
 function ParentFolderRow({
   parentFolderId,
+  isSelected,
+  onSelect,
   onClick,
 }: {
   parentFolderId: string | null;
+  isSelected: boolean;
+  onSelect: () => void;
   onClick: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -745,12 +733,16 @@ function ParentFolderRow({
       ref={setNodeRef}
       className={cn(
         "flex cursor-pointer items-center gap-3 border-b px-4 py-2.5 text-muted-foreground hover:bg-accent/50",
-        isOver && "bg-primary/10 ring-1 ring-inset ring-primary"
+        isOver && "bg-primary/10 ring-1 ring-inset ring-primary",
+        isSelected && "bg-accent/50"
       )}
-      onClick={onClick}
+      onClick={onSelect}
+      onDoubleClick={onClick}
     >
-      <Folder className="size-5" />
-      <span className="text-sm">..</span>
+      <CornerLeftUp className="size-5" />
+      <span className="flex-1 text-sm">..</span>
+      {/* ...버튼 자리 — 다른 행과 높이 맞춤 */}
+      <div className="size-9" />
     </div>
   );
 }

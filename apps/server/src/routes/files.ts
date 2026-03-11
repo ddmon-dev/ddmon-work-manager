@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, eq, isNull, ilike, asc, desc, sql } from "drizzle-orm";
+import { and, eq, isNull, asc, desc } from "drizzle-orm";
 import { db } from "../db";
 import { files } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
@@ -48,53 +48,6 @@ app.get("/", async (c) => {
   });
 
   return successResponse(c, { items });
-});
-
-// GET /search — 전체 하위 폴더 재귀 검색
-app.get("/search", async (c) => {
-  const search = c.req.query("q")?.trim();
-  if (!search) return successResponse(c, { items: [] });
-
-  // 검색 결과 + 각 항목의 폴더 경로를 CTE 없이 단순 조회
-  const items = await db.query.files.findMany({
-    where: and(
-      ilike(files.name, `%${search}%`),
-      eq(files.deleted, false)
-    ),
-    orderBy: [desc(files.isFolder), asc(files.name)],
-  });
-
-  // 경로 조립: 각 항목의 folderId를 따라 조상 폴더명 수집
-  const folderCache = new Map<string, { name: string; folderId: string | null }>();
-
-  async function getFolderPath(folderId: string | null): Promise<string> {
-    const segments: string[] = [];
-    let currentId = folderId;
-    while (currentId) {
-      let folder = folderCache.get(currentId);
-      if (!folder) {
-        const row = await db.query.files.findFirst({
-          where: eq(files.id, currentId),
-          columns: { name: true, folderId: true },
-        });
-        if (!row) break;
-        folder = { name: row.name, folderId: row.folderId };
-        folderCache.set(currentId, folder);
-      }
-      segments.unshift(folder.name);
-      currentId = folder.folderId;
-    }
-    return segments.length > 0 ? `전체 파일 / ${segments.join(" / ")}` : "전체 파일";
-  }
-
-  const results = await Promise.all(
-    items.map(async (item) => ({
-      ...item,
-      folderPath: await getFolderPath(item.folderId),
-    }))
-  );
-
-  return successResponse(c, { items: results });
 });
 
 // POST /upload — 파일 업로드

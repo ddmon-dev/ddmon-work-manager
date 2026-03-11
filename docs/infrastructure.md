@@ -13,6 +13,9 @@ npm workspaces 기반 모노레포.
 │   ├── types/           # 상수, 타입 정의
 │   └── utils/           # 금액 계산 등 유틸리티
 ├── scripts/             # 운영 스크립트
+├── storage/             # 로컬 파일 스토리지 (gitignore)
+│   ├── files/           # 드라이브 파일 (flat, UUID 기반)
+│   └── editor/          # 에디터 첨부 이미지 (flat, UUID 기반)
 ├── .env                 # 프로젝트명 + DB 크레덴셜 (gitignore)
 ├── .env.example         # .env 템플릿
 ├── docker-compose.yml   # 개발환경 Docker
@@ -40,6 +43,15 @@ POSTGRES_USER=your_db_user
 POSTGRES_PASSWORD=your_db_password
 POSTGRES_DB=work_manager
 ```
+
+### 파일 스토리지
+
+로컬 파일시스템 기반. `STORAGE_DIR` 환경변수로 경로 지정 (기본값: `../../storage`).
+
+- 구현: `apps/server/src/lib/storage.ts` — `uploadFile`, `deleteFile`, `getFile`, `ensureStorageDir`
+- 서버 시작 시 `ensureStorageDir()`로 디렉토리 자동 생성
+- 파일은 UUID 기반으로 flat 저장. 폴더 계층은 DB에서만 관리
+- `storage/` 디렉토리는 `.gitignore`에 포함
 
 ## 개발환경
 
@@ -71,6 +83,7 @@ PORT=8001
 BETTER_AUTH_SECRET=dev-secret-do-not-use-in-production
 BETTER_AUTH_URL=http://localhost:8001
 CLIENT_URL=http://localhost:8000
+STORAGE_DIR=../../storage
 ```
 
 `.env.development.example`을 복사하여 생성. DB 크레덴셜은 `.env`와 일치시킬 것.
@@ -139,6 +152,7 @@ PORT=7070
 NODE_ENV=production
 SERVE_STATIC=true
 STATIC_DIR=../../apps/client/dist-production
+STORAGE_DIR=../../storage
 ```
 
 `.env.production.example`을 복사하여 생성. DB 크레덴셜은 `.env`와 일치시킬 것.
@@ -199,7 +213,7 @@ Drizzle Kit 사용. 설정 파일: `apps/server/drizzle.config.ts`
 출력:  apps/server/drizzle/migrations/
 ```
 
-`0000_initial` ~ `0004_add_project_schedules` (5개).
+`0000_initial` ~ `0006_add_library_and_files` (7개).
 
 ### 새 마이그레이션 생성
 

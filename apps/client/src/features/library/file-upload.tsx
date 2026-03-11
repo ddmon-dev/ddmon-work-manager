@@ -59,28 +59,32 @@ export function FileUpload({ folderId, children }: FileUploadProps) {
     e.preventDefault();
     dragCounter.current = 0;
     setIsDragging(false);
+    // 폴더 행에서 stopPropagation 된 경우 여기까지 오지 않음
+    // 폴더가 아닌 영역에 드롭된 경우에만 현재 폴더로 업로드
     if (e.dataTransfer.files.length > 0) {
       handleFiles(e.dataTransfer.files);
     }
   };
 
+  // 캡처 단계에서 드래그 상태 정리 (자식의 stopPropagation과 무관하게 항상 실행)
+  const handleDropCapture = () => {
+    dragCounter.current = 0;
+    setIsDragging(false);
+  };
+
   return (
     <div
-      className="relative flex-1"
+      className={cn(
+        "relative flex-1 transition-colors",
+        isDragging && "bg-primary/5 ring-2 ring-inset ring-primary/30"
+      )}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
+      onDropCapture={handleDropCapture}
       onDrop={handleDrop}
     >
       {children}
-      {isDragging && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/5">
-          <div className="flex flex-col items-center gap-2 text-primary">
-            <Upload className="size-8" />
-            <p className="text-sm font-medium">파일을 여기에 놓으세요</p>
-          </div>
-        </div>
-      )}
       {uploadProgress && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-lg border bg-background px-4 py-2 shadow-md">
           <Spinner className="size-4" />

@@ -10,13 +10,12 @@ import { toast } from "sonner";
 import {
   useFilesQuery,
   useFilePathQuery,
-  useFileSearchQuery,
   useCreateFolder,
   useDeleteFile,
   useRenameFile,
   useMoveFile,
 } from "./api";
-import type { FileItem, FileSearchItem } from "./types";
+import type { FileItem } from "./types";
 
 interface Breadcrumb {
   id: string | null;
@@ -34,7 +33,6 @@ export function useDrive() {
   const [showTrash, setShowTrash] = useState(false);
   const [sort, setSort] = useState<"name" | "date" | "size">("name");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
-  const [searchTerm, setSearchTerm] = useState("");
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
   const [newFolderName, setNewFolderName] = useState("");
   const [showNewFolder, setShowNewFolder] = useState(false);
@@ -43,22 +41,12 @@ export function useDrive() {
   const [moveTargetId, setMoveTargetId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  // 검색 디바운스 (300ms)
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  const isSearchMode = debouncedSearch.length > 0;
 
   const { data: items, isLoading } = useFilesQuery(
     showTrash ? null : currentFolderId,
     sort,
     order
   );
-  const { data: searchResults, isLoading: isSearchLoading } = useFileSearchQuery(debouncedSearch);
   const { data: folderPath } = useFilePathQuery(currentFolderId);
 
   const breadcrumbs: Breadcrumb[] = currentFolderId && folderPath
@@ -68,10 +56,6 @@ export function useDrive() {
   const deleteFile = useDeleteFile();
   const renameFile = useRenameFile();
   const moveFile = useMoveFile();
-
-  const filteredItems: (FileItem | FileSearchItem)[] | undefined = isSearchMode
-    ? searchResults
-    : items;
 
   const handleNavigate = useCallback(
     (folderId: string | null) => {
@@ -194,7 +178,7 @@ export function useDrive() {
         case "F2": {
           if (selectedId) {
             e.preventDefault();
-            const item = filteredItems?.find((i) => i.id === selectedId);
+            const item = items?.find((i) => i.id === selectedId);
             if (item) {
               setRenamingId(item.id);
               setRenameValue(item.name);
@@ -205,7 +189,7 @@ export function useDrive() {
         case "Enter": {
           if (selectedId) {
             e.preventDefault();
-            const item = filteredItems?.find((i) => i.id === selectedId);
+            const item = items?.find((i) => i.id === selectedId);
             if (item) handleFileClick(item);
           }
           break;
@@ -221,7 +205,7 @@ export function useDrive() {
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [selectedId, renamingId, filteredItems, handleDelete, handleFileClick, closeContextMenu]);
+  }, [selectedId, renamingId, items, handleDelete, handleFileClick, closeContextMenu]);
 
   return {
     // 상태
@@ -229,21 +213,18 @@ export function useDrive() {
     showTrash,
     sort,
     order,
-    searchTerm,
     previewFile,
     newFolderName,
     showNewFolder,
     renamingId,
     renameValue,
-    filteredItems,
-    isLoading: isSearchMode ? isSearchLoading : isLoading,
-    isSearchMode,
+    items,
+    isLoading,
     moveTargetId,
     breadcrumbs,
     selectedId,
     contextMenu,
     // 세터
-    setSearchTerm,
     setPreviewFile,
     setNewFolderName,
     setShowNewFolder,

@@ -72,7 +72,6 @@ export const queryKeys = {
     all: ["files"] as const,
     list: (params: Params) => ["files", "list", params] as const,
     path: (id: string) => ["files", "path", id] as const,
-    search: (q: string) => ["files", "search", q] as const,
   },
   trash: {
     all: ["trash"] as const,

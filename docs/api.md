@@ -226,6 +226,59 @@ userId 필터링: 모든 메모 API는 `user.id`로 자동 필터링 (사용자�
 - 연도별 요약 카드: 매출액·수금액 모두 **프로젝트 계약일 연도** 기준으로 집계
 - 월별 차트: 매출액은 계약일, 수금액은 **실제 입금일** 기준 (현금 흐름 반영)
 
+### Library Boards (`/api/library-boards`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/library-boards` | 목록 (sortOrder 정렬, 비페이지네이션) |
+| POST | `/library-boards` | 생성 |
+| PATCH | `/library-boards/:id` | 수정 |
+| DELETE | `/library-boards/:id` | 소프트 삭제 |
+| PUT | `/library-boards/reorder` | 순서 변경 (`{ ids: string[] }`) |
+
+### Library Documents (`/api/library-documents`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/library-documents` | 목록 (`?boardId=` 필수, updatedAt desc, content 제외) |
+| POST | `/library-documents` | 생성 |
+| GET | `/library-documents/:id` | 상세 (content 포함) |
+| PATCH | `/library-documents/:id` | 수정 (title, content 부분 수정 가능) |
+| DELETE | `/library-documents/:id` | 휴지통으로 이동 |
+| PATCH | `/library-documents/:id/move` | 게시판 이동 (`{ boardId }`) |
+| PATCH | `/library-documents/:id/restore` | 휴지통에서 복원 |
+| DELETE | `/library-documents/:id/permanent` | 영구 삭제 |
+
+### Files (`/api/files`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/files` | 목록 (`?folderId=&sort=&order=`, null이면 루트) |
+| POST | `/files/upload` | 파일 업로드 (multipart, `file` + `folderId`) |
+| POST | `/files/folder` | 폴더 생성 |
+| GET | `/files/:id/download` | 파일 다운로드 |
+| PATCH | `/files/:id` | 이름 변경 |
+| PATCH | `/files/:id/move` | 폴더 이동 (`{ folderId }`) |
+| DELETE | `/files/:id` | 휴지통으로 이동 |
+| PATCH | `/files/:id/restore` | 휴지통에서 복원 |
+| DELETE | `/files/:id/permanent` | 영구 삭제 (스토리지 파일도 삭제) |
+
+정렬 옵션: `sort=name|date|size`, `order=asc|desc`. 폴더가 항상 먼저 표시.
+
+### Uploads (`/api/uploads`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| POST | `/uploads` | 에디터 이미지 업로드 (BlockNote용, multipart) |
+| GET | `/uploads/:key` | 업로드된 파일 서빙 (immutable 캐시) |
+
+### Trash (`/api/trash`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/trash` | 휴지통 목록 (문서 + 파일 통합, deletedAt desc) |
+| DELETE | `/trash/empty` | 휴지통 비우기 (스토리지 파일 + DB 영구 삭제) |
+
 ### Business Info (`/api/business-info`)
 
 | Method | Path | 설명 |
