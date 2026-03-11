@@ -10,12 +10,13 @@ import { toast } from "sonner";
 import {
   useFilesQuery,
   useFilePathQuery,
+  useFileSearchQuery,
   useCreateFolder,
   useDeleteFile,
   useRenameFile,
   useMoveFile,
 } from "./api";
-import type { FileItem } from "./types";
+import type { FileItem, FileSearchItem } from "./types";
 
 interface Breadcrumb {
   id: string | null;
@@ -42,12 +43,22 @@ export function useDrive() {
   const [moveTargetId, setMoveTargetId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // 검색 디바운스 (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const isSearchMode = debouncedSearch.length > 0;
 
   const { data: items, isLoading } = useFilesQuery(
     showTrash ? null : currentFolderId,
     sort,
     order
   );
+  const { data: searchResults, isLoading: isSearchLoading } = useFileSearchQuery(debouncedSearch);
   const { data: folderPath } = useFilePathQuery(currentFolderId);
 
   const breadcrumbs: Breadcrumb[] = currentFolderId && folderPath
@@ -58,10 +69,8 @@ export function useDrive() {
   const renameFile = useRenameFile();
   const moveFile = useMoveFile();
 
-  const filteredItems = searchTerm
-    ? items?.filter((item) =>
-        item.name.normalize("NFC").toLowerCase().includes(searchTerm.normalize("NFC").toLowerCase())
-      )
+  const filteredItems: (FileItem | FileSearchItem)[] | undefined = isSearchMode
+    ? searchResults
     : items;
 
   const handleNavigate = useCallback(
@@ -227,7 +236,8 @@ export function useDrive() {
     renamingId,
     renameValue,
     filteredItems,
-    isLoading,
+    isLoading: isSearchMode ? isSearchLoading : isLoading,
+    isSearchMode,
     moveTargetId,
     breadcrumbs,
     selectedId,

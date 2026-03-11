@@ -61,7 +61,7 @@ import { TrashView } from "./trash";
 import { toast } from "sonner";
 import { useDrive, type ContextMenuState } from "./use-drive";
 import { useUploadFile } from "./api";
-import type { FileItem } from "./types";
+import type { FileItem, FileSearchItem } from "./types";
 import type { LucideIcon } from "lucide-react";
 
 export function Drive() {
@@ -101,6 +101,7 @@ export function Drive() {
     closeContextMenu,
     selectedId,
     contextMenu,
+    isSearchMode,
     setSelectedId,
     formatSize,
     getFileIcon,
@@ -197,8 +198,8 @@ export function Drive() {
       ) : (
         <FileUpload folderId={currentFolderId}>
           <div className="flex h-full flex-col">
-            {/* 브레드크럼 */}
-            {breadcrumbs.length > 1 && (
+            {/* 브레드크럼 (검색 모드에서는 숨김) */}
+            {!isSearchMode && breadcrumbs.length > 1 && (
               <div className="flex items-center gap-1 border-b px-4 py-1.5 text-sm">
                 {breadcrumbs.map((crumb, index) => (
                   <Fragment key={crumb.id ?? "root"}>
@@ -274,8 +275,8 @@ export function Drive() {
                 if (e.target === e.currentTarget) openContextMenu(e, null);
               }}
             >
-              {/* ../ 상위 폴더 행 (하위 폴더에서는 항상 표시) */}
-              {!isLoading && currentFolderId && (
+              {/* ../ 상위 폴더 행 (검색 모드에서는 숨김) */}
+              {!isSearchMode && !isLoading && currentFolderId && (
                 <ParentFolderRow
                   parentFolderId={
                     breadcrumbs.length >= 2
@@ -362,6 +363,7 @@ export function Drive() {
                       currentFolderId={currentFolderId}
                       isMoving={item.id === movingId}
                       isSelected={selectedId === item.id}
+                      isSearchMode={isSearchMode}
                       onSelect={setSelectedId}
                       onFileClick={handleFileClick}
                       onContextMenu={openContextMenu}
@@ -528,18 +530,20 @@ function DraggableFileRow({
   onDelete,
   isMoving,
   isSelected,
+  isSearchMode,
   onSelect,
   onContextMenu,
   onDropUpload,
   formatSize,
   getFileIcon,
 }: {
-  item: FileItem;
+  item: FileItem | FileSearchItem;
   renamingId: string | null;
   renameValue: string;
   currentFolderId: string | null;
   isMoving: boolean;
   isSelected: boolean;
+  isSearchMode: boolean;
   onSelect: (id: string) => void;
   onFileClick: (file: FileItem) => void;
   onContextMenu: (e: React.MouseEvent, item: FileItem) => void;
@@ -646,7 +650,14 @@ function DraggableFileRow({
             onBlur={() => onRenameSubmit(item.id)}
           />
         ) : (
-          <p className="truncate text-sm">{item.name}</p>
+          <>
+            <p className="truncate text-sm">{item.name}</p>
+            {isSearchMode && "folderPath" in item && (
+              <p className="truncate text-xs text-muted-foreground">
+                {(item as FileSearchItem).folderPath}
+              </p>
+            )}
+          </>
         )}
       </div>
 

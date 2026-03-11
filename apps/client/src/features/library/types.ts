@@ -41,6 +41,11 @@ export interface FileItem {
   updatedAt: string;
 }
 
+// 검색 결과 (folderPath 포함)
+export interface FileSearchItem extends FileItem {
+  folderPath: string;
+}
+
 // 휴지통 아이템
 export interface TrashItem {
   id: string;

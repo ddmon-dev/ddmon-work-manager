@@ -6,6 +6,7 @@ import type {
   LibraryDocumentSummary,
   LibraryDocument,
   FileItem,
+  FileSearchItem,
   TrashItem,
 } from "./types";
 import type {
@@ -167,6 +168,28 @@ export function useFilesQuery(
           order,
         })
         .then((d) => d.items),
+  });
+}
+
+export function useFilePathQuery(folderId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.files.path(folderId ?? ""),
+    queryFn: () =>
+      api
+        .get<{ path: { id: string; name: string }[] }>(`/files/${folderId}/path`)
+        .then((d) => d.path),
+    enabled: !!folderId,
+  });
+}
+
+export function useFileSearchQuery(search: string) {
+  return useQuery({
+    queryKey: queryKeys.files.search(search),
+    queryFn: () =>
+      api
+        .get<{ items: FileSearchItem[] }>("/files/search", { q: search })
+        .then((d) => d.items),
+    enabled: search.length > 0,
   });
 }
 
