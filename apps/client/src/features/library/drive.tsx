@@ -185,6 +185,7 @@ export function Drive() {
           showTrash
           onTrashClick={() => setShowTrash(true)}
           isTrashActive={showTrash}
+          onContextMenu={openContextMenu}
         />
       </div>
 
