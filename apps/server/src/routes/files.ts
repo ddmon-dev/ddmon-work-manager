@@ -5,9 +5,22 @@ import { files } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { fileRenameSchema, folderCreateSchema } from "@packages/schemas";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { uploadFile, deleteFile, getFile } from "../lib/storage";
+import { uploadFile, deleteFile, getFile, STORAGE_CONFIG } from "../lib/storage";
 import type { AppVariables } from "../lib/types";
 import { randomUUID } from "crypto";
+
+async function isDescendant(parentId: string | null, ancestorId: string): Promise<boolean> {
+  let currentId = parentId;
+  while (currentId) {
+    if (currentId === ancestorId) return true;
+    const folder = await db.query.files.findFirst({
+      where: eq(files.id, currentId),
+      columns: { folderId: true },
+    });
+    currentId = folder?.folderId ?? null;
+  }
+  return false;
+}
 
 const app = new Hono<{ Variables: AppVariables }>();
 app.use("*", requireAuth);
@@ -49,23 +62,34 @@ app.post("/upload", async (c) => {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  if (buffer.length > STORAGE_CONFIG.MAX_FILE_SIZE_MB * 1024 * 1024) {
+    return errorResponse(c, ERRORS.FILE_TOO_LARGE, 400, `파일 크기가 ${STORAGE_CONFIG.MAX_FILE_SIZE_MB}MB를 초과합니다.`);
+  }
+
   const ext = file.name.includes(".") ? file.name.split(".").pop() : "";
   const uuid = randomUUID();
   const s3Key = `files/${uuid}${ext ? `.${ext}` : ""}`;
 
   await uploadFile(s3Key, buffer, file.type);
 
-  const [created] = await db
-    .insert(files)
-    .values({
-      name: file.name,
-      s3Key,
-      mimeType: file.type,
-      size: file.size,
-      folderId,
-      author: user.name ?? undefined,
-    })
-    .returning();
+  let created;
+  try {
+    [created] = await db
+      .insert(files)
+      .values({
+        name: file.name,
+        s3Key,
+        mimeType: file.type,
+        size: file.size,
+        folderId,
+        author: user.name ?? undefined,
+      })
+      .returning();
+  } catch (err) {
+    await deleteFile(s3Key);
+    throw err;
+  }
 
   return successResponse(c, created, 201);
 });
@@ -130,6 +154,14 @@ app.patch("/:id/move", async (c) => {
   const id = c.req.param("id");
   const { folderId } = (await c.req.json()) as { folderId: string | null };
 
+  if (id === folderId) {
+    return errorResponse(c, ERRORS.VALIDATION, 400, "자기 자신으로 이동할 수 없습니다.");
+  }
+
+  if (folderId && (await isDescendant(folderId, id))) {
+    return errorResponse(c, ERRORS.CIRCULAR_REFERENCE, 400);
+  }
+
   const [updated] = await db
     .update(files)
     .set({ folderId, updatedAt: new Date() })
@@ -177,11 +209,15 @@ app.delete("/:id/permanent", async (c) => {
   });
   if (!file) return errorResponse(c, ERRORS.NOT_FOUND, 404);
 
-  if (file.s3Key) {
-    await deleteFile(file.s3Key);
-  }
-
   await db.delete(files).where(eq(files.id, id));
+
+  if (file.s3Key) {
+    try {
+      await deleteFile(file.s3Key);
+    } catch (err) {
+      console.warn(`[Storage] Failed to delete file: ${file.s3Key}`, err);
+    }
+  }
 
   return successResponse(c, { id });
 });

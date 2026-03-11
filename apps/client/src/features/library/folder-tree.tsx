@@ -12,7 +12,7 @@ import type { FileItem } from "./types";
 
 interface FolderTreeProps {
   currentFolderId: string | null;
-  onNavigate: (folderId: string | null) => void;
+  onNavigate: (folderId: string | null, folderName?: string) => void;
   showTrash?: boolean;
   onTrashClick?: () => void;
   isTrashActive?: boolean;
@@ -71,7 +71,7 @@ function FolderChildren({
 }: {
   folderId: string | null;
   currentFolderId: string | null;
-  onNavigate: (id: string | null) => void;
+  onNavigate: (id: string | null, name?: string) => void;
   depth: number;
 }) {
   const { data: items } = useFilesQuery(folderId);
@@ -102,7 +102,7 @@ function FolderNode({
 }: {
   folder: FileItem;
   currentFolderId: string | null;
-  onNavigate: (id: string | null) => void;
+  onNavigate: (id: string | null, name?: string) => void;
   depth: number;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -124,7 +124,7 @@ function FolderNode({
         expandable
         expanded={expanded}
         onToggle={() => setExpanded(!expanded)}
-        onClick={() => onNavigate(folder.id)}
+        onClick={() => onNavigate(folder.id, folder.name)}
       />
       {expanded && (
         <FolderChildren

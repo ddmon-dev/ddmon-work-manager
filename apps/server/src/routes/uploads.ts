@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { requireAuth } from "../middleware/auth";
-import { uploadFile } from "../lib/storage";
+import { uploadFile, STORAGE_CONFIG } from "../lib/storage";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import type { AppVariables } from "../lib/types";
 import { randomUUID } from "crypto";
@@ -18,6 +18,11 @@ app.post("/", async (c) => {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  if (buffer.length > STORAGE_CONFIG.MAX_EDITOR_IMAGE_SIZE_MB * 1024 * 1024) {
+    return errorResponse(c, ERRORS.FILE_TOO_LARGE, 400, `파일 크기가 ${STORAGE_CONFIG.MAX_EDITOR_IMAGE_SIZE_MB}MB를 초과합니다.`);
+  }
+
   const ext = file.name.includes(".") ? file.name.split(".").pop() : "";
   const uuid = randomUUID();
   const s3Key = `editor/${uuid}${ext ? `.${ext}` : ""}`;

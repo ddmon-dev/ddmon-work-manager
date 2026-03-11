@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import {
   File as FileIcon,
-  Folder,
   FolderPlus,
+  Folder,
   Download,
   MoreHorizontal,
   Pencil,
   Trash2,
-  Image,
-  FileText,
   ArrowUpDown,
+  FolderInput,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import {
@@ -18,6 +18,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 import {
   Empty,
@@ -28,110 +35,51 @@ import {
 } from "@/shared/ui/empty";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/utils/classnames";
-import { toast } from "sonner";
-import {
-  useFilesQuery,
-  useCreateFolder,
-  useDeleteFile,
-  useRenameFile,
-} from "./api";
 import { FileUpload, UploadButton } from "./file-upload";
 import { FolderTree } from "./folder-tree";
 import { FilePreview } from "./file-preview";
 import { TrashView } from "./trash";
-import type { FileItem } from "./types";
+import { useDrive } from "./use-drive";
 
 export function Drive() {
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  const [showTrash, setShowTrash] = useState(false);
-  const [sort, setSort] = useState<"name" | "date" | "size">("name");
-  const [order, setOrder] = useState<"asc" | "desc">("asc");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
-  const [newFolderName, setNewFolderName] = useState("");
-  const [showNewFolder, setShowNewFolder] = useState(false);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
-
-  const { data: items, isLoading } = useFilesQuery(
-    showTrash ? null : currentFolderId,
+  const {
+    currentFolderId,
+    showTrash,
     sort,
-    order
+    order,
+    searchTerm,
+    previewFile,
+    newFolderName,
+    showNewFolder,
+    renamingId,
+    renameValue,
+    filteredItems,
+    isLoading,
+    moveTargetId,
+    breadcrumbs,
+    setSearchTerm,
+    setPreviewFile,
+    setNewFolderName,
+    setShowNewFolder,
+    setRenamingId,
+    setRenameValue,
+    setShowTrash,
+    setMoveTargetId,
+    handleNavigate,
+    navigateToBreadcrumb,
+    handleCreateFolder,
+    handleDelete,
+    handleRename,
+    handleFileClick,
+    toggleSort,
+    handleMove,
+    formatSize,
+    getFileIcon,
+  } = useDrive();
+
+  const [selectedMoveFolder, setSelectedMoveFolder] = useState<string | null>(
+    null
   );
-  const createFolder = useCreateFolder();
-  const deleteFile = useDeleteFile();
-  const renameFile = useRenameFile();
-
-  const filteredItems = searchTerm
-    ? items?.filter((item) =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : items;
-
-  const handleNavigate = (folderId: string | null) => {
-    setCurrentFolderId(folderId);
-    setShowTrash(false);
-  };
-
-  const handleCreateFolder = async () => {
-    if (!newFolderName.trim()) return;
-    await createFolder.mutateAsync({
-      name: newFolderName.trim(),
-      folderId: currentFolderId,
-    });
-    setNewFolderName("");
-    setShowNewFolder(false);
-  };
-
-  const handleDelete = async (id: string) => {
-    await deleteFile.mutateAsync(id);
-    toast.success("휴지통으로 이동했습니다.");
-  };
-
-  const handleRename = async (id: string) => {
-    if (!renameValue.trim()) return;
-    await renameFile.mutateAsync({ id, name: renameValue.trim() });
-    setRenamingId(null);
-  };
-
-  const handleFileClick = (file: FileItem) => {
-    if (file.isFolder) {
-      setCurrentFolderId(file.id);
-      return;
-    }
-    const isImage = file.mimeType?.startsWith("image/");
-    const isPdf = file.mimeType === "application/pdf";
-    if (isImage || isPdf) {
-      setPreviewFile(file);
-    } else {
-      window.open(`/api/files/${file.id}/download`, "_blank");
-    }
-  };
-
-  const toggleSort = (field: "name" | "date" | "size") => {
-    if (sort === field) {
-      setOrder(order === "asc" ? "desc" : "asc");
-    } else {
-      setSort(field);
-      setOrder("asc");
-    }
-  };
-
-  const formatSize = (bytes: number | null) => {
-    if (!bytes) return "-";
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  const getFileIcon = (file: FileItem) => {
-    if (file.isFolder) return <Folder className="size-5 text-blue-500" />;
-    if (file.mimeType?.startsWith("image/"))
-      return <Image className="size-5 text-green-500" />;
-    if (file.mimeType === "application/pdf")
-      return <FileText className="size-5 text-red-500" />;
-    return <FileIcon className="size-5 text-muted-foreground" />;
-  };
 
   return (
     <div className="flex h-full">
@@ -154,6 +102,30 @@ export function Drive() {
       ) : (
         <FileUpload folderId={currentFolderId}>
           <div className="flex h-full flex-col">
+            {/* 브레드크럼 */}
+            {breadcrumbs.length > 1 && (
+              <div className="flex items-center gap-1 border-b px-4 py-1.5 text-sm">
+                {breadcrumbs.map((crumb, index) => (
+                  <Fragment key={crumb.id ?? "root"}>
+                    {index > 0 && (
+                      <ChevronRight className="size-3 text-muted-foreground" />
+                    )}
+                    <button
+                      className={cn(
+                        "hover:underline",
+                        index === breadcrumbs.length - 1
+                          ? "font-medium"
+                          : "text-muted-foreground"
+                      )}
+                      onClick={() => navigateToBreadcrumb(index)}
+                    >
+                      {crumb.name}
+                    </button>
+                  </Fragment>
+                ))}
+              </div>
+            )}
+
             {/* 상단 툴바 */}
             <div className="flex items-center gap-2 border-b px-4 py-2">
               <Input
@@ -162,7 +134,7 @@ export function Drive() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-8 max-w-xs"
               />
-              <div className="flex gap-1 ml-auto">
+              <div className="ml-auto flex gap-1">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-8">
@@ -199,7 +171,7 @@ export function Drive() {
 
             {/* 새 폴더 입력 */}
             {showNewFolder && (
-              <div className="flex items-center gap-2 border-b px-4 py-2 bg-muted/30">
+              <div className="flex items-center gap-2 border-b bg-muted/30 px-4 py-2">
                 <Folder className="size-5 text-blue-500" />
                 <Input
                   value={newFolderName}
@@ -213,7 +185,11 @@ export function Drive() {
                     if (e.key === "Escape") setShowNewFolder(false);
                   }}
                 />
-                <Button size="sm" className="h-8" onClick={handleCreateFolder}>
+                <Button
+                  size="sm"
+                  className="h-8"
+                  onClick={handleCreateFolder}
+                >
                   생성
                 </Button>
                 <Button
@@ -243,16 +219,27 @@ export function Drive() {
                     </EmptyMedia>
                     <EmptyTitle>파일이 없습니다</EmptyTitle>
                     <EmptyDescription>
-                      파일을 드래그 앤 드롭하거나 업로드 버튼을 사용하세요.
+                      파일을 드래그 앤 드롭하거나 아래 버튼을 사용하세요.
                     </EmptyDescription>
                   </EmptyHeader>
+                  <div className="flex gap-2">
+                    <UploadButton folderId={currentFolderId} />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowNewFolder(true)}
+                    >
+                      <FolderPlus className="mr-1 size-4" />
+                      새 폴더
+                    </Button>
+                  </div>
                 </Empty>
               ) : (
                 <div>
                   {filteredItems?.map((item) => (
                     <div
                       key={item.id}
-                      className="group flex items-center gap-3 border-b px-4 py-2.5 cursor-pointer hover:bg-accent/50"
+                      className="group flex cursor-pointer items-center gap-3 border-b px-4 py-2.5 hover:bg-accent/50"
                       onClick={() => handleFileClick(item)}
                     >
                       {getFileIcon(item)}
@@ -277,11 +264,11 @@ export function Drive() {
                         )}
                       </div>
 
-                      <span className="text-xs text-muted-foreground w-20 text-right shrink-0">
+                      <span className="w-20 shrink-0 text-right text-xs text-muted-foreground">
                         {item.isFolder ? "-" : formatSize(item.size)}
                       </span>
 
-                      <span className="text-xs text-muted-foreground w-24 text-right shrink-0">
+                      <span className="w-24 shrink-0 text-right text-xs text-muted-foreground">
                         {new Date(item.updatedAt).toLocaleDateString("ko-KR")}
                       </span>
 
@@ -306,6 +293,16 @@ export function Drive() {
                           >
                             <Pencil className="mr-2 size-3.5" />
                             이름 변경
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMoveTargetId(item.id);
+                              setSelectedMoveFolder(currentFolderId);
+                            }}
+                          >
+                            <FolderInput className="mr-2 size-3.5" />
+                            이동
                           </DropdownMenuItem>
                           {!item.isFolder && (
                             <DropdownMenuItem
@@ -346,6 +343,37 @@ export function Drive() {
         file={previewFile}
         onClose={() => setPreviewFile(null)}
       />
+
+      {/* 이동 Dialog */}
+      <Dialog
+        open={!!moveTargetId}
+        onOpenChange={(open) => !open && setMoveTargetId(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>이동할 폴더 선택</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-60 overflow-y-auto">
+            <FolderTree
+              currentFolderId={selectedMoveFolder}
+              onNavigate={setSelectedMoveFolder}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMoveTargetId(null)}>
+              취소
+            </Button>
+            <Button
+              onClick={() => {
+                handleMove(selectedMoveFolder);
+                setSelectedMoveFolder(null);
+              }}
+            >
+              이동
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

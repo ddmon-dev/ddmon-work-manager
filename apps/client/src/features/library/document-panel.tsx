@@ -4,7 +4,6 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Spinner } from "@/shared/ui/spinner";
 import { Sheet, SheetContent, SheetTitle } from "@/shared/ui/sheet";
-import { toast } from "sonner";
 import { useDocumentQuery, useUpdateDocument } from "./api";
 import { DocumentEditor } from "./document-editor";
 
@@ -20,14 +19,42 @@ export function DocumentPanel({ docId, onClose }: DocumentPanelProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">(
+    "saved"
+  );
 
   useEffect(() => {
     if (doc) {
       setTitle(doc.title);
       setContent(doc.content);
       setIsDirty(false);
+      setSaveStatus("saved");
     }
   }, [doc]);
+
+  // isDirty 변경 시 saveStatus 동기화
+  useEffect(() => {
+    if (isDirty) setSaveStatus("unsaved");
+  }, [isDirty]);
+
+  // 자동저장 디바운스
+  useEffect(() => {
+    if (!isDirty || !docId) return;
+    const timer = setTimeout(async () => {
+      setSaveStatus("saving");
+      try {
+        await updateDocument.mutateAsync({
+          id: docId,
+          data: { title, content: content ?? undefined },
+        });
+        setIsDirty(false);
+        setSaveStatus("saved");
+      } catch {
+        setSaveStatus("unsaved");
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [isDirty, title, content, docId]);
 
   const handleTitleChange = (value: string) => {
     setTitle(value);
@@ -41,12 +68,13 @@ export function DocumentPanel({ docId, onClose }: DocumentPanelProps) {
 
   const handleSave = async () => {
     if (!docId) return;
+    setSaveStatus("saving");
     await updateDocument.mutateAsync({
       id: docId,
       data: { title, content: content ?? undefined },
     });
     setIsDirty(false);
-    toast.success("저장되었습니다.");
+    setSaveStatus("saved");
   };
 
   return (
@@ -78,6 +106,10 @@ export function DocumentPanel({ docId, onClose }: DocumentPanelProps) {
                 className="flex-1 border-0 text-lg font-semibold shadow-none focus-visible:ring-0"
                 placeholder="문서 제목"
               />
+              <span className="text-xs text-muted-foreground">
+                {saveStatus === "saving" && "저장 중..."}
+                {saveStatus === "saved" && !isDirty && "저장됨"}
+              </span>
               <Button
                 size="sm"
                 onClick={handleSave}

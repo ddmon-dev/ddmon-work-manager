@@ -1,4 +1,5 @@
-import { Plus, FileText, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Plus, FileText, Trash2, MoreHorizontal, FolderInput } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
 import {
@@ -8,8 +9,28 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@/shared/ui/empty";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/shared/ui/dialog";
 import { cn } from "@/shared/utils/classnames";
-import { useDocumentsQuery, useCreateDocument, useDeleteDocument } from "./api";
+import { toast } from "sonner";
+import {
+  useDocumentsQuery,
+  useCreateDocument,
+  useDeleteDocument,
+  useBoardsQuery,
+  useMoveDocument,
+} from "./api";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 
@@ -25,8 +46,13 @@ export function DocumentList({
   onSelectDoc,
 }: DocumentListProps) {
   const { data: documents, isLoading } = useDocumentsQuery(boardId);
+  const { data: boards } = useBoardsQuery();
   const createDocument = useCreateDocument();
   const deleteDocument = useDeleteDocument();
+  const moveDocument = useMoveDocument();
+
+  const [moveDocId, setMoveDocId] = useState<string | null>(null);
+  const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
 
   const handleCreate = async () => {
     if (!boardId) return;
@@ -40,6 +66,14 @@ export function DocumentList({
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     await deleteDocument.mutateAsync(id);
+  };
+
+  const handleMoveDoc = async () => {
+    if (!moveDocId || !selectedBoardId) return;
+    await moveDocument.mutateAsync({ id: moveDocId, boardId: selectedBoardId });
+    setMoveDocId(null);
+    setSelectedBoardId(null);
+    toast.success("문서가 이동되었습니다.");
   };
 
   if (!boardId) {
@@ -113,17 +147,77 @@ export function DocumentList({
                 {doc.updatedBy && ` · ${doc.updatedBy}`}
               </p>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7 opacity-0 group-hover:opacity-100"
-              onClick={(e) => handleDelete(e, doc.id)}
-            >
-              <Trash2 className="size-3.5 text-muted-foreground" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 opacity-0 group-hover:opacity-100"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreHorizontal className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMoveDocId(doc.id);
+                  }}
+                >
+                  <FolderInput className="mr-2 size-3.5" />
+                  이동
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => handleDelete(e, doc.id)}
+                  className="text-destructive"
+                >
+                  <Trash2 className="mr-2 size-3.5" />
+                  삭제
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ))}
       </div>
+
+      <Dialog
+        open={!!moveDocId}
+        onOpenChange={(open) => !open && setMoveDocId(null)}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>게시판 이동</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1">
+            {boards
+              ?.filter((b) => b.id !== boardId)
+              .map((board) => (
+                <button
+                  key={board.id}
+                  className={cn(
+                    "w-full rounded-md px-3 py-2 text-left text-sm hover:bg-accent",
+                    selectedBoardId === board.id && "bg-accent font-medium"
+                  )}
+                  onClick={() => setSelectedBoardId(board.id)}
+                >
+                  {board.name}
+                </button>
+              ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMoveDocId(null)}>
+              취소
+            </Button>
+            <Button
+              onClick={handleMoveDoc}
+              disabled={!selectedBoardId || moveDocument.isPending}
+            >
+              이동
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,13 +1,23 @@
 import { mkdir, writeFile, unlink, stat } from "fs/promises";
 import { createReadStream } from "fs";
-import { join, dirname, extname } from "path";
+import { join, dirname, extname, resolve as pathResolve } from "path";
 import type { Readable } from "stream";
 
 const STORAGE_DIR = process.env.STORAGE_DIR ?? "../../storage";
+const STORAGE_ROOT = pathResolve(STORAGE_DIR);
 
 function resolve(key: string) {
-  return join(STORAGE_DIR, key);
+  const resolved = pathResolve(STORAGE_ROOT, key);
+  if (!resolved.startsWith(STORAGE_ROOT)) {
+    throw new Error(`Path traversal detected: ${key}`);
+  }
+  return resolved;
 }
+
+export const STORAGE_CONFIG = {
+  MAX_FILE_SIZE_MB: Number(process.env.MAX_FILE_SIZE_MB) || 100,
+  MAX_EDITOR_IMAGE_SIZE_MB: Number(process.env.MAX_EDITOR_IMAGE_SIZE_MB) || 10,
+};
 
 const MIME_MAP: Record<string, string> = {
   ".jpg": "image/jpeg",

@@ -17,6 +17,14 @@ export const ERRORS = {
     code: "UNEXPECTED_ERROR",
     message: "예기치 않은 오류가 발생했습니다.",
   },
+  FILE_TOO_LARGE: {
+    code: "FILE_TOO_LARGE",
+    message: "파일 크기가 제한을 초과합니다.",
+  },
+  CIRCULAR_REFERENCE: {
+    code: "CIRCULAR_REFERENCE",
+    message: "하위 폴더로 이동할 수 없습니다.",
+  },
 } as const;
 
 export function successResponse<T>(c: Context, data: T, status: 200 | 201 = 200) {
