@@ -1,14 +1,12 @@
-import { ListTodo, Lightbulb, StickyNote, Calculator } from "lucide-react";
+import { ListTodo, StickyNote, Calculator } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { ButtonGroup } from "@/shared/ui/button-group";
 import { useTodo } from "@/features/ui/todo-widget";
-import { useMindnote } from "@/features/ui/mindnote-widget";
 import { useMemoWidget } from "@/features/ui/memo-widget";
 import { useCalculator } from "@/features/ui/calculator-widget";
 
 export function WidgetTriggerGroup() {
   const { open: openTodo } = useTodo();
-  const { open: openMindnote } = useMindnote();
   const { open: openMemo } = useMemoWidget();
   const { toggle: toggleCalculator, triggerRef } = useCalculator();
 
@@ -22,15 +20,6 @@ export function WidgetTriggerGroup() {
       >
         <ListTodo />
         <span>할 일</span>
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={openMindnote}
-        className="flex-1 hover:text-primary bg-transparent! transition-colors"
-      >
-        <Lightbulb />
-        <span>노트</span>
       </Button>
       <Button
         variant="ghost"

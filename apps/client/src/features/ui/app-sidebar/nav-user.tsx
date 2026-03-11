@@ -1,5 +1,5 @@
 import { APP_CONFIG } from "@/app.config";
-import { ChevronsUpDown, LogOut, Pencil, Shield } from "lucide-react";
+import { ChevronsUpDown, Lightbulb, LogOut, Pencil, Shield } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
 import {
   DropdownMenu,
@@ -19,10 +19,12 @@ import { Skeleton } from "@/shared/ui/skeleton";
 import { useAuth, type AuthState } from "@/features/auth/hooks/use-auth";
 import { authClient } from "@/features/auth/lib/auth-client";
 import { UpdateProfileDialog } from "@/features/auth/ui/update-profile-dialog";
+import { useMindnote } from "@/features/ui/mindnote-widget";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
   const auth = useAuth();
+  const { open: openMindnote } = useMindnote();
 
   const handleSignOut = async () => {
     await authClient.signOut();
@@ -58,6 +60,11 @@ export function NavUser() {
                 내 정보수정
               </DropdownMenuItem>
             </UpdateProfileDialog>
+            <DropdownMenuItem onClick={openMindnote}>
+              <Lightbulb />
+              마인드노트
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>
               <LogOut />
               로그아웃
