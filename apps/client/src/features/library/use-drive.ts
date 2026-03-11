@@ -60,7 +60,7 @@ export function useDrive() {
 
   const filteredItems = searchTerm
     ? items?.filter((item) =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase())
+        item.name.normalize("NFC").toLowerCase().includes(searchTerm.normalize("NFC").toLowerCase())
       )
     : items;
 
