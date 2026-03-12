@@ -1,5 +1,6 @@
 import { mkdir, writeFile, unlink, stat } from "fs/promises";
 import { createReadStream } from "fs";
+import { exec } from "child_process";
 import { join, dirname, extname, resolve as pathResolve } from "path";
 import type { Readable } from "stream";
 
@@ -71,6 +72,11 @@ export async function deleteFile(key: string) {
   } catch (err: any) {
     if (err.code !== "ENOENT") throw err;
   }
+}
+
+export function openFileNative(key: string): void {
+  const filePath = resolve(key);
+  exec(`open "${filePath}"`);
 }
 
 export async function getFile(key: string): Promise<{

@@ -17,6 +17,7 @@ import {
   useBatchDeleteFiles,
   useBatchMoveFiles,
 } from "./api";
+import { api } from "@/shared/lib/api-client";
 import { useDialog } from "@/shared/ui/app-dialog";
 import type { FileItem } from "./types";
 
@@ -296,7 +297,7 @@ export function useDrive() {
       if (isImage || isPdf) {
         setPreviewFile(file);
       } else {
-        window.open(`/api/files/${file.id}/download`, "_blank");
+        api.post(`/files/${file.id}/open`);
       }
     },
     [nav.handleNavigate, clearSelection]
