@@ -962,7 +962,7 @@ function FileContextMenu({
             <ContextMenuButton
               icon={Trash2}
               label={`${multiCount}개 항목 삭제`}
-              shortcut="Del"
+              shortcut="⌘⌫"
               variant="destructive"
               onClick={() => onDelete(item)}
             />
@@ -973,7 +973,7 @@ function FileContextMenu({
             <ContextMenuButton
               icon={item.isFolder ? FolderOpen : Eye}
               label="열기"
-              shortcut="Enter"
+              shortcut="⌘O"
               onClick={() => onOpen(item)}
             />
             {!item.isFolder && (
@@ -987,7 +987,7 @@ function FileContextMenu({
             <ContextMenuButton
               icon={Pencil}
               label="이름 변경"
-              shortcut="F2"
+              shortcut="⏎"
               onClick={() => onRename(item)}
             />
             <ContextMenuButton
@@ -999,7 +999,7 @@ function FileContextMenu({
             <ContextMenuButton
               icon={Trash2}
               label="삭제"
-              shortcut="Del"
+              shortcut="⌘⌫"
               variant="destructive"
               onClick={() => onDelete(item)}
             />
@@ -1010,6 +1010,7 @@ function FileContextMenu({
           <ContextMenuButton
             icon={FolderPlus}
             label="새 폴더"
+            shortcut="⇧N"
             onClick={onNewFolder}
           />
           <ContextMenuButton

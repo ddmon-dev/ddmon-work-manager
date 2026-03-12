@@ -404,17 +404,18 @@ export function useDrive() {
         return;
       }
 
-      switch (e.key) {
-        case "Delete":
+      const code = e.code;
+
+      switch (code) {
         case "Backspace": {
-          if (selectedIds.size > 0) {
+          if (e.metaKey && selectedIds.size > 0) {
             e.preventDefault();
             const firstId = Array.from(selectedIds)[0];
             handleDelete(firstId);
           }
           break;
         }
-        case "F2": {
+        case "Enter": {
           if (selectedIds.size === 1) {
             e.preventDefault();
             const id = Array.from(selectedIds)[0];
@@ -425,8 +426,8 @@ export function useDrive() {
           }
           break;
         }
-        case "Enter": {
-          if (selectedIds.size === 1) {
+        case "KeyO": {
+          if (e.metaKey && selectedIds.size === 1) {
             e.preventDefault();
             const id = Array.from(selectedIds)[0];
             const item = items?.find((i) => i.id === id);
@@ -440,7 +441,14 @@ export function useDrive() {
           closeContextMenu();
           break;
         }
-        case "a": {
+        case "KeyN": {
+          if (e.shiftKey && !e.metaKey && !e.ctrlKey) {
+            e.preventDefault();
+            folder.setShowNewFolder(true);
+          }
+          break;
+        }
+        case "KeyA": {
           if ((e.metaKey || e.ctrlKey) && items) {
             e.preventDefault();
             setSelectedIds(new Set(items.map((i) => i.id)));
@@ -461,6 +469,7 @@ export function useDrive() {
     handleFileClick,
     closeContextMenu,
     clearSelection,
+    folder.setShowNewFolder,
   ]);
 
   return {
