@@ -163,11 +163,14 @@ export function Drive() {
       const item = items?.find((i) => i.id === event.active.id);
       if (item) {
         setDraggedItem(item);
+        if (!selectedIds.has(item.id)) {
+          clearSelection();
+        }
         const width = event.active.rect.current?.initial?.width;
         if (width) setDragRowWidth(width);
       }
     },
-    [items]
+    [items, selectedIds, clearSelection]
   );
 
   const handleDragEnd = useCallback(
@@ -181,12 +184,15 @@ export function Drive() {
         | null
         | undefined;
       if (targetFolderId === undefined) return;
+      // 자기 자신 또는 선택 그룹에 포함된 폴더에 드롭 차단
+      if (targetFolderId === active.id) return;
+      if (selectedIds.has(active.id as string) && targetFolderId && selectedIds.has(targetFolderId)) return;
       setMovingId(active.id as string);
       handleDragDrop(active.id as string, targetFolderId).then(() =>
         setMovingId(null)
       );
     },
-    [handleDragDrop]
+    [handleDragDrop, selectedIds]
   );
 
 
@@ -401,6 +407,13 @@ export function Drive() {
                         selectedIds.has(item.id)
                       }
                       isSelected={selectedIds.has(item.id)}
+                      isDropDisabled={
+                        !item.isFolder ||
+                        (!!draggedItem && (
+                          item.id === draggedItem.id ||
+                          (selectedIds.has(draggedItem.id) && selectedIds.has(item.id))
+                        ))
+                      }
                       onSelect={(e) => selectItem(item.id, e)}
                       onFileClick={handleFileClick}
                       onContextMenu={openContextMenu}
@@ -594,6 +607,7 @@ function DraggableFileRow({
   isMoving,
   isGroupDragging,
   isSelected,
+  isDropDisabled,
   onSelect,
   onContextMenu,
   onDropUpload,
@@ -607,6 +621,7 @@ function DraggableFileRow({
   isMoving: boolean;
   isGroupDragging: boolean;
   isSelected: boolean;
+  isDropDisabled: boolean;
   onSelect: (e: React.MouseEvent) => void;
   onFileClick: (file: FileItem) => void;
   onContextMenu: (e: React.MouseEvent, item: FileItem) => void;
@@ -630,7 +645,7 @@ function DraggableFileRow({
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: `list-${item.id}`,
     data: { folderId: item.id },
-    disabled: !item.isFolder,
+    disabled: isDropDisabled,
   });
 
   const ref = useCallback(
@@ -686,7 +701,7 @@ function DraggableFileRow({
         "group flex cursor-grab items-center gap-3 border-b px-4 py-2.5 outline-none hover:bg-accent/50 active:cursor-grabbing",
         (isDragging || isMoving || isGroupDragging) && "opacity-30",
         (isOver || nativeDragOver) &&
-          item.isFolder &&
+          !isDropDisabled &&
           "bg-primary/10 ring-1 ring-inset ring-primary",
         isSelected && "bg-accent/50"
       )}
