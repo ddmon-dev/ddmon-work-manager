@@ -130,6 +130,18 @@ export function Drive() {
   const [movingId, setMovingId] = useState<string | null>(null);
   const uploadFile = useUploadFile();
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  const newFolderRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showNewFolder) return;
+    const handler = (e: MouseEvent) => {
+      if (newFolderRef.current && !newFolderRef.current.contains(e.target as Node)) {
+        setShowNewFolder(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showNewFolder, setShowNewFolder]);
 
   // 드래그 시 선택된 항목 수 (draggedItem이 selectedIds에 포함되면 전체, 아니면 1)
   const dragCount =
@@ -336,7 +348,10 @@ export function Drive() {
 
               {/* 새 폴더 입력 */}
               {showNewFolder && (
-                <div className="flex items-center gap-2 border-b bg-muted/30 px-4 py-2">
+                <div
+                  ref={newFolderRef}
+                  className="flex items-center gap-2 border-b bg-muted/30 px-4 py-2"
+                >
                   <Folder className="size-5 text-blue-500" />
                   <Input
                     value={newFolderName}
@@ -350,21 +365,23 @@ export function Drive() {
                       if (e.key === "Escape") setShowNewFolder(false);
                     }}
                   />
-                  <Button
-                    size="sm"
-                    className="h-8"
-                    onClick={handleCreateFolder}
-                  >
-                    생성
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8"
-                    onClick={() => setShowNewFolder(false)}
-                  >
-                    취소
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      className="h-7"
+                      onClick={handleCreateFolder}
+                    >
+                      생성
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7"
+                      onClick={() => setShowNewFolder(false)}
+                    >
+                      취소
+                    </Button>
+                  </div>
                 </div>
               )}
 
