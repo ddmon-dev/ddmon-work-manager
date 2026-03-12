@@ -163,7 +163,6 @@ export function useDrive() {
   const renaming = useRenaming();
   const folder = useNewFolder(nav.currentFolderId);
 
-  const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
   const [moveTargetIds, setMoveTargetIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -292,13 +291,7 @@ export function useDrive() {
         clearSelection();
         return;
       }
-      const isImage = file.mimeType?.startsWith("image/");
-      const isPdf = file.mimeType === "application/pdf";
-      if (isImage || isPdf) {
-        setPreviewFile(file);
-      } else {
-        api.post(`/files/${file.id}/open`);
-      }
+      api.post(`/files/${file.id}/open`);
     },
     [nav.handleNavigate, clearSelection]
   );
@@ -475,7 +468,6 @@ export function useDrive() {
     showTrash: nav.showTrash,
     sort: sorting.sort,
     order: sorting.order,
-    previewFile,
     newFolderName: folder.newFolderName,
     showNewFolder: folder.showNewFolder,
     renamingId: renaming.renamingId,
@@ -487,7 +479,6 @@ export function useDrive() {
     selectedIds,
     contextMenu,
     // 세터
-    setPreviewFile,
     setNewFolderName: folder.setNewFolderName,
     setShowNewFolder: folder.setShowNewFolder,
     setRenamingId: renaming.setRenamingId,

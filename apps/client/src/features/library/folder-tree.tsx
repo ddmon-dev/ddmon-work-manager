@@ -68,7 +68,7 @@ export function FolderTree({
   );
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full select-none flex-col">
       <div className="flex items-center border-b px-3 py-2">
         <span className="text-sm font-medium">폴더</span>
       </div>

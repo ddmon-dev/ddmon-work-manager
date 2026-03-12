@@ -57,7 +57,6 @@ import {
 } from "@dnd-kit/core";
 import { FileUpload, UploadButton } from "./file-upload";
 import { FolderTree } from "./folder-tree";
-import { FilePreview } from "./file-preview";
 import { TrashView } from "./trash";
 import { toast } from "sonner";
 import { useDrive, type ContextMenuState } from "./use-drive";
@@ -71,7 +70,6 @@ export function Drive() {
     showTrash,
     sort,
     order,
-    previewFile,
     newFolderName,
     showNewFolder,
     renamingId,
@@ -80,7 +78,6 @@ export function Drive() {
     isLoading,
     moveTargetIds,
     breadcrumbs,
-    setPreviewFile,
     setNewFolderName,
     setShowNewFolder,
     setRenamingId,
@@ -207,7 +204,7 @@ export function Drive() {
         </div>
       ) : (
         <FileUpload folderId={currentFolderId}>
-          <div className="flex h-full flex-col">
+          <div className="flex h-full select-none flex-col">
             {/* 브레드크럼 */}
             <div className="flex items-center gap-1 border-b px-4 py-2 text-sm">
               {breadcrumbs.map((crumb, index) => (
@@ -363,7 +360,7 @@ export function Drive() {
                   </div>
                 </Empty>
               ) : (
-                <div role="listbox" aria-multiselectable aria-label="파일 목록" className="select-none">
+                <div role="listbox" aria-multiselectable aria-label="파일 목록">
                   {items?.map((item) => (
                     <DraggableFileRow
                       key={item.id}
@@ -417,11 +414,6 @@ export function Drive() {
           </div>
         </FileUpload>
       )}
-
-      <FilePreview
-        file={previewFile}
-        onClose={() => setPreviewFile(null)}
-      />
 
       {/* 이동 Dialog */}
       <Dialog
