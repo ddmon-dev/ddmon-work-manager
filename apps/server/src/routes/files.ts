@@ -3,7 +3,7 @@ import { and, eq, isNull, asc, desc, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { files } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
-import { fileRenameSchema, folderCreateSchema } from "@packages/schemas";
+import { fileRenameSchema, folderCreateSchema, fileFavoriteSchema } from "@packages/schemas";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { uploadFile, deleteFile, getFile, openFileNative, STORAGE_CONFIG } from "../lib/storage";
 import type { AppVariables } from "../lib/types";
@@ -135,8 +135,18 @@ async function permanentDeleteRecursive(tx: DbTransaction, folderId: string): Pr
 const app = new Hono<{ Variables: AppVariables }>();
 app.use("*", requireAuth);
 
-// GET / — 파일/폴더 목록 (folderId 필터, null이면 루트)
+// GET / — 파일/폴더 목록 (folderId 필터, null이면 루트) / favorites=true면 즐겨찾기만
 app.get("/", async (c) => {
+  const favorites = c.req.query("favorites");
+
+  if (favorites === "true") {
+    const items = await db.query.files.findMany({
+      where: and(eq(files.isFavorited, true), eq(files.deleted, false)),
+      orderBy: [desc(files.isFolder), asc(files.name)],
+    });
+    return successResponse(c, { items });
+  }
+
   const folderId = c.req.query("folderId") || null;
 
   const items = await db.query.files.findMany({
@@ -293,6 +303,22 @@ app.post("/:id/open", async (c) => {
   openFileNative(file.s3Key);
 
   return successResponse(c, { message: "파일을 열었습니다" });
+});
+
+// PATCH /:id/favorite — 즐겨찾기 토글
+app.patch("/:id/favorite", async (c) => {
+  const id = c.req.param("id");
+  const parsed = fileFavoriteSchema.safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  const [updated] = await db
+    .update(files)
+    .set({ isFavorited: parsed.data.isFavorited, updatedAt: new Date() })
+    .where(eq(files.id, id))
+    .returning();
+
+  if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+  return successResponse(c, updated);
 });
 
 // PATCH /:id — 이름 변경

@@ -24,6 +24,7 @@ export const files = pgTable("files", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  isFavorited: boolean("is_favorited").notNull().default(false),
   deleted: boolean("deleted").notNull().default(false),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });

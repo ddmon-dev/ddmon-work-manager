@@ -50,6 +50,13 @@
       "when": 1773220910526,
       "tag": "0006_add_library_and_files",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1773334387396,
+      "tag": "0007_add_is_favorited_to_files",
+      "breakpoints": true
     }
   ]
 }

@@ -157,6 +157,27 @@ export function usePermanentDeleteDocument() {
 
 // ─── 파일 ───
 
+export function useFavoritesQuery() {
+  return useQuery({
+    queryKey: queryKeys.files.favorites,
+    queryFn: () =>
+      api
+        .get<{ items: FileItem[] }>("/files", { favorites: "true" })
+        .then((d) => d.items),
+  });
+}
+
+export function useToggleFavorite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isFavorited }: { id: string; isFavorited: boolean }) =>
+      api.patch<FileItem>(`/files/${id}/favorite`, { isFavorited }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.files.all });
+    },
+  });
+}
+
 export function useFilesQuery(folderId: string | null) {
   return useQuery({
     queryKey: queryKeys.files.list(folderId),

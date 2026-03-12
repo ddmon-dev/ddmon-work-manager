@@ -89,7 +89,7 @@ export function FileUpload({ folderId, children }: FileUploadProps) {
   return (
     <div
       className={cn(
-        "relative flex-1 transition-colors",
+        "relative min-w-0 flex-1 transition-colors",
         isDragging && "bg-primary/5 ring-2 ring-inset ring-primary/30"
       )}
       onDragEnter={handleDragEnter}

@@ -16,6 +16,7 @@ import {
   useMoveFile,
   useBatchDeleteFiles,
   useBatchMoveFiles,
+  useToggleFavorite,
 } from "./api";
 import { api } from "@/shared/lib/api-client";
 import { useDialog } from "@/shared/ui/app-dialog";
@@ -30,7 +31,7 @@ export interface ContextMenuState {
   x: number;
   y: number;
   item: FileItem | null;
-  source: "tree" | "list";
+  source: "tree" | "list" | "favorite";
 }
 
 // ─── 소규모 로컬 함수 ───
@@ -206,6 +207,7 @@ export function useDrive() {
   const batchDeleteFiles = useBatchDeleteFiles();
   const moveFile = useMoveFile();
   const batchMoveFiles = useBatchMoveFiles();
+  const toggleFavoriteMutation = useToggleFavorite();
 
   // 선택 핸들러
   const selectItem = useCallback(
@@ -372,8 +374,20 @@ export function useDrive() {
     }
   };
 
+  const handleToggleFavorite = useCallback(
+    async (id: string, currentState: boolean) => {
+      try {
+        await toggleFavoriteMutation.mutateAsync({ id, isFavorited: !currentState });
+        toast.success(!currentState ? "즐겨찾기에 추가했습니다." : "즐겨찾기를 해제했습니다.");
+      } catch {
+        toast.error("즐겨찾기 변경에 실패했습니다.");
+      }
+    },
+    [toggleFavoriteMutation]
+  );
+
   const openContextMenu = useCallback(
-    (e: React.MouseEvent, item: FileItem | null, source: "tree" | "list" = "list") => {
+    (e: React.MouseEvent, item: FileItem | null, source: "tree" | "list" | "favorite" = "list") => {
       e.preventDefault();
       if (item) {
         // 우클릭한 항목이 기존 선택에 포함되지 않으면 단일 선택으로 전환
@@ -505,6 +519,7 @@ export function useDrive() {
     toggleSort: sorting.toggleSort,
     handleMove,
     handleDragDrop,
+    handleToggleFavorite,
     openContextMenu,
     closeContextMenu,
     selectItem,

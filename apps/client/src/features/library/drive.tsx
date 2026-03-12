@@ -21,6 +21,8 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
+  Star,
+  StarOff,
 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import {
@@ -64,6 +66,7 @@ import { toast } from "sonner";
 import { useDrive, type ContextMenuState } from "./use-drive";
 import { useUploadFile, useRenameFile } from "./api";
 import type { FileItem } from "./types";
+import { MiddleTruncate } from "@/shared/ui/middle-truncate";
 import type { LucideIcon } from "lucide-react";
 
 export function Drive() {
@@ -95,6 +98,7 @@ export function Drive() {
     toggleSort,
     handleMove,
     handleDragDrop,
+    handleToggleFavorite,
     openContextMenu,
     closeContextMenu,
     selectedIds,
@@ -117,6 +121,8 @@ export function Drive() {
   const [showTree, setShowTree] = useState(true);
   const [treeRenamingId, setTreeRenamingId] = useState<string | null>(null);
   const [treeRenameValue, setTreeRenameValue] = useState("");
+  const [favRenamingId, setFavRenamingId] = useState<string | null>(null);
+  const [favRenameValue, setFavRenameValue] = useState("");
   const treeRenameFile = useRenameFile();
   const handleTreeRename = async (id: string) => {
     if (!treeRenameValue.trim()) return;
@@ -124,6 +130,13 @@ export function Drive() {
       await treeRenameFile.mutateAsync({ id, name: treeRenameValue.trim() });
     } catch {}
     setTreeRenamingId(null);
+  };
+  const handleFavRename = async (id: string) => {
+    if (!favRenameValue.trim()) return;
+    try {
+      await treeRenameFile.mutateAsync({ id, name: favRenameValue.trim() });
+    } catch {}
+    setFavRenamingId(null);
   };
   const [draggedItem, setDraggedItem] = useState<FileItem | null>(null);
   const [dragRowWidth, setDragRowWidth] = useState<number | null>(null);
@@ -222,54 +235,41 @@ export function Drive() {
           <FolderTree
             currentFolderId={currentFolderId}
             onNavigate={handleNavigate}
+            onFileClick={handleFileClick}
             showTrash
             onTrashClick={() => setShowTrash(true)}
             isTrashActive={showTrash}
             onContextMenu={(e, item) => openContextMenu(e, item, "tree")}
+            onFavContextMenu={(e, item) => openContextMenu(e, item, "favorite")}
             renamingId={treeRenamingId}
             renameValue={treeRenameValue}
             onRenameChange={setTreeRenameValue}
             onRenameSubmit={handleTreeRename}
             onRenameCancel={() => setTreeRenamingId(null)}
+            favRenamingId={favRenamingId}
+            favRenameValue={favRenameValue}
+            onFavRenameChange={setFavRenameValue}
+            onFavRenameSubmit={handleFavRename}
+            onFavRenameCancel={() => setFavRenamingId(null)}
           />
         </div>
       )}
 
       {/* 우측: 파일 목록 */}
       {showTrash ? (
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <TrashView />
         </div>
       ) : (
         <FileUpload folderId={currentFolderId}>
           <div className="flex h-full select-none flex-col">
             {/* 브레드크럼 */}
-            <div className="flex items-center gap-1 border-b px-2 py-2 text-sm">
-              <button
-                className="-my-1 shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                onClick={() => setShowTree((v) => !v)}
-              >
-                {showTree ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
-              </button>
-              {breadcrumbs.map((crumb, index) => (
-                <Fragment key={crumb.id ?? "root"}>
-                  {index > 0 && (
-                    <ChevronRight className="size-3 text-muted-foreground" />
-                  )}
-                  <button
-                    className={cn(
-                      "hover:underline",
-                      index === breadcrumbs.length - 1
-                        ? "font-medium"
-                        : "text-muted-foreground"
-                    )}
-                    onClick={() => navigateToBreadcrumb(index)}
-                  >
-                    {crumb.name}
-                  </button>
-                </Fragment>
-              ))}
-            </div>
+            <Breadcrumbs
+              breadcrumbs={breadcrumbs}
+              showTree={showTree}
+              onToggleTree={() => setShowTree((v) => !v)}
+              onNavigate={navigateToBreadcrumb}
+            />
 
             {/* 상단 툴바 */}
             <div className="flex items-center gap-2 border-b px-4 py-2">
@@ -441,6 +441,9 @@ export function Drive() {
                       onRenameChange={setRenameValue}
                       onRenameSubmit={handleRename}
                       onRenameCancel={() => setRenamingId(null)}
+                      onToggleFavorite={(id, isFavorited) =>
+                        handleToggleFavorite(id, isFavorited)
+                      }
                       onMoveStart={(id) => {
                         startMove(id);
                         setSelectedMoveFolder(currentFolderId);
@@ -573,8 +576,15 @@ export function Drive() {
             window.open(`/api/files/${item.id}/download`, "_blank");
             closeContextMenu();
           }}
+          onToggleFavorite={(item) => {
+            handleToggleFavorite(item.id, item.isFavorited);
+            closeContextMenu();
+          }}
           onRename={(item) => {
-            if (contextMenu?.source === "tree") {
+            if (contextMenu?.source === "favorite") {
+              setFavRenamingId(item.id);
+              setFavRenameValue(item.name);
+            } else if (contextMenu?.source === "tree") {
               setTreeRenamingId(item.id);
               setTreeRenameValue(item.name);
             } else {
@@ -619,6 +629,7 @@ function DraggableFileRow({
   onRenameChange,
   onRenameSubmit,
   onRenameCancel,
+  onToggleFavorite,
   onMoveStart,
   onDelete,
   isMoving,
@@ -646,6 +657,7 @@ function DraggableFileRow({
   onRenameChange: (value: string) => void;
   onRenameSubmit: (id: string) => void;
   onRenameCancel: () => void;
+  onToggleFavorite: (id: string, isFavorited: boolean) => void;
   onMoveStart: (id: string) => void;
   onDelete: (id: string) => void;
   onDropUpload: (files: FileList, folderId: string) => void;
@@ -730,9 +742,9 @@ function DraggableFileRow({
       }}
       onContextMenu={(e) => onContextMenu(e, item)}
     >
-      {getFileIcon(item)}
+      <span className="shrink-0">{getFileIcon(item)}</span>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 overflow-hidden">
         {renamingId === item.id ? (
           <Input
             value={renameValue}
@@ -757,7 +769,7 @@ function DraggableFileRow({
             onBlur={() => onRenameSubmit(item.id)}
           />
         ) : (
-          <p className="truncate text-sm">{item.name}</p>
+          <MiddleTruncate className="text-sm">{item.name}</MiddleTruncate>
         )}
       </div>
 
@@ -789,6 +801,19 @@ function DraggableFileRow({
           >
             <Pencil className="mr-2 size-3.5" />
             이름 변경
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite(item.id, item.isFavorited);
+            }}
+          >
+            {item.isFavorited ? (
+              <StarOff className="mr-2 size-3.5" />
+            ) : (
+              <Star className="mr-2 size-3.5" />
+            )}
+            {item.isFavorited ? "즐겨찾기 해제" : "즐겨찾기 추가"}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={(e) => {
@@ -885,6 +910,7 @@ function FileContextMenu({
   onClose,
   onOpen,
   onDownload,
+  onToggleFavorite,
   onRename,
   onMove,
   onDelete,
@@ -897,6 +923,7 @@ function FileContextMenu({
   onClose: () => void;
   onOpen: (item: FileItem) => void;
   onDownload: (item: FileItem) => void;
+  onToggleFavorite: (item: FileItem) => void;
   onRename: (item: FileItem) => void;
   onMove: (item: FileItem) => void;
   onDelete: (item: FileItem) => void;
@@ -983,6 +1010,11 @@ function FileContextMenu({
                 onClick={() => onDownload(item)}
               />
             )}
+            <ContextMenuButton
+              icon={item.isFavorited ? StarOff : Star}
+              label={item.isFavorited ? "즐겨찾기 해제" : "즐겨찾기 추가"}
+              onClick={() => onToggleFavorite(item)}
+            />
             <div className="my-1 h-px bg-border" />
             <ContextMenuButton
               icon={Pencil}
@@ -1022,6 +1054,101 @@ function FileContextMenu({
       )}
     </div>,
     document.body
+  );
+}
+
+// ─── Breadcrumbs ───
+
+/** 깊이가 깊어지면 중간 경로를 "..."으로 축약. root + 마지막 2개는 항상 표시 */
+function collapseBreadcrumbs(
+  breadcrumbs: { id: string | null; name: string }[]
+) {
+  if (breadcrumbs.length <= 5) return breadcrumbs;
+
+  // root + ... + 마지막 2개
+  return [
+    breadcrumbs[0],
+    { id: "__ellipsis__", name: "..." },
+    breadcrumbs[breadcrumbs.length - 2],
+    breadcrumbs[breadcrumbs.length - 1],
+  ];
+}
+
+function Breadcrumbs({
+  breadcrumbs,
+  showTree,
+  onToggleTree,
+  onNavigate,
+}: {
+  breadcrumbs: { id: string | null; name: string }[];
+  showTree: boolean;
+  onToggleTree: () => void;
+  onNavigate: (index: number) => void;
+}) {
+  const collapsed = collapseBreadcrumbs(breadcrumbs);
+
+  // collapsed → original index 매핑
+  const getOriginalIndex = (collapsedIndex: number) => {
+    if (breadcrumbs.length <= 5) return collapsedIndex;
+    if (collapsedIndex === 0) return 0;
+    if (collapsedIndex === 1) return -1; // ellipsis
+    // 마지막 2개: collapsed[2] → breadcrumbs[-2], collapsed[3] → breadcrumbs[-1]
+    return breadcrumbs.length - (collapsed.length - collapsedIndex);
+  };
+
+  return (
+    <div className="flex min-w-0 items-center gap-1 border-b px-2 py-2 text-sm">
+      <button
+        className="-my-1 shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+        onClick={onToggleTree}
+      >
+        {showTree ? (
+          <PanelLeftClose className="size-4" />
+        ) : (
+          <PanelLeftOpen className="size-4" />
+        )}
+      </button>
+      {collapsed.map((crumb, i) => (
+        <Fragment key={crumb.id ?? "root"}>
+          {i > 0 && (
+            <ChevronRight className="size-3 shrink-0 text-muted-foreground" />
+          )}
+          {crumb.id === "__ellipsis__" ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="shrink-0 text-muted-foreground hover:underline">
+                  ...
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="max-w-[240px]">
+                {breadcrumbs.slice(1, -1).map((mid, midIdx) => (
+                  <DropdownMenuItem
+                    key={mid.id}
+                    title={mid.name}
+                    onClick={() => onNavigate(midIdx + 1)}
+                  >
+                    <span className="truncate">{mid.name}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <button
+              className={cn(
+                "max-w-[200px] shrink truncate hover:underline",
+                i === collapsed.length - 1
+                  ? "font-medium"
+                  : "text-muted-foreground"
+              )}
+              title={crumb.name}
+              onClick={() => onNavigate(getOriginalIndex(i))}
+            >
+              {crumb.name}
+            </button>
+          )}
+        </Fragment>
+      ))}
+    </div>
   );
 }
 

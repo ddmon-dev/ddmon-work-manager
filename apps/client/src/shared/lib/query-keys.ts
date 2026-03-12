@@ -72,6 +72,7 @@ export const queryKeys = {
     all: ["files"] as const,
     list: (folderId: string | null) => ["files", "list", folderId] as const,
     path: (id: string) => ["files", "path", id] as const,
+    favorites: ["files", "favorites"] as const,
   },
   trash: {
     all: ["trash"] as const,

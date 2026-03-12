@@ -36,6 +36,7 @@ export interface FileItem {
   size: number | null;
   folderId: string | null;
   isFolder: boolean;
+  isFavorited: boolean;
   author: string | null;
   createdAt: string;
   updatedAt: string;

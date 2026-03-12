@@ -24,6 +24,13 @@ export const fileRenameSchema = z.object({
 
 export type FileRenameInput = z.infer<typeof fileRenameSchema>;
 
+// 즐겨찾기 토글
+export const fileFavoriteSchema = z.object({
+  isFavorited: z.boolean(),
+});
+
+export type FileFavoriteInput = z.infer<typeof fileFavoriteSchema>;
+
 // 폴더 생성
 export const folderCreateSchema = z.object({
   name: z.string().min(1, "폴더 이름을 입력해주세요."),
