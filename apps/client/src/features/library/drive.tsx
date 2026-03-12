@@ -78,7 +78,7 @@ export function Drive() {
     renameValue,
     items,
     isLoading,
-    moveTargetId,
+    moveTargetIds,
     breadcrumbs,
     setPreviewFile,
     setNewFolderName,
@@ -86,7 +86,7 @@ export function Drive() {
     setRenamingId,
     setRenameValue,
     setShowTrash,
-    setMoveTargetId,
+    setMoveTargetIds,
     handleNavigate,
     navigateToBreadcrumb,
     handleCreateFolder,
@@ -98,11 +98,18 @@ export function Drive() {
     handleDragDrop,
     openContextMenu,
     closeContextMenu,
-    selectedId,
+    selectedIds,
     contextMenu,
-    setSelectedId,
+    selectItem,
+    clearSelection,
+    startMove,
+    isMultiSelection,
     formatSize,
     getFileIcon,
+    dragRect,
+    dragContainerRef,
+    handleDragSelectStart,
+    wasDragSelectingRef,
   } = useDrive();
 
   const [selectedMoveFolder, setSelectedMoveFolder] = useState<string | null>(
@@ -113,6 +120,10 @@ export function Drive() {
   const [movingId, setMovingId] = useState<string | null>(null);
   const uploadFile = useUploadFile();
   const uploadInputRef = useRef<HTMLInputElement>(null);
+
+  // 드래그 시 선택된 항목 수 (draggedItem이 selectedIds에 포함되면 전체, 아니면 1)
+  const dragCount =
+    draggedItem && selectedIds.has(draggedItem.id) ? selectedIds.size : 1;
 
   const handleDropUpload = useCallback(
     async (fileList: FileList, targetFolderId: string) => {
@@ -223,6 +234,12 @@ export function Drive() {
 
             {/* 상단 툴바 */}
             <div className="flex items-center gap-2 border-b px-4 py-2">
+              {/* 선택 카운트 표시 */}
+              {selectedIds.size > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  {selectedIds.size}개 선택
+                </span>
+              )}
               <div className="ml-auto flex gap-1">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -260,9 +277,15 @@ export function Drive() {
 
             {/* 파일 목록 */}
             <div
-              className="flex-1 overflow-y-auto"
+              ref={dragContainerRef}
+              className="relative flex-1 overflow-y-auto"
+              onMouseDown={handleDragSelectStart}
               onClick={(e) => {
-                if (e.target === e.currentTarget) setSelectedId(null);
+                if (wasDragSelectingRef.current) {
+                  wasDragSelectingRef.current = false;
+                  return;
+                }
+                if (e.target === e.currentTarget) clearSelection();
               }}
               onContextMenu={(e) => {
                 if (e.target === e.currentTarget) openContextMenu(e, null);
@@ -276,8 +299,8 @@ export function Drive() {
                       ? breadcrumbs[breadcrumbs.length - 2].id
                       : null
                   }
-                  isSelected={selectedId === "parent-folder"}
-                  onSelect={() => setSelectedId("parent-folder")}
+                  isSelected={selectedIds.has("parent-folder")}
+                  onSelect={(e) => selectItem("parent-folder", e)}
                   onClick={() =>
                     navigateToBreadcrumb(breadcrumbs.length - 2)
                   }
@@ -348,7 +371,7 @@ export function Drive() {
                   </div>
                 </Empty>
               ) : (
-                <div>
+                <div role="listbox" aria-multiselectable aria-label="파일 목록" className="select-none">
                   {items?.map((item) => (
                     <DraggableFileRow
                       key={item.id}
@@ -357,8 +380,13 @@ export function Drive() {
                       renameValue={renameValue}
                       currentFolderId={currentFolderId}
                       isMoving={item.id === movingId}
-                      isSelected={selectedId === item.id}
-                      onSelect={setSelectedId}
+                      isGroupDragging={
+                        !!draggedItem &&
+                        selectedIds.has(draggedItem.id) &&
+                        selectedIds.has(item.id)
+                      }
+                      isSelected={selectedIds.has(item.id)}
+                      onSelect={(e) => selectItem(item.id, e)}
                       onFileClick={handleFileClick}
                       onContextMenu={openContextMenu}
                       onRenameStart={(id, name) => {
@@ -369,7 +397,7 @@ export function Drive() {
                       onRenameSubmit={handleRename}
                       onRenameCancel={() => setRenamingId(null)}
                       onMoveStart={(id) => {
-                        setMoveTargetId(id);
+                        startMove(id);
                         setSelectedMoveFolder(currentFolderId);
                       }}
                       onDelete={handleDelete}
@@ -379,6 +407,19 @@ export function Drive() {
                     />
                   ))}
                 </div>
+              )}
+
+              {/* 드래그 선택 사각형 */}
+              {dragRect && (
+                <div
+                  className="pointer-events-none fixed z-10 border border-primary/50 bg-primary/10"
+                  style={{
+                    left: dragRect.x,
+                    top: dragRect.y,
+                    width: dragRect.width,
+                    height: dragRect.height,
+                  }}
+                />
               )}
             </div>
           </div>
@@ -392,12 +433,16 @@ export function Drive() {
 
       {/* 이동 Dialog */}
       <Dialog
-        open={!!moveTargetId}
-        onOpenChange={(open) => !open && setMoveTargetId(null)}
+        open={moveTargetIds.length > 0}
+        onOpenChange={(open) => !open && setMoveTargetIds([])}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>이동할 폴더 선택</DialogTitle>
+            <DialogTitle>
+              {moveTargetIds.length > 1
+                ? `${moveTargetIds.length}개 항목 이동`
+                : "이동할 폴더 선택"}
+            </DialogTitle>
           </DialogHeader>
           <div className="max-h-60 overflow-y-auto">
             <FolderTree
@@ -406,7 +451,7 @@ export function Drive() {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setMoveTargetId(null)}>
+            <Button variant="outline" onClick={() => setMoveTargetIds([])}>
               취소
             </Button>
             <Button
@@ -433,8 +478,15 @@ export function Drive() {
           >
             <DragOverlayIcon item={draggedItem} />
             <span className="truncate text-sm font-medium">
-              {draggedItem.name}
+              {dragCount > 1
+                ? `${dragCount}개 항목`
+                : draggedItem.name}
             </span>
+            {dragCount > 1 && (
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
+                {dragCount}
+              </span>
+            )}
           </div>
         )}
       </DragOverlay>
@@ -470,6 +522,8 @@ export function Drive() {
       {contextMenu && (
         <FileContextMenu
           contextMenu={contextMenu}
+          isMulti={isMultiSelection(contextMenu.item?.id)}
+          multiCount={selectedIds.size}
           onClose={closeContextMenu}
           onOpen={(item) => {
             handleFileClick(item);
@@ -485,7 +539,7 @@ export function Drive() {
             closeContextMenu();
           }}
           onMove={(item) => {
-            setMoveTargetId(item.id);
+            startMove(item.id);
             setSelectedMoveFolder(currentFolderId);
             closeContextMenu();
           }}
@@ -523,6 +577,7 @@ function DraggableFileRow({
   onMoveStart,
   onDelete,
   isMoving,
+  isGroupDragging,
   isSelected,
   onSelect,
   onContextMenu,
@@ -535,8 +590,9 @@ function DraggableFileRow({
   renameValue: string;
   currentFolderId: string | null;
   isMoving: boolean;
+  isGroupDragging: boolean;
   isSelected: boolean;
-  onSelect: (id: string) => void;
+  onSelect: (e: React.MouseEvent) => void;
   onFileClick: (file: FileItem) => void;
   onContextMenu: (e: React.MouseEvent, item: FileItem) => void;
   onRenameStart: (id: string, name: string) => void;
@@ -607,17 +663,20 @@ function DraggableFileRow({
       ref={ref}
       {...attributes}
       {...listeners}
+      role="option"
+      aria-selected={isSelected}
+      data-item-id={item.id}
       {...nativeDragHandlers}
       className={cn(
-        "group flex cursor-grab items-center gap-3 border-b px-4 py-2.5 hover:bg-accent/50 active:cursor-grabbing",
-        (isDragging || isMoving) && "opacity-30",
+        "group flex cursor-grab items-center gap-3 border-b px-4 py-2.5 outline-none hover:bg-accent/50 active:cursor-grabbing",
+        (isDragging || isMoving || isGroupDragging) && "opacity-30",
         (isOver || nativeDragOver) &&
           item.isFolder &&
           "bg-primary/10 ring-1 ring-inset ring-primary",
         isSelected && "bg-accent/50"
       )}
-      onClick={() => {
-        if (!isDragging) onSelect(item.id);
+      onClick={(e) => {
+        if (!isDragging) onSelect(e);
       }}
       onDoubleClick={() => {
         if (!isDragging) onFileClick(item);
@@ -631,7 +690,7 @@ function DraggableFileRow({
           <Input
             value={renameValue}
             onChange={(e) => onRenameChange(e.target.value)}
-            className="h-7 text-sm"
+            className="h-7 select-text text-sm"
             autoFocus
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
@@ -721,7 +780,7 @@ function ParentFolderRow({
 }: {
   parentFolderId: string | null;
   isSelected: boolean;
-  onSelect: () => void;
+  onSelect: (e: React.MouseEvent) => void;
   onClick: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -764,6 +823,8 @@ function DragOverlayIcon({ item }: { item: FileItem }) {
 
 function FileContextMenu({
   contextMenu,
+  isMulti,
+  multiCount,
   onClose,
   onOpen,
   onDownload,
@@ -774,6 +835,8 @@ function FileContextMenu({
   onUpload,
 }: {
   contextMenu: ContextMenuState;
+  isMulti: boolean;
+  multiCount: number;
   onClose: () => void;
   onOpen: (item: FileItem) => void;
   onDownload: (item: FileItem) => void;
@@ -830,41 +893,61 @@ function FileContextMenu({
       style={{ left: position.x, top: position.y }}
     >
       {item ? (
-        <>
-          <ContextMenuButton
-            icon={item.isFolder ? FolderOpen : Eye}
-            label="열기"
-            shortcut="Enter"
-            onClick={() => onOpen(item)}
-          />
-          {!item.isFolder && (
+        isMulti ? (
+          // 다중 선택 컨텍스트 메뉴
+          <>
             <ContextMenuButton
-              icon={Download}
-              label="다운로드"
-              onClick={() => onDownload(item)}
+              icon={FolderInput}
+              label={`${multiCount}개 항목 이동`}
+              onClick={() => onMove(item)}
             />
-          )}
-          <div className="my-1 h-px bg-border" />
-          <ContextMenuButton
-            icon={Pencil}
-            label="이름 변경"
-            shortcut="F2"
-            onClick={() => onRename(item)}
-          />
-          <ContextMenuButton
-            icon={FolderInput}
-            label="이동"
-            onClick={() => onMove(item)}
-          />
-          <div className="my-1 h-px bg-border" />
-          <ContextMenuButton
-            icon={Trash2}
-            label="삭제"
-            shortcut="Del"
-            variant="destructive"
-            onClick={() => onDelete(item)}
-          />
-        </>
+            <div className="my-1 h-px bg-border" />
+            <ContextMenuButton
+              icon={Trash2}
+              label={`${multiCount}개 항목 삭제`}
+              shortcut="Del"
+              variant="destructive"
+              onClick={() => onDelete(item)}
+            />
+          </>
+        ) : (
+          // 단건 컨텍스트 메뉴
+          <>
+            <ContextMenuButton
+              icon={item.isFolder ? FolderOpen : Eye}
+              label="열기"
+              shortcut="Enter"
+              onClick={() => onOpen(item)}
+            />
+            {!item.isFolder && (
+              <ContextMenuButton
+                icon={Download}
+                label="다운로드"
+                onClick={() => onDownload(item)}
+              />
+            )}
+            <div className="my-1 h-px bg-border" />
+            <ContextMenuButton
+              icon={Pencil}
+              label="이름 변경"
+              shortcut="F2"
+              onClick={() => onRename(item)}
+            />
+            <ContextMenuButton
+              icon={FolderInput}
+              label="이동"
+              onClick={() => onMove(item)}
+            />
+            <div className="my-1 h-px bg-border" />
+            <ContextMenuButton
+              icon={Trash2}
+              label="삭제"
+              shortcut="Del"
+              variant="destructive"
+              onClick={() => onDelete(item)}
+            />
+          </>
+        )
       ) : (
         <>
           <ContextMenuButton

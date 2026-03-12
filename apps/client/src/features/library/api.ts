@@ -152,19 +152,13 @@ export function usePermanentDeleteDocument() {
 
 // ─── 파일 ───
 
-export function useFilesQuery(
-  folderId: string | null,
-  sort?: string,
-  order?: string
-) {
+export function useFilesQuery(folderId: string | null) {
   return useQuery({
-    queryKey: queryKeys.files.list({ folderId, sort, order }),
+    queryKey: queryKeys.files.list(folderId),
     queryFn: () =>
       api
         .get<{ items: FileItem[] }>("/files", {
           folderId: folderId ?? undefined,
-          sort,
-          order,
         })
         .then((d) => d.items),
   });
@@ -181,29 +175,36 @@ export function useFilePathQuery(folderId: string | null) {
   });
 }
 
-export function useUploadFile() {
+export function useUploadFile(onProgress?: (loaded: number, total: number) => void) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      file,
-      folderId,
-    }: {
-      file: File;
-      folderId: string | null;
-    }) => {
-      const formData = new FormData();
-      formData.append("file", file);
-      if (folderId) formData.append("folderId", folderId);
+    mutationFn: ({ file, folderId }: { file: File; folderId: string | null }) =>
+      new Promise<FileItem>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        const formData = new FormData();
+        formData.append("file", file);
+        if (folderId) formData.append("folderId", folderId);
 
-      const res = await fetch("/api/files/upload", {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-      });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.message);
-      return json.data as FileItem;
-    },
+        if (onProgress) {
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) onProgress(e.loaded, e.total);
+          };
+        }
+
+        xhr.onload = () => {
+          try {
+            const json = JSON.parse(xhr.responseText);
+            if (!json.success) return reject(new Error(json.message));
+            resolve(json.data as FileItem);
+          } catch {
+            reject(new Error("업로드 응답을 파싱할 수 없습니다."));
+          }
+        };
+        xhr.onerror = () => reject(new Error("네트워크 오류"));
+        xhr.withCredentials = true;
+        xhr.open("POST", "/api/files/upload");
+        xhr.send(formData);
+      }),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.files.all }),
   });
 }
@@ -213,7 +214,10 @@ export function useCreateFolder() {
   return useMutation({
     mutationFn: (data: { name: string; folderId?: string | null }) =>
       api.post<FileItem>("/files/folder", data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.files.all }),
+    onSuccess: (_, variables) =>
+      qc.invalidateQueries({
+        queryKey: queryKeys.files.list(variables.folderId ?? null),
+      }),
   });
 }
 
@@ -262,6 +266,31 @@ export function usePermanentDeleteFile() {
   return useMutation({
     mutationFn: (id: string) => api.delete(`/files/${id}/permanent`),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.trash.all }),
+  });
+}
+
+export function useBatchDeleteFiles() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => api.post("/files/batch-delete", { ids }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.files.all });
+      qc.invalidateQueries({ queryKey: queryKeys.trash.all });
+    },
+  });
+}
+
+export function useBatchMoveFiles() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      ids,
+      folderId,
+    }: {
+      ids: string[];
+      folderId: string | null;
+    }) => api.post("/files/batch-move", { ids, folderId }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.files.all }),
   });
 }
 

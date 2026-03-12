@@ -70,7 +70,7 @@ export const queryKeys = {
   },
   files: {
     all: ["files"] as const,
-    list: (params: Params) => ["files", "list", params] as const,
+    list: (folderId: string | null) => ["files", "list", folderId] as const,
     path: (id: string) => ["files", "path", id] as const,
   },
   trash: {

@@ -72,7 +72,7 @@ export function FolderTree({
       <div className="flex items-center border-b px-3 py-2">
         <span className="text-sm font-medium">폴더</span>
       </div>
-      <div className="flex-1 overflow-y-auto p-1 space-y-0.5">
+      <div className="flex-1 overflow-y-auto p-1 space-y-0.5" role="tree">
         {/* 루트 */}
         <DroppableTreeItem
           droppableId="tree-root"
@@ -81,6 +81,7 @@ export function FolderTree({
           icon={<HardDrive className="size-4" />}
           isActive={currentFolderId === null && !isTrashActive}
           onClick={() => onNavigate(null)}
+          ariaLevel={1}
         />
 
         {/* 루트 폴더들 */}
@@ -204,6 +205,7 @@ function FolderNode({
         onContextMenu={
           onContextMenu ? (e) => onContextMenu(e, folder) : undefined
         }
+        ariaLevel={depth + 1}
       />
       {isExpanded && (
         <FolderChildren
@@ -251,6 +253,7 @@ interface TreeItemProps {
   onToggle?: () => void;
   onClick?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
+  ariaLevel?: number;
 }
 
 function TreeItem({
@@ -264,9 +267,14 @@ function TreeItem({
   onToggle,
   onClick,
   onContextMenu,
+  ariaLevel,
 }: TreeItemProps) {
   return (
     <div
+      role="treeitem"
+      aria-expanded={expandable ? expanded : undefined}
+      aria-level={ariaLevel}
+      aria-selected={isActive}
       className={cn(
         "flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-accent",
         isActive && "bg-accent font-medium",

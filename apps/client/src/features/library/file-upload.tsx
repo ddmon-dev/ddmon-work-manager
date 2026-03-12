@@ -12,28 +12,40 @@ interface FileUploadProps {
 
 export function FileUpload({ folderId, children }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
-  const uploadFile = useUploadFile();
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number;
+    total: number;
+    loaded: number;
+    fileTotal: number;
+  } | null>(null);
+  const uploadFile = useUploadFile((loaded, total) => {
+    setUploadProgress((prev) =>
+      prev ? { ...prev, loaded, fileTotal: total } : null
+    );
+  });
   const dragCounter = useRef(0);
 
   const handleFiles = useCallback(
     async (fileList: FileList) => {
       const files = Array.from(fileList);
       if (files.length === 0) return;
-      setUploadProgress({ current: 0, total: files.length });
       let successCount = 0;
+      let failCount = 0;
       for (let i = 0; i < files.length; i++) {
-        setUploadProgress({ current: i + 1, total: files.length });
+        setUploadProgress({ current: i + 1, total: files.length, loaded: 0, fileTotal: 0 });
         try {
           await uploadFile.mutateAsync({ file: files[i], folderId });
           successCount++;
         } catch {
-          toast.error(`${files[i].name} 업로드 실패`);
+          failCount++;
         }
       }
       setUploadProgress(null);
       if (successCount > 0) {
         toast.success(`${successCount}개 파일 업로드 완료`);
+      }
+      if (failCount > 0) {
+        toast.error(`${failCount}개 파일 업로드 실패`);
       }
     },
     [folderId, uploadFile]
@@ -59,18 +71,20 @@ export function FileUpload({ folderId, children }: FileUploadProps) {
     e.preventDefault();
     dragCounter.current = 0;
     setIsDragging(false);
-    // 폴더 행에서 stopPropagation 된 경우 여기까지 오지 않음
-    // 폴더가 아닌 영역에 드롭된 경우에만 현재 폴더로 업로드
     if (e.dataTransfer.files.length > 0) {
       handleFiles(e.dataTransfer.files);
     }
   };
 
-  // 캡처 단계에서 드래그 상태 정리 (자식의 stopPropagation과 무관하게 항상 실행)
   const handleDropCapture = () => {
     dragCounter.current = 0;
     setIsDragging(false);
   };
+
+  const percent =
+    uploadProgress && uploadProgress.fileTotal > 0
+      ? Math.round((uploadProgress.loaded / uploadProgress.fileTotal) * 100)
+      : 0;
 
   return (
     <div
@@ -86,11 +100,20 @@ export function FileUpload({ folderId, children }: FileUploadProps) {
     >
       {children}
       {uploadProgress && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-lg border bg-background px-4 py-2 shadow-md">
-          <Spinner className="size-4" />
-          <span className="text-sm">
-            업로드 중 ({uploadProgress.current}/{uploadProgress.total})
-          </span>
+        <div className="absolute bottom-4 left-1/2 z-50 w-72 -translate-x-1/2 rounded-lg border bg-background px-4 py-3 shadow-md">
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-2">
+              <Spinner className="size-4" />
+              업로드 중 ({uploadProgress.current}/{uploadProgress.total})
+            </span>
+            <span className="text-xs text-muted-foreground">{percent}%</span>
+          </div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary transition-[width] duration-200"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
         </div>
       )}
     </div>

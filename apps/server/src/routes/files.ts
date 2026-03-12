@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, eq, isNull, asc, desc, inArray } from "drizzle-orm";
+import { and, eq, isNull, asc, desc, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { files } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
@@ -9,34 +9,69 @@ import { uploadFile, deleteFile, getFile, STORAGE_CONFIG } from "../lib/storage"
 import type { AppVariables } from "../lib/types";
 import { randomUUID } from "crypto";
 
-async function isDescendant(parentId: string | null, ancestorId: string): Promise<boolean> {
-  let currentId = parentId;
-  while (currentId) {
-    if (currentId === ancestorId) return true;
-    const folder = await db.query.files.findFirst({
-      where: eq(files.id, currentId),
-      columns: { folderId: true },
-    });
-    currentId = folder?.folderId ?? null;
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** CTE 기반 순환 참조 검증 */
+async function isDescendant(tx: DbTransaction, parentId: string | null, ancestorId: string): Promise<boolean> {
+  if (!parentId) return false;
+  const result = await tx.execute(sql`
+    WITH RECURSIVE ancestors AS (
+      SELECT folder_id FROM files WHERE id = ${parentId}
+      UNION ALL
+      SELECT f.folder_id FROM files f JOIN ancestors a ON f.id = a.folder_id
+    )
+    SELECT 1 FROM ancestors WHERE folder_id = ${ancestorId} LIMIT 1
+  `);
+  return (result as unknown[]).length > 0;
+}
+
+/** 같은 폴더 내 이름 충돌 시 자동 넘버링 */
+async function resolveUniqueName(
+  executor: typeof db | DbTransaction,
+  name: string,
+  folderId: string | null,
+  excludeId?: string
+): Promise<string> {
+  const existing = await (executor as typeof db)
+    .select({ name: files.name })
+    .from(files)
+    .where(
+      and(
+        folderId ? eq(files.folderId, folderId) : isNull(files.folderId),
+        eq(files.deleted, false),
+        ...(excludeId ? [sql`${files.id} != ${excludeId}`] : [])
+      )
+    );
+
+  const existingNames = new Set(existing.map((e) => e.name));
+  if (!existingNames.has(name)) return name;
+
+  const dotIdx = name.lastIndexOf(".");
+  const base = dotIdx > 0 ? name.slice(0, dotIdx) : name;
+  const ext = dotIdx > 0 ? name.slice(dotIdx) : "";
+
+  let counter = 1;
+  while (existingNames.has(`${base} (${counter})${ext}`)) {
+    counter++;
   }
-  return false;
+  return `${base} (${counter})${ext}`;
 }
 
 /** 폴더와 하위 항목을 재귀적으로 소프트 삭제 */
-async function softDeleteRecursive(folderId: string, deletedAt: Date) {
-  const children = await db.query.files.findMany({
+async function softDeleteRecursive(tx: DbTransaction, folderId: string, deletedAt: Date) {
+  const children = await tx.query.files.findMany({
     where: and(eq(files.folderId, folderId), eq(files.deleted, false)),
     columns: { id: true, isFolder: true },
   });
 
   for (const child of children) {
     if (child.isFolder) {
-      await softDeleteRecursive(child.id, deletedAt);
+      await softDeleteRecursive(tx, child.id, deletedAt);
     }
   }
 
   if (children.length > 0) {
-    await db
+    await tx
       .update(files)
       .set({ deleted: true, deletedAt, updatedAt: new Date() })
       .where(
@@ -49,55 +84,52 @@ async function softDeleteRecursive(folderId: string, deletedAt: Date) {
 }
 
 /** 같은 deletedAt 타임스탬프를 가진 하위 항목을 재귀적으로 복원 */
-async function restoreRecursive(folderId: string, deletedAt: Date) {
-  const children = await db.query.files.findMany({
+async function restoreRecursive(tx: DbTransaction, folderId: string, deletedAt: Date) {
+  const children = await tx.query.files.findMany({
     where: and(eq(files.folderId, folderId), eq(files.deleted, true), eq(files.deletedAt, deletedAt)),
     columns: { id: true, isFolder: true },
   });
 
   for (const child of children) {
     if (child.isFolder) {
-      await restoreRecursive(child.id, deletedAt);
+      await restoreRecursive(tx, child.id, deletedAt);
     }
   }
 
   if (children.length > 0) {
     const childIds = children.map((c) => c.id);
-    await db
+    await tx
       .update(files)
       .set({ deleted: false, deletedAt: null, updatedAt: new Date() })
       .where(inArray(files.id, childIds));
   }
 }
 
-/** 폴더와 하위 항목을 재귀적으로 영구 삭제 (리프부터) */
-async function permanentDeleteRecursive(folderId: string) {
-  const children = await db.query.files.findMany({
+/** 폴더와 하위 항목을 재귀적으로 영구 삭제 (리프부터). 삭제할 s3Key 목록 반환 */
+async function permanentDeleteRecursive(tx: DbTransaction, folderId: string): Promise<string[]> {
+  const children = await tx.query.files.findMany({
     where: eq(files.folderId, folderId),
     columns: { id: true, isFolder: true, s3Key: true },
   });
 
+  const s3Keys: string[] = [];
+
   for (const child of children) {
     if (child.isFolder) {
-      await permanentDeleteRecursive(child.id);
+      const childKeys = await permanentDeleteRecursive(tx, child.id);
+      s3Keys.push(...childKeys);
     }
-  }
-
-  // 파일 스토리지 정리
-  for (const child of children) {
     if (child.s3Key) {
-      try {
-        await deleteFile(child.s3Key);
-      } catch (err) {
-        console.warn(`[Storage] Failed to delete file: ${child.s3Key}`, err);
-      }
+      s3Keys.push(child.s3Key);
     }
   }
 
   // 자식 일괄 DB 삭제
   if (children.length > 0) {
-    await db.delete(files).where(eq(files.folderId, folderId));
+    await tx.delete(files).where(eq(files.folderId, folderId));
   }
+
+  return s3Keys;
 }
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -106,23 +138,13 @@ app.use("*", requireAuth);
 // GET / — 파일/폴더 목록 (folderId 필터, null이면 루트)
 app.get("/", async (c) => {
   const folderId = c.req.query("folderId") || null;
-  const sort = c.req.query("sort") ?? "name";
-  const order = c.req.query("order") ?? "asc";
-
-  const orderFn = order === "desc" ? desc : asc;
-  const sortColumn =
-    sort === "date"
-      ? files.updatedAt
-      : sort === "size"
-        ? files.size
-        : files.name;
 
   const items = await db.query.files.findMany({
     where: and(
       folderId ? eq(files.folderId, folderId) : isNull(files.folderId),
       eq(files.deleted, false)
     ),
-    orderBy: [desc(files.isFolder), orderFn(sortColumn)],
+    orderBy: [desc(files.isFolder), asc(files.name)],
   });
 
   return successResponse(c, { items });
@@ -160,6 +182,8 @@ app.post("/upload", async (c) => {
   const uuid = randomUUID();
   const s3Key = `files/${uuid}${ext ? `.${ext}` : ""}`;
 
+  const uniqueName = await resolveUniqueName(db, file.name, folderId);
+
   await uploadFile(s3Key, buffer, file.type);
 
   let created;
@@ -167,7 +191,7 @@ app.post("/upload", async (c) => {
     [created] = await db
       .insert(files)
       .values({
-        name: file.name,
+        name: uniqueName,
         s3Key,
         mimeType: file.type,
         size: file.size,
@@ -202,10 +226,12 @@ app.post("/folder", async (c) => {
     }
   }
 
+  const uniqueName = await resolveUniqueName(db, parsed.data.name, targetFolderId);
+
   const [created] = await db
     .insert(files)
     .values({
-      name: parsed.data.name,
+      name: uniqueName,
       folderId: targetFolderId,
       isFolder: true,
       author: user.name ?? undefined,
@@ -261,6 +287,30 @@ app.patch("/:id", async (c) => {
   const parsed = fileRenameSchema.safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
+  // 이름 변경 시 중복 체크 (사용자 의도 존중 → 중복이면 400 에러)
+  const target = await db.query.files.findFirst({
+    where: eq(files.id, id),
+    columns: { folderId: true },
+  });
+  if (!target) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  const duplicate = await db
+    .select({ id: files.id })
+    .from(files)
+    .where(
+      and(
+        target.folderId ? eq(files.folderId, target.folderId) : isNull(files.folderId),
+        eq(files.name, parsed.data.name),
+        eq(files.deleted, false),
+        sql`${files.id} != ${id}`
+      )
+    )
+    .limit(1);
+
+  if (duplicate.length > 0) {
+    return errorResponse(c, ERRORS.VALIDATION, 400, "같은 폴더에 동일한 이름이 이미 존재합니다.");
+  }
+
   const [updated] = await db
     .update(files)
     .set({ name: parsed.data.name, updatedAt: new Date() })
@@ -271,7 +321,7 @@ app.patch("/:id", async (c) => {
   return successResponse(c, updated);
 });
 
-// PATCH /:id/move — 폴더 이동
+// PATCH /:id/move — 폴더 이동 (트랜잭션)
 app.patch("/:id/move", async (c) => {
   const id = c.req.param("id");
   const { folderId } = (await c.req.json()) as { folderId: string | null };
@@ -280,21 +330,50 @@ app.patch("/:id/move", async (c) => {
     return errorResponse(c, ERRORS.VALIDATION, 400, "자기 자신으로 이동할 수 없습니다.");
   }
 
-  if (folderId && (await isDescendant(folderId, id))) {
-    return errorResponse(c, ERRORS.CIRCULAR_REFERENCE, 400);
-  }
+  const updated = await db.transaction(async (tx) => {
+    if (folderId && (await isDescendant(tx, folderId, id))) {
+      return null; // 순환 참조
+    }
 
-  const [updated] = await db
-    .update(files)
-    .set({ folderId, updatedAt: new Date() })
-    .where(eq(files.id, id))
-    .returning();
+    // 이동 대상의 현재 이름 조회
+    const target = await tx.query.files.findFirst({
+      where: eq(files.id, id),
+      columns: { name: true },
+    });
+    if (!target) return undefined;
 
+    // 대상 폴더에서 동일 이름 중복 체크
+    const duplicate = await (tx as unknown as typeof db)
+      .select({ id: files.id })
+      .from(files)
+      .where(
+        and(
+          folderId ? eq(files.folderId, folderId) : isNull(files.folderId),
+          eq(files.name, target.name),
+          eq(files.deleted, false),
+          sql`${files.id} != ${id}`
+        )
+      )
+      .limit(1);
+
+    if (duplicate.length > 0) return "duplicate" as const;
+
+    const [result] = await tx
+      .update(files)
+      .set({ folderId, updatedAt: new Date() })
+      .where(eq(files.id, id))
+      .returning();
+
+    return result;
+  });
+
+  if (updated === null) return errorResponse(c, ERRORS.CIRCULAR_REFERENCE, 400);
+  if (updated === "duplicate") return errorResponse(c, ERRORS.VALIDATION, 400, "대상 폴더에 동일한 이름이 이미 존재합니다.");
   if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
   return successResponse(c, updated);
 });
 
-// DELETE /:id — 휴지통으로 이동
+// DELETE /:id — 휴지통으로 이동 (트랜잭션)
 app.delete("/:id", async (c) => {
   const id = c.req.param("id");
   const deletedAt = new Date();
@@ -305,20 +384,21 @@ app.delete("/:id", async (c) => {
   });
   if (!target) return errorResponse(c, ERRORS.NOT_FOUND, 404);
 
-  // 폴더면 하위 항목도 재귀적으로 소프트 삭제
-  if (target.isFolder) {
-    await softDeleteRecursive(id, deletedAt);
-  }
+  await db.transaction(async (tx) => {
+    if (target.isFolder) {
+      await softDeleteRecursive(tx, id, deletedAt);
+    }
 
-  await db
-    .update(files)
-    .set({ deleted: true, deletedAt, updatedAt: new Date() })
-    .where(eq(files.id, id));
+    await tx
+      .update(files)
+      .set({ deleted: true, deletedAt, updatedAt: new Date() })
+      .where(eq(files.id, id));
+  });
 
   return successResponse(c, { id });
 });
 
-// PATCH /:id/restore — 휴지통에서 복원
+// PATCH /:id/restore — 휴지통에서 복원 (트랜잭션)
 app.patch("/:id/restore", async (c) => {
   const id = c.req.param("id");
 
@@ -328,21 +408,24 @@ app.patch("/:id/restore", async (c) => {
   });
   if (!target) return errorResponse(c, ERRORS.NOT_FOUND, 404);
 
-  // 폴더면 같은 deletedAt 타임스탬프를 가진 하위 항목도 함께 복원
-  if (target.isFolder && target.deletedAt) {
-    await restoreRecursive(id, target.deletedAt);
-  }
+  const updated = await db.transaction(async (tx) => {
+    if (target.isFolder && target.deletedAt) {
+      await restoreRecursive(tx, id, target.deletedAt);
+    }
 
-  const [updated] = await db
-    .update(files)
-    .set({ deleted: false, deletedAt: null, updatedAt: new Date() })
-    .where(eq(files.id, id))
-    .returning();
+    const [result] = await tx
+      .update(files)
+      .set({ deleted: false, deletedAt: null, updatedAt: new Date() })
+      .where(eq(files.id, id))
+      .returning();
+
+    return result;
+  });
 
   return successResponse(c, updated!);
 });
 
-// DELETE /:id/permanent — 영구 삭제
+// DELETE /:id/permanent — 영구 삭제 (트랜잭션 + 스토리지 후처리)
 app.delete("/:id/permanent", async (c) => {
   const id = c.req.param("id");
 
@@ -351,22 +434,141 @@ app.delete("/:id/permanent", async (c) => {
   });
   if (!file) return errorResponse(c, ERRORS.NOT_FOUND, 404);
 
-  // 폴더면 하위 항목부터 재귀 삭제 (FK RESTRICT 대응)
-  if (file.isFolder) {
-    await permanentDeleteRecursive(id);
-  }
+  const s3KeysToDelete: string[] = [];
 
-  await db.delete(files).where(eq(files.id, id));
+  await db.transaction(async (tx) => {
+    if (file.isFolder) {
+      const childKeys = await permanentDeleteRecursive(tx, id);
+      s3KeysToDelete.push(...childKeys);
+    }
 
+    await tx.delete(files).where(eq(files.id, id));
+  });
+
+  // 스토리지 삭제는 트랜잭션 밖에서 후처리
   if (file.s3Key) {
+    s3KeysToDelete.push(file.s3Key);
+  }
+  for (const key of s3KeysToDelete) {
     try {
-      await deleteFile(file.s3Key);
+      await deleteFile(key);
     } catch (err) {
-      console.warn(`[Storage] Failed to delete file: ${file.s3Key}`, err);
+      console.warn(`[Storage] Failed to delete file: ${key}`, err);
     }
   }
 
   return successResponse(c, { id });
+});
+
+// POST /batch-delete — 배치 소프트 삭제 (트랜잭션)
+app.post("/batch-delete", async (c) => {
+  const { ids } = (await c.req.json()) as { ids: string[] };
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return errorResponse(c, ERRORS.VALIDATION, 400);
+  }
+
+  const deletedAt = new Date();
+
+  const targets = await db.query.files.findMany({
+    where: and(inArray(files.id, ids), eq(files.deleted, false)),
+    columns: { id: true, isFolder: true },
+  });
+
+  if (targets.length === 0) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  await db.transaction(async (tx) => {
+    for (const target of targets) {
+      if (target.isFolder) {
+        await softDeleteRecursive(tx, target.id, deletedAt);
+      }
+    }
+
+    await tx
+      .update(files)
+      .set({ deleted: true, deletedAt, updatedAt: new Date() })
+      .where(inArray(files.id, targets.map((t) => t.id)));
+  });
+
+  return successResponse(c, { ids: targets.map((t) => t.id) });
+});
+
+// POST /batch-move — 배치 이동 (트랜잭션, 충돌 시 전체 차단)
+app.post("/batch-move", async (c) => {
+  const { ids, folderId } = (await c.req.json()) as { ids: string[]; folderId: string | null };
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return errorResponse(c, ERRORS.VALIDATION, 400);
+  }
+
+  const duplicateNames: string[] = [];
+  const movedIds: string[] = [];
+
+  await db.transaction(async (tx) => {
+    // 1단계: 충돌 사전 검증
+    for (const id of ids) {
+      if (id === folderId) continue;
+
+      const target = await tx.query.files.findFirst({
+        where: eq(files.id, id),
+        columns: { name: true, isFolder: true },
+      });
+      if (!target) continue;
+
+      if (target.isFolder && folderId && (await isDescendant(tx, folderId, id))) {
+        continue;
+      }
+
+      const duplicate = await (tx as unknown as typeof db)
+        .select({ id: files.id })
+        .from(files)
+        .where(
+          and(
+            folderId ? eq(files.folderId, folderId) : isNull(files.folderId),
+            eq(files.name, target.name),
+            eq(files.deleted, false),
+            sql`${files.id} != ${id}`
+          )
+        )
+        .limit(1);
+
+      if (duplicate.length > 0) {
+        duplicateNames.push(target.name);
+      }
+    }
+
+    // 충돌 항목이 있으면 아무것도 이동하지 않음
+    if (duplicateNames.length > 0) return;
+
+    // 2단계: 전부 이동
+    for (const id of ids) {
+      if (id === folderId) continue;
+
+      const target = await tx.query.files.findFirst({
+        where: eq(files.id, id),
+        columns: { isFolder: true },
+      });
+      if (!target) continue;
+
+      if (target.isFolder && folderId && (await isDescendant(tx, folderId, id))) {
+        continue;
+      }
+
+      await tx
+        .update(files)
+        .set({ folderId, updatedAt: new Date() })
+        .where(eq(files.id, id));
+
+      movedIds.push(id);
+    }
+  });
+
+  if (duplicateNames.length > 0) {
+    return errorResponse(c, ERRORS.VALIDATION, 400,
+      `대상 폴더에 동일한 이름이 이미 존재합니다: ${duplicateNames.join(", ")}`);
+  }
+
+  return successResponse(c, { ids: movedIds });
 });
 
 export default app;
