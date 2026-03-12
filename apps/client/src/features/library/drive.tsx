@@ -594,7 +594,7 @@ function DraggableFileRow({
     listeners,
     setNodeRef: setDragRef,
     isDragging,
-  } = useDraggable({ id: item.id });
+  } = useDraggable({ id: item.id, disabled: renamingId === item.id });
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: `list-${item.id}`,
