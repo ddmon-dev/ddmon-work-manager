@@ -8,6 +8,7 @@ dist-production/
 # local env
 backups/
 storage/
+storage-dev/
 
 # seed (개인정보 포함)
 apps/server/src/db/seed.ts
