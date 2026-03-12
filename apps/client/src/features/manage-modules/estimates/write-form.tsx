@@ -32,7 +32,7 @@ import {
 } from "../_base/ui";
 import { useFormGuard } from "../_base/hooks";
 import { useCreateEstimate, useUpdateEstimate } from "./api";
-import { DISCOUNT_OPTIONS, DEFAULT_UNIT } from "./constants";
+import { DISCOUNT_OPTIONS, TAX_OPTIONS, DEFAULT_UNIT } from "./constants";
 import type { EstimateWithDetails } from "./types";
 import { ItemGroupEditor } from "./item-group-editor";
 import {
@@ -267,6 +267,14 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                   <div className="sticky bottom-0 border-t border-border-dark/50 bg-background/60 backdrop-blur-md">
                     <div className="px-6 pt-4 pb-2 space-y-2">
                       <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                          <FormNativeSelect
+                            control={form.control}
+                            name="taxType"
+                            label="세금 타입"
+                            options={[...TAX_OPTIONS]}
+                          />
+                        </div>
                         <div className="flex-1">
                           <FormNativeSelect
                             control={form.control}
