@@ -42,7 +42,6 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@/shared/ui/empty";
-import { Skeleton } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/utils/classnames";
 import {
   DndContext,
@@ -210,28 +209,26 @@ export function Drive() {
         <FileUpload folderId={currentFolderId}>
           <div className="flex h-full flex-col">
             {/* 브레드크럼 */}
-            {breadcrumbs.length > 1 && (
-              <div className="flex items-center gap-1 border-b px-4 py-1.5 text-sm">
-                {breadcrumbs.map((crumb, index) => (
-                  <Fragment key={crumb.id ?? "root"}>
-                    {index > 0 && (
-                      <ChevronRight className="size-3 text-muted-foreground" />
+            <div className="flex items-center gap-1 border-b px-4 py-2 text-sm">
+              {breadcrumbs.map((crumb, index) => (
+                <Fragment key={crumb.id ?? "root"}>
+                  {index > 0 && (
+                    <ChevronRight className="size-3 text-muted-foreground" />
+                  )}
+                  <button
+                    className={cn(
+                      "hover:underline",
+                      index === breadcrumbs.length - 1
+                        ? "font-medium"
+                        : "text-muted-foreground"
                     )}
-                    <button
-                      className={cn(
-                        "hover:underline",
-                        index === breadcrumbs.length - 1
-                          ? "font-medium"
-                          : "text-muted-foreground"
-                      )}
-                      onClick={() => navigateToBreadcrumb(index)}
-                    >
-                      {crumb.name}
-                    </button>
-                  </Fragment>
-                ))}
-              </div>
-            )}
+                    onClick={() => navigateToBreadcrumb(index)}
+                  >
+                    {crumb.name}
+                  </button>
+                </Fragment>
+              ))}
+            </div>
 
             {/* 상단 툴바 */}
             <div className="flex items-center gap-2 border-b px-4 py-2">
@@ -342,13 +339,7 @@ export function Drive() {
                 </div>
               )}
 
-              {isLoading ? (
-                <div className="space-y-2 p-4">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} className="h-10 w-full" />
-                  ))}
-                </div>
-              ) : items?.length === 0 ? (
+              {!isLoading && items?.length === 0 ? (
                 <Empty className="h-full border-0">
                   <EmptyHeader>
                     <EmptyMedia variant="icon">

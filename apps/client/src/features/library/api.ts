@@ -178,7 +178,6 @@ export function useFilePathQuery(folderId: string | null) {
         .get<{ path: { id: string; name: string }[] }>(`/files/${folderId}/path`)
         .then((d) => d.path),
     enabled: !!folderId,
-    placeholderData: keepPreviousData,
   });
 }
 
