@@ -50,6 +50,16 @@ export function useDrive() {
   );
   const { data: folderPath } = useFilePathQuery(currentFolderId);
 
+  // 삭제된 폴더에 있으면 루트로 자동 이동
+  useEffect(() => {
+    if (currentFolderId && folderPath !== undefined) {
+      const currentInPath = folderPath?.some((p) => p.id === currentFolderId);
+      if (!currentInPath) {
+        setCurrentFolderId(null);
+      }
+    }
+  }, [currentFolderId, folderPath]);
+
   const breadcrumbs: Breadcrumb[] = currentFolderId && folderPath
     ? [{ id: null, name: "전체 파일" }, ...folderPath]
     : [{ id: null, name: "전체 파일" }];

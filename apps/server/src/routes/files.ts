@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, eq, isNull, asc, desc } from "drizzle-orm";
+import { and, eq, isNull, asc, desc, inArray } from "drizzle-orm";
 import { db } from "../db";
 import { files } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
@@ -20,6 +20,84 @@ async function isDescendant(parentId: string | null, ancestorId: string): Promis
     currentId = folder?.folderId ?? null;
   }
   return false;
+}
+
+/** 폴더와 하위 항목을 재귀적으로 소프트 삭제 */
+async function softDeleteRecursive(folderId: string, deletedAt: Date) {
+  const children = await db.query.files.findMany({
+    where: and(eq(files.folderId, folderId), eq(files.deleted, false)),
+    columns: { id: true, isFolder: true },
+  });
+
+  for (const child of children) {
+    if (child.isFolder) {
+      await softDeleteRecursive(child.id, deletedAt);
+    }
+  }
+
+  if (children.length > 0) {
+    await db
+      .update(files)
+      .set({ deleted: true, deletedAt, updatedAt: new Date() })
+      .where(
+        and(
+          eq(files.folderId, folderId),
+          eq(files.deleted, false)
+        )
+      );
+  }
+}
+
+/** 같은 deletedAt 타임스탬프를 가진 하위 항목을 재귀적으로 복원 */
+async function restoreRecursive(folderId: string, deletedAt: Date) {
+  const children = await db.query.files.findMany({
+    where: and(eq(files.folderId, folderId), eq(files.deleted, true), eq(files.deletedAt, deletedAt)),
+    columns: { id: true, isFolder: true },
+  });
+
+  for (const child of children) {
+    if (child.isFolder) {
+      await restoreRecursive(child.id, deletedAt);
+    }
+  }
+
+  if (children.length > 0) {
+    const childIds = children.map((c) => c.id);
+    await db
+      .update(files)
+      .set({ deleted: false, deletedAt: null, updatedAt: new Date() })
+      .where(inArray(files.id, childIds));
+  }
+}
+
+/** 폴더와 하위 항목을 재귀적으로 영구 삭제 (리프부터) */
+async function permanentDeleteRecursive(folderId: string) {
+  const children = await db.query.files.findMany({
+    where: eq(files.folderId, folderId),
+    columns: { id: true, isFolder: true, s3Key: true },
+  });
+
+  for (const child of children) {
+    if (child.isFolder) {
+      await permanentDeleteRecursive(child.id);
+    }
+  }
+
+  // 파일 스토리지 정리
+  for (const child of children) {
+    if (child.s3Key) {
+      try {
+        await deleteFile(child.s3Key);
+      } catch (err) {
+        console.warn(`[Storage] Failed to delete file: ${child.s3Key}`, err);
+      }
+    }
+  }
+
+  // 자식 일괄 DB 삭제
+  if (children.length > 0) {
+    await db.delete(files).where(eq(files.folderId, folderId));
+  }
 }
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -61,6 +139,17 @@ app.post("/upload", async (c) => {
     return errorResponse(c, ERRORS.VALIDATION, 400);
   }
 
+  // 삭제된 폴더에 업로드 방지
+  if (folderId) {
+    const parentFolder = await db.query.files.findFirst({
+      where: and(eq(files.id, folderId), eq(files.isFolder, true), eq(files.deleted, false)),
+      columns: { id: true },
+    });
+    if (!parentFolder) {
+      return errorResponse(c, ERRORS.VALIDATION, 400, "대상 폴더가 존재하지 않거나 삭제되었습니다.");
+    }
+  }
+
   const buffer = Buffer.from(await file.arrayBuffer());
 
   if (buffer.length > STORAGE_CONFIG.MAX_FILE_SIZE_MB * 1024 * 1024) {
@@ -100,11 +189,24 @@ app.post("/folder", async (c) => {
   const parsed = folderCreateSchema.safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
+  const targetFolderId = parsed.data.folderId ?? null;
+
+  // 삭제된 폴더 안에 생성 방지
+  if (targetFolderId) {
+    const parentFolder = await db.query.files.findFirst({
+      where: and(eq(files.id, targetFolderId), eq(files.isFolder, true), eq(files.deleted, false)),
+      columns: { id: true },
+    });
+    if (!parentFolder) {
+      return errorResponse(c, ERRORS.VALIDATION, 400, "대상 폴더가 존재하지 않거나 삭제되었습니다.");
+    }
+  }
+
   const [created] = await db
     .insert(files)
     .values({
       name: parsed.data.name,
-      folderId: parsed.data.folderId ?? null,
+      folderId: targetFolderId,
       isFolder: true,
       author: user.name ?? undefined,
     })
@@ -122,7 +224,7 @@ app.get("/:id/path", async (c) => {
   while (currentId) {
     const folder: { id: string; name: string; folderId: string | null } | undefined =
       await db.query.files.findFirst({
-        where: eq(files.id, currentId),
+        where: and(eq(files.id, currentId), eq(files.deleted, false)),
         columns: { id: true, name: true, folderId: true },
       });
     if (!folder) break;
@@ -195,14 +297,24 @@ app.patch("/:id/move", async (c) => {
 // DELETE /:id — 휴지통으로 이동
 app.delete("/:id", async (c) => {
   const id = c.req.param("id");
+  const deletedAt = new Date();
 
-  const [updated] = await db
+  const target = await db.query.files.findFirst({
+    where: eq(files.id, id),
+    columns: { id: true, isFolder: true },
+  });
+  if (!target) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  // 폴더면 하위 항목도 재귀적으로 소프트 삭제
+  if (target.isFolder) {
+    await softDeleteRecursive(id, deletedAt);
+  }
+
+  await db
     .update(files)
-    .set({ deleted: true, deletedAt: new Date(), updatedAt: new Date() })
-    .where(eq(files.id, id))
-    .returning();
+    .set({ deleted: true, deletedAt, updatedAt: new Date() })
+    .where(eq(files.id, id));
 
-  if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
   return successResponse(c, { id });
 });
 
@@ -210,14 +322,24 @@ app.delete("/:id", async (c) => {
 app.patch("/:id/restore", async (c) => {
   const id = c.req.param("id");
 
+  const target = await db.query.files.findFirst({
+    where: eq(files.id, id),
+    columns: { id: true, isFolder: true, deletedAt: true },
+  });
+  if (!target) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  // 폴더면 같은 deletedAt 타임스탬프를 가진 하위 항목도 함께 복원
+  if (target.isFolder && target.deletedAt) {
+    await restoreRecursive(id, target.deletedAt);
+  }
+
   const [updated] = await db
     .update(files)
     .set({ deleted: false, deletedAt: null, updatedAt: new Date() })
     .where(eq(files.id, id))
     .returning();
 
-  if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
-  return successResponse(c, updated);
+  return successResponse(c, updated!);
 });
 
 // DELETE /:id/permanent — 영구 삭제
@@ -228,6 +350,11 @@ app.delete("/:id/permanent", async (c) => {
     where: eq(files.id, id),
   });
   if (!file) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  // 폴더면 하위 항목부터 재귀 삭제 (FK RESTRICT 대응)
+  if (file.isFolder) {
+    await permanentDeleteRecursive(id);
+  }
 
   await db.delete(files).where(eq(files.id, id));
 
