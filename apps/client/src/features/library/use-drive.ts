@@ -30,6 +30,7 @@ export interface ContextMenuState {
   x: number;
   y: number;
   item: FileItem | null;
+  source: "tree" | "list";
 }
 
 // ─── 소규모 로컬 함수 ───
@@ -372,7 +373,7 @@ export function useDrive() {
   };
 
   const openContextMenu = useCallback(
-    (e: React.MouseEvent, item: FileItem | null) => {
+    (e: React.MouseEvent, item: FileItem | null, source: "tree" | "list" = "list") => {
       e.preventDefault();
       if (item) {
         // 우클릭한 항목이 기존 선택에 포함되지 않으면 단일 선택으로 전환
@@ -381,7 +382,7 @@ export function useDrive() {
           lastSelectedIdRef.current = item.id;
         }
       }
-      setContextMenu({ x: e.clientX, y: e.clientY, item });
+      setContextMenu({ x: e.clientX, y: e.clientY, item, source });
     },
     [selectedIds]
   );

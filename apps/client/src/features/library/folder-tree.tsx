@@ -8,6 +8,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
+import { Input } from "@/shared/ui/input";
 import { useDroppable } from "@dnd-kit/core";
 import { useFilesQuery, useFilePathQuery } from "./api";
 import type { FileItem } from "./types";
@@ -19,6 +20,11 @@ interface FolderTreeProps {
   onTrashClick?: () => void;
   isTrashActive?: boolean;
   onContextMenu?: (e: React.MouseEvent, item: FileItem) => void;
+  renamingId?: string | null;
+  renameValue?: string;
+  onRenameChange?: (value: string) => void;
+  onRenameSubmit?: (id: string) => void;
+  onRenameCancel?: () => void;
 }
 
 export function FolderTree({
@@ -28,6 +34,11 @@ export function FolderTree({
   onTrashClick,
   isTrashActive,
   onContextMenu,
+  renamingId,
+  renameValue,
+  onRenameChange,
+  onRenameSubmit,
+  onRenameCancel,
 }: FolderTreeProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -92,6 +103,11 @@ export function FolderTree({
           expandedIds={expandedIds}
           onToggle={toggleExpand}
           onContextMenu={onContextMenu}
+          renamingId={renamingId}
+          renameValue={renameValue}
+          onRenameChange={onRenameChange}
+          onRenameSubmit={onRenameSubmit}
+          onRenameCancel={onRenameCancel}
           depth={1}
         />
       </div>
@@ -118,6 +134,11 @@ function FolderChildren({
   expandedIds,
   onToggle,
   onContextMenu,
+  renamingId,
+  renameValue,
+  onRenameChange,
+  onRenameSubmit,
+  onRenameCancel,
   depth,
 }: {
   folderId: string | null;
@@ -126,6 +147,11 @@ function FolderChildren({
   expandedIds: Set<string>;
   onToggle: (id: string) => void;
   onContextMenu?: (e: React.MouseEvent, item: FileItem) => void;
+  renamingId?: string | null;
+  renameValue?: string;
+  onRenameChange?: (value: string) => void;
+  onRenameSubmit?: (id: string) => void;
+  onRenameCancel?: () => void;
   depth: number;
 }) {
   const { data: items, isLoading } = useFilesQuery(folderId);
@@ -156,6 +182,11 @@ function FolderChildren({
           expandedIds={expandedIds}
           onToggle={onToggle}
           onContextMenu={onContextMenu}
+          renamingId={renamingId}
+          renameValue={renameValue}
+          onRenameChange={onRenameChange}
+          onRenameSubmit={onRenameSubmit}
+          onRenameCancel={onRenameCancel}
           depth={depth}
         />
       ))}
@@ -170,6 +201,11 @@ function FolderNode({
   expandedIds,
   onToggle,
   onContextMenu,
+  renamingId,
+  renameValue,
+  onRenameChange,
+  onRenameSubmit,
+  onRenameCancel,
   depth,
 }: {
   folder: FileItem;
@@ -178,6 +214,11 @@ function FolderNode({
   expandedIds: Set<string>;
   onToggle: (id: string) => void;
   onContextMenu?: (e: React.MouseEvent, item: FileItem) => void;
+  renamingId?: string | null;
+  renameValue?: string;
+  onRenameChange?: (value: string) => void;
+  onRenameSubmit?: (id: string) => void;
+  onRenameCancel?: () => void;
   depth: number;
 }) {
   const isExpanded = expandedIds.has(folder.id);
@@ -188,7 +229,7 @@ function FolderNode({
       <DroppableTreeItem
         droppableId={`tree-${folder.id}`}
         folderId={folder.id}
-        label={folder.name}
+        label={renamingId === folder.id ? (renameValue ?? "") : folder.name}
         icon={
           isExpanded ? (
             <FolderOpen className="size-4" />
@@ -197,6 +238,10 @@ function FolderNode({
           )
         }
         isActive={isActive}
+        isRenaming={renamingId === folder.id}
+        onRenameChange={onRenameChange}
+        onRenameSubmit={() => onRenameSubmit?.(folder.id)}
+        onRenameCancel={onRenameCancel}
         depth={depth}
         expandable
         expanded={isExpanded}
@@ -215,6 +260,11 @@ function FolderNode({
           expandedIds={expandedIds}
           onToggle={onToggle}
           onContextMenu={onContextMenu}
+          renamingId={renamingId}
+          renameValue={renameValue}
+          onRenameChange={onRenameChange}
+          onRenameSubmit={onRenameSubmit}
+          onRenameCancel={onRenameCancel}
           depth={depth + 1}
         />
       )}
@@ -247,6 +297,10 @@ interface TreeItemProps {
   icon: React.ReactNode;
   isActive: boolean;
   isDropTarget?: boolean;
+  isRenaming?: boolean;
+  onRenameChange?: (value: string) => void;
+  onRenameSubmit?: () => void;
+  onRenameCancel?: () => void;
   depth?: number;
   expandable?: boolean;
   expanded?: boolean;
@@ -261,6 +315,10 @@ function TreeItem({
   icon,
   isActive,
   isDropTarget,
+  isRenaming,
+  onRenameChange,
+  onRenameSubmit,
+  onRenameCancel,
   depth = 0,
   expandable,
   expanded,
@@ -281,7 +339,7 @@ function TreeItem({
         isDropTarget && "bg-primary/10 ring-1 ring-inset ring-primary"
       )}
       style={{ paddingLeft: `${8 + depth * 16}px` }}
-      onClick={onClick}
+      onClick={isRenaming ? undefined : onClick}
       onContextMenu={onContextMenu}
     >
       {expandable ? (
@@ -304,9 +362,26 @@ function TreeItem({
         <span className="w-3.5" />
       )}
       {icon}
-      <span className="truncate" title={label}>
-        {label}
-      </span>
+      {isRenaming ? (
+        <Input
+          value={label}
+          onChange={(e) => onRenameChange?.(e.target.value)}
+          className="h-auto! -my-0.5 min-w-0 flex-1 select-text rounded-sm border-0 px-1 py-0.5 text-sm shadow-none ring-1 ring-ring"
+          autoFocus
+          onFocus={(e) => e.currentTarget.select()}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing) return;
+            if (e.key === "Enter") onRenameSubmit?.();
+            if (e.key === "Escape") onRenameCancel?.();
+          }}
+          onBlur={() => onRenameSubmit?.()}
+        />
+      ) : (
+        <span className="truncate" title={label}>
+          {label}
+        </span>
+      )}
     </div>
   );
 }

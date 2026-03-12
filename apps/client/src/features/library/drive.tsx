@@ -19,6 +19,8 @@ import {
   ArrowUpDown,
   FolderInput,
   ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import {
@@ -60,7 +62,7 @@ import { FolderTree } from "./folder-tree";
 import { TrashView } from "./trash";
 import { toast } from "sonner";
 import { useDrive, type ContextMenuState } from "./use-drive";
-import { useUploadFile } from "./api";
+import { useUploadFile, useRenameFile } from "./api";
 import type { FileItem } from "./types";
 import type { LucideIcon } from "lucide-react";
 
@@ -112,6 +114,17 @@ export function Drive() {
   const [selectedMoveFolder, setSelectedMoveFolder] = useState<string | null>(
     null
   );
+  const [showTree, setShowTree] = useState(true);
+  const [treeRenamingId, setTreeRenamingId] = useState<string | null>(null);
+  const [treeRenameValue, setTreeRenameValue] = useState("");
+  const treeRenameFile = useRenameFile();
+  const handleTreeRename = async (id: string) => {
+    if (!treeRenameValue.trim()) return;
+    try {
+      await treeRenameFile.mutateAsync({ id, name: treeRenameValue.trim() });
+    } catch {}
+    setTreeRenamingId(null);
+  };
   const [draggedItem, setDraggedItem] = useState<FileItem | null>(null);
   const [dragRowWidth, setDragRowWidth] = useState<number | null>(null);
   const [movingId, setMovingId] = useState<string | null>(null);
@@ -186,16 +199,23 @@ export function Drive() {
     >
     <div className="flex h-full">
       {/* 좌측: 폴더 트리 */}
-      <div className="w-52 shrink-0 border-r">
-        <FolderTree
-          currentFolderId={currentFolderId}
-          onNavigate={handleNavigate}
-          showTrash
-          onTrashClick={() => setShowTrash(true)}
-          isTrashActive={showTrash}
-          onContextMenu={openContextMenu}
-        />
-      </div>
+      {showTree && (
+        <div className="w-[250px] shrink-0 border-r">
+          <FolderTree
+            currentFolderId={currentFolderId}
+            onNavigate={handleNavigate}
+            showTrash
+            onTrashClick={() => setShowTrash(true)}
+            isTrashActive={showTrash}
+            onContextMenu={(e, item) => openContextMenu(e, item, "tree")}
+            renamingId={treeRenamingId}
+            renameValue={treeRenameValue}
+            onRenameChange={setTreeRenameValue}
+            onRenameSubmit={handleTreeRename}
+            onRenameCancel={() => setTreeRenamingId(null)}
+          />
+        </div>
+      )}
 
       {/* 우측: 파일 목록 */}
       {showTrash ? (
@@ -206,7 +226,13 @@ export function Drive() {
         <FileUpload folderId={currentFolderId}>
           <div className="flex h-full select-none flex-col">
             {/* 브레드크럼 */}
-            <div className="flex items-center gap-1 border-b px-4 py-2 text-sm">
+            <div className="flex items-center gap-1 border-b px-2 py-2 text-sm">
+              <button
+                className="-my-1 shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                onClick={() => setShowTree((v) => !v)}
+              >
+                {showTree ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
+              </button>
               {breadcrumbs.map((crumb, index) => (
                 <Fragment key={crumb.id ?? "root"}>
                   {index > 0 && (
@@ -518,8 +544,13 @@ export function Drive() {
             closeContextMenu();
           }}
           onRename={(item) => {
-            setRenamingId(item.id);
-            setRenameValue(item.name);
+            if (contextMenu?.source === "tree") {
+              setTreeRenamingId(item.id);
+              setTreeRenameValue(item.name);
+            } else {
+              setRenamingId(item.id);
+              setRenameValue(item.name);
+            }
             closeContextMenu();
           }}
           onMove={(item) => {
@@ -674,8 +705,17 @@ function DraggableFileRow({
           <Input
             value={renameValue}
             onChange={(e) => onRenameChange(e.target.value)}
-            className="h-7 select-text text-sm"
+            className="h-auto! select-text rounded-sm border-0 px-1 py-0.5 text-sm shadow-none ring-1 ring-ring"
             autoFocus
+            onFocus={(e) => {
+              const input = e.currentTarget;
+              if (item.isFolder) {
+                input.select();
+              } else {
+                const dotIndex = input.value.lastIndexOf(".");
+                input.setSelectionRange(0, dotIndex > 0 ? dotIndex : input.value.length);
+              }
+            }}
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
               if (e.nativeEvent.isComposing) return;
