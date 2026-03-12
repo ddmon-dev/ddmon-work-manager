@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import {
   File as FileIcon,
+  Files,
   FileText,
   Image,
   FolderPlus,
@@ -476,7 +477,7 @@ export function Drive() {
                 : undefined
             }
           >
-            <DragOverlayIcon item={draggedItem} />
+            <DragOverlayIcon item={draggedItem} isMulti={dragCount > 1} />
             <span className="truncate text-sm font-medium">
               {dragCount > 1
                 ? `${dragCount}개 항목`
@@ -809,8 +810,9 @@ function ParentFolderRow({
 
 // ─── DragOverlayIcon ───
 
-function DragOverlayIcon({ item }: { item: FileItem }) {
+function DragOverlayIcon({ item, isMulti }: { item: FileItem; isMulti?: boolean }) {
   const className = "size-5 shrink-0";
+  if (isMulti) return <Files className={cn(className, "text-muted-foreground")} />;
   if (item.isFolder) return <Folder className={cn(className, "text-blue-500")} />;
   if (item.mimeType?.startsWith("image/"))
     return <Image className={cn(className, "text-green-500")} />;
