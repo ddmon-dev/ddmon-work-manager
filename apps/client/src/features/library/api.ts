@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
 import type {
@@ -161,6 +166,7 @@ export function useFilesQuery(folderId: string | null) {
           folderId: folderId ?? undefined,
         })
         .then((d) => d.items),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -172,6 +178,7 @@ export function useFilePathQuery(folderId: string | null) {
         .get<{ path: { id: string; name: string }[] }>(`/files/${folderId}/path`)
         .then((d) => d.path),
     enabled: !!folderId,
+    placeholderData: keepPreviousData,
   });
 }
 
