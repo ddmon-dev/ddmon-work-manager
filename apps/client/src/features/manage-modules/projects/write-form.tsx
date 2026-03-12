@@ -26,6 +26,7 @@ import {
 import { useFormGuard } from "../_base/hooks";
 import { useCreateProject, useUpdateProject, fetchEstimateProjectInfo, useAvailableEstimates } from "./api";
 import { PROJECT_STATUS_OPTIONS, WORK_PHASE_OPTIONS } from "./config";
+import { TAX_OPTIONS } from "../estimates/constants";
 import type { ProjectWithDetails } from "./types";
 
 // 로컬 폼 스키마: 날짜를 Date 객체로 override
@@ -217,15 +218,23 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                   placeholder="프로젝트 설명을 입력해주세요."
                   optional
                 />
-                <FormNumberInput
-                  control={form.control}
-                  name="contractAmount"
-                  label="공급가액"
-                  placeholder="공급가액 (원)"
-                  suffix="원"
-                  thousandSeparator
-                  optional
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormNumberInput
+                    control={form.control}
+                    name="contractAmount"
+                    label="공급가액"
+                    placeholder="공급가액 (원)"
+                    suffix="원"
+                    thousandSeparator
+                    optional
+                  />
+                  <FormNativeSelect
+                    control={form.control}
+                    name="taxType"
+                    label="세금 타입"
+                    options={[...TAX_OPTIONS]}
+                  />
+                </div>
                 <FormRadioGroup
                   control={form.control}
                   name="workPhase"
