@@ -52,8 +52,8 @@ function useNavigation() {
 
   const breadcrumbs: Breadcrumb[] =
     currentFolderId && folderPath
-      ? [{ id: null, name: "전체 파일" }, ...folderPath]
-      : [{ id: null, name: "전체 파일" }];
+      ? [{ id: null, name: "내 드라이브" }, ...folderPath]
+      : [{ id: null, name: "내 드라이브" }];
 
   const handleNavigate = useCallback((folderId: string | null) => {
     setCurrentFolderId(folderId);

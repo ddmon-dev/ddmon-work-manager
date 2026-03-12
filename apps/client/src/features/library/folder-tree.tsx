@@ -88,7 +88,7 @@ export function FolderTree({
         <DroppableTreeItem
           droppableId="tree-root"
           folderId={null}
-          label="전체 파일"
+          label="내 드라이브"
           icon={<HardDrive className="size-4" />}
           isActive={currentFolderId === null && !isTrashActive}
           onClick={() => onNavigate(null)}
