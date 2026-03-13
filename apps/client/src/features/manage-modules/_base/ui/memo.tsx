@@ -3,25 +3,41 @@ import { MemoForm } from "./memo-form";
 import { MemoHistory } from "./memo-history";
 import type { MemoItem } from "../types";
 
-interface MemoSectionProps {
-  memos: MemoItem[];
-  onAdd: (content: string) => Promise<void>;
-  onUpdate: (memoId: string, content: string) => Promise<void>;
-  onDelete: (memoId: string) => Promise<void>;
+interface MemoHooks {
+  useCreateMemo: () => { mutateAsync: (params: { parentId: string; content: string }) => Promise<unknown> };
+  useUpdateMemo: () => { mutateAsync: (params: { parentId: string; memoId: string; content: string }) => Promise<unknown> };
+  useDeleteMemo: () => { mutateAsync: (params: { parentId: string; memoId: string }) => Promise<unknown> };
 }
 
-export function MemoSection({
-  memos,
-  onAdd,
-  onUpdate,
-  onDelete,
-}: MemoSectionProps) {
+interface MemoSectionProps {
+  parentId: string;
+  memos: MemoItem[];
+  hooks: MemoHooks;
+}
+
+export function MemoSection({ parentId, memos, hooks }: MemoSectionProps) {
+  const createMemo = hooks.useCreateMemo();
+  const updateMemo = hooks.useUpdateMemo();
+  const deleteMemo = hooks.useDeleteMemo();
+
+  const handleAdd = async (content: string) => {
+    await createMemo.mutateAsync({ parentId, content });
+  };
+
+  const handleUpdate = async (memoId: string, content: string) => {
+    await updateMemo.mutateAsync({ parentId, memoId, content });
+  };
+
+  const handleDelete = async (memoId: string) => {
+    await deleteMemo.mutateAsync({ parentId, memoId });
+  };
+
   return (
     <div>
       <DetailSectionTitle>메모 히스토리</DetailSectionTitle>
       <div className="space-y-4">
-        <MemoForm onSubmit={onAdd} />
-        <MemoHistory memos={memos} onUpdate={onUpdate} onDelete={onDelete} />
+        <MemoForm onSubmit={handleAdd} />
+        <MemoHistory memos={memos} onUpdate={handleUpdate} onDelete={handleDelete} />
       </div>
     </div>
   );

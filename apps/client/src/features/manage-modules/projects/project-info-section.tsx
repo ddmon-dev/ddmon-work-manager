@@ -1,3 +1,4 @@
+import { NewlineText } from "@/shared/ui/newline-text";
 import { DetailInfoRow } from "../_base/ui";
 import { StatusBadge } from "./status-badge";
 import { WorkPhaseIndicator } from "./work-phase-indicator";
@@ -26,6 +27,7 @@ export function ProjectInfoSection({ data }: ProjectInfoSectionProps) {
       <DetailInfoRow label="계약일" value={data.contractDate} />
       <DetailInfoRow label="납품일" value={data.deliveredDate} />
       <DetailInfoRow label="완료일" value={data.completedDate} />
+      {data.notes && <DetailInfoRow label="비고" value={<NewlineText>{data.notes}</NewlineText>} />}
     </>
   );
 }

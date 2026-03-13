@@ -1,7 +1,6 @@
 import { SheetFooter, SheetBody, SheetContainer, SheetScrollColumn } from "@/shared/ui/sheet";
 import {
   DetailSectionTitle,
-  DetailInfoRow,
   ManageSheetClose,
   ManageSheetModeChange,
   MemoSection,
@@ -19,6 +18,12 @@ import { EstimateVersions } from "./project-estimate-versions";
 import { PaymentForm, PaymentHistory } from "./project-payment-section";
 import { ProjectGantt } from "../project-schedules/gantt/project-gantt";
 import type { ProjectWithDetails } from "./types";
+
+const projectMemoHooks = {
+  useCreateMemo: useCreateProjectMemo,
+  useUpdateMemo: useUpdateProjectMemo,
+  useDeleteMemo: useDeleteProjectMemo,
+};
 
 // ── 헤더 ────────────────────────────────────────────────────
 
@@ -46,22 +51,6 @@ interface DetailViewProps {
 }
 
 export function DetailView({ data, refetch }: DetailViewProps) {
-  const createMemo = useCreateProjectMemo();
-  const updateMemo = useUpdateProjectMemo();
-  const deleteMemo = useDeleteProjectMemo();
-
-  const handleAddMemo = async (content: string) => {
-    await createMemo.mutateAsync({ parentId: data.id, content });
-  };
-
-  const handleUpdateMemo = async (memoId: string, content: string) => {
-    await updateMemo.mutateAsync({ parentId: data.id, memoId, content });
-  };
-
-  const handleDeleteMemo = async (memoId: string) => {
-    await deleteMemo.mutateAsync({ parentId: data.id, memoId });
-  };
-
   const contractAmount = data.contractAmount ? Number(data.contractAmount) : 0;
 
   return (
@@ -72,12 +61,6 @@ export function DetailView({ data, refetch }: DetailViewProps) {
           <SheetContainer>
             <ProjectInfoSection data={data} />
           </SheetContainer>
-
-          {data.notes && (
-            <SheetContainer>
-              <DetailInfoRow label="비고" value={data.notes} vertical />
-            </SheetContainer>
-          )}
 
           {contractAmount > 0 && (
             <SheetContainer>
@@ -114,10 +97,9 @@ export function DetailView({ data, refetch }: DetailViewProps) {
           )}
           <SheetContainer>
             <MemoSection
+              parentId={data.id}
               memos={data.memos}
-              onAdd={handleAddMemo}
-              onUpdate={handleUpdateMemo}
-              onDelete={handleDeleteMemo}
+              hooks={projectMemoHooks}
             />
           </SheetContainer>
         </SheetScrollColumn>

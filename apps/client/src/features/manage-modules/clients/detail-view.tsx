@@ -14,27 +14,17 @@ import {
 } from "./api";
 import type { ClientWithMemos } from "./types";
 
+const clientMemoHooks = {
+  useCreateMemo: useCreateClientMemo,
+  useUpdateMemo: useUpdateClientMemo,
+  useDeleteMemo: useDeleteClientMemo,
+};
+
 interface DetailViewProps {
   data: ClientWithMemos;
 }
 
 export function DetailView({ data }: DetailViewProps) {
-  const createMemo = useCreateClientMemo();
-  const updateMemo = useUpdateClientMemo();
-  const deleteMemo = useDeleteClientMemo();
-
-  const handleAddMemo = async (content: string) => {
-    await createMemo.mutateAsync({ parentId: data.id, content });
-  };
-
-  const handleUpdateMemo = async (memoId: string, content: string) => {
-    await updateMemo.mutateAsync({ parentId: data.id, memoId, content });
-  };
-
-  const handleDeleteMemo = async (memoId: string) => {
-    await deleteMemo.mutateAsync({ parentId: data.id, memoId });
-  };
-
   return (
     <>
       <SheetBody>
@@ -59,10 +49,9 @@ export function DetailView({ data }: DetailViewProps) {
 
         <SheetContainer>
           <MemoSection
+            parentId={data.id}
             memos={data.memos}
-            onAdd={handleAddMemo}
-            onUpdate={handleUpdateMemo}
-            onDelete={handleDeleteMemo}
+            hooks={clientMemoHooks}
           />
         </SheetContainer>
       </SheetBody>
