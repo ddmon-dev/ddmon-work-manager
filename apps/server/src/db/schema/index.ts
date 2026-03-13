@@ -10,4 +10,5 @@ export * from "./mindnotes";
 export * from "./memos";
 export * from "./library";
 export * from "./files";
+export * from "./partners";
 export * from "./relations";

@@ -60,6 +60,8 @@ requireAuth → requireSuperAdmin (선택적)
 | `UPDATE_FAILED` | 500 | 수정 실패 |
 | `DELETE_FAILED` | 500 | 삭제 실패 |
 | `UNEXPECTED_ERROR` | 500 | 예기치 않은 오류 |
+| `PARTNER_HAS_ASSIGNMENTS` | 409 | 프로젝트에 배치된 파트너 삭제 불가 |
+| `DUPLICATE_ASSIGNMENT` | 409 | 이미 배치된 파트너 |
 
 헬퍼: `errorResponse(c, ERRORS.XXX, status, detail?)` — detail이 있으면 기본 메시지 대체
 
@@ -88,6 +90,19 @@ requireAuth → requireSuperAdmin (선택적)
 | PATCH | `/clients/memos/:id` | 메모 수정 |
 | DELETE | `/clients/memos/:id` | 메모 소프트 삭제 |
 
+### Partners (`/api/partners`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/partners` | 목록 (페이지네이션, 검색: name, phone) |
+| POST | `/partners` | 생성 |
+| GET | `/partners/:id` | 상세 (메모 포함, author → "name(username)" 변환) |
+| PATCH | `/partners/:id` | 수정 |
+| DELETE | `/partners/:id` | 소프트 삭제 (프로젝트 배치 있으면 409 거부) |
+| POST | `/partners/:id/memos` | 메모 생성 |
+| PATCH | `/partners/memos/:id` | 메모 수정 |
+| DELETE | `/partners/memos/:id` | 메모 소프트 삭제 |
+
 ### Estimates (`/api/estimates`)
 
 | Method | Path | 설명 |
@@ -107,7 +122,7 @@ requireAuth → requireSuperAdmin (선택적)
 |--------|------|------|
 | GET | `/projects` | 목록 (페이지네이션, 검색: name, projectNumber, clientName) |
 | POST | `/projects` | 생성 (프로젝트 번호 자동 생성) |
-| GET | `/projects/:id` | 상세 (payments/memos/estimateSeries 포함) |
+| GET | `/projects/:id` | 상세 (payments/memos/projectPartners 포함) |
 | PATCH | `/projects/:id` | 수정 |
 | DELETE | `/projects/:id` | 소프트 삭제 |
 | PATCH | `/projects/:id/status` | 상태 변경 |
@@ -117,6 +132,10 @@ requireAuth → requireSuperAdmin (선택적)
 | POST | `/projects/:id/memos` | 메모 생성 |
 | PATCH | `/projects/memos/:id` | 메모 수정 |
 | DELETE | `/projects/memos/:id` | 메모 소프트 삭제 |
+| GET | `/projects/:id/partners` | 프로젝트 파트너 목록 |
+| POST | `/projects/:id/partners` | 파트너 배치 (중복 409) |
+| PATCH | `/projects/partners/:id` | 파트너 배치 수정 |
+| DELETE | `/projects/partners/:id` | 파트너 배치 해제 (하드 삭제) |
 
 ### Project Schedules (`/api/project-schedules`)
 

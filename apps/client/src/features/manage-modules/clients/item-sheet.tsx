@@ -14,6 +14,7 @@ export function ItemSheet() {
       formComponent={WriteForm}
       viewComponent={DetailView}
       moduleName={CONFIG.moduleName}
+      size={{ create: "md", modify: "md", view: "xs", duplicate: "md" }}
     />
   );
 }

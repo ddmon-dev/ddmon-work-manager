@@ -27,6 +27,7 @@ import {
   FormDatePicker,
 } from "@/shared/ui/form";
 import { useDialog } from "@/shared/ui/app-dialog";
+import { InlineEmpty } from "@/shared/ui/inline-empty";
 import {
   DetailSectionTitle,
   DetailInfoRow,
@@ -44,6 +45,7 @@ import {
   useUpdateProjectMemo,
   useDeleteProjectMemo,
 } from "./api";
+import { ProjectPartnerSection } from "./project-partner-section";
 import {
   fetchEstimate,
   useGetVersions,
@@ -514,11 +516,7 @@ function PaymentHistory({ projectId, payments, refetch }: PaymentHistoryProps) {
 
   if (payments.length === 0) {
     return (
-      <ul className="border rounded-lg">
-        <li className="py-6 text-center text-sm text-muted-foreground">
-          아직 입금 내역이 없습니다.
-        </li>
-      </ul>
+      <InlineEmpty message="아직 입금 내역이 없습니다." />
     );
   }
 
@@ -661,8 +659,15 @@ export function DetailView({ data, refetch }: DetailViewProps) {
           </SheetContainer>
         </SheetScrollColumn>
 
-        {/* 우측: 견적서 버전 + 일정 + 메모 */}
+        {/* 우측: 파트너 + 견적서 버전 + 메모 */}
         <SheetScrollColumn>
+          <SheetContainer>
+            <ProjectPartnerSection
+              projectId={data.id}
+              partners={data.projectPartners ?? []}
+              refetch={refetch}
+            />
+          </SheetContainer>
           {data.estimateNumber && (
             <SheetContainer>
               <EstimateVersions estimateNumber={data.estimateNumber} />

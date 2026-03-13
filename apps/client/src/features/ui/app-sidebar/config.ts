@@ -7,6 +7,7 @@ import {
   FileSpreadsheet,
   FolderKanban,
   GanttChart,
+  Users,
 } from "lucide-react";
 
 interface MenuConfig {
@@ -31,6 +32,7 @@ export const navigationConfig: MenuConfig = {
       title: "영업",
       items: [
         { title: "클라이언트 관리", url: "/clients", icon: Briefcase },
+        { title: "파트너 관리", url: "/partners", icon: Users },
         { title: "견적서 관리", url: "/estimates", icon: FileSpreadsheet },
         { title: "매출/수금 통계", url: "/revenue", icon: BarChart3 },
       ],

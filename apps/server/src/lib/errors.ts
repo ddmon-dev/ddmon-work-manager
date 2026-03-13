@@ -25,6 +25,14 @@ export const ERRORS = {
     code: "CIRCULAR_REFERENCE",
     message: "하위 폴더로 이동할 수 없습니다.",
   },
+  PARTNER_HAS_ASSIGNMENTS: {
+    code: "PARTNER_HAS_ASSIGNMENTS",
+    message: "프로젝트에 배치된 파트너는 삭제할 수 없습니다.",
+  },
+  DUPLICATE_ASSIGNMENT: {
+    code: "DUPLICATE_ASSIGNMENT",
+    message: "이미 배치된 파트너입니다.",
+  },
 } as const;
 
 export function successResponse<T>(c: Context, data: T, status: 200 | 201 = 200) {
@@ -34,7 +42,7 @@ export function successResponse<T>(c: Context, data: T, status: 200 | 201 = 200)
 export function errorResponse(
   c: Context,
   error: { code: string; message: string },
-  status: 400 | 401 | 403 | 404 | 500 = 500,
+  status: 400 | 401 | 403 | 404 | 409 | 500 = 500,
   detail?: string
 ) {
   return c.json(

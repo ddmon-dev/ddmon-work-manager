@@ -12,6 +12,7 @@ export { RowActionButtons } from "./row-action-buttons";
 export { MemoSection } from "./memo";
 export { CreateButton } from "./create-button";
 export { ClientSelect } from "./client-select";
+export { PartnerSelect } from "./partner-select";
 export { BulkActionBar } from "./bulk-action-bar";
 export { DuplicateButton } from "./duplicate-button";
 export { ExportDataButton } from "./export-data-button";

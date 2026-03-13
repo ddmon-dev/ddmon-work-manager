@@ -3,7 +3,6 @@ import { format } from "date-fns";
 import { PencilIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/shared/ui/popover";
-import { ListEmpty } from "@/shared/ui/data-list";
 import { useDialog } from "@/shared/ui/app-dialog";
 import type { MemoItem } from "../types";
 import { MemoForm } from "./memo-form";
@@ -40,8 +39,8 @@ export function MemoHistory({ memos, onUpdate, onDelete }: MemoHistoryProps) {
         </li>
       ))}
       {memos.length === 0 && (
-        <li>
-          <ListEmpty message={{ description: "등록된 메모가 없습니다." }} />
+        <li className="py-6 text-center text-sm text-muted-foreground">
+          등록된 메모가 없습니다.
         </li>
       )}
     </ul>

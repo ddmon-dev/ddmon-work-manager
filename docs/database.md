@@ -38,6 +38,9 @@ Admins = Better Auth user 테이블 (별도 admins 테이블 없음).
 | `mindnotes` | 마인드노트 | uuid | **하드** |
 | `memos` | 메모 (개인 메모장) | uuid | **하드** |
 | `business_info` | 사업자 정보 | uuid | — |
+| `partners` | 파트너 (프리랜서/협력사) | uuid | 소프트 |
+| `partner_memos` | 파트너 메모 | uuid | 소프트 |
+| `project_partners` | 프로젝트-파트너 배치 (다대다) | uuid | **하드** |
 | `library_boards` | 라이브러리 게시판 | uuid | 소프트 |
 | `library_documents` | 라이브러리 문서 | uuid | 소프트 (휴지통) |
 | `files` | 드라이브 파일/폴더 | uuid | 소프트 (휴지통) |
@@ -54,8 +57,12 @@ estimate_series ─── estimates (1:N)
                      └── estimate_item_groups (1:N, CASCADE)
                           └── estimate_items (1:N, CASCADE)
 
+partners ─────┬── partner_memos (1:N, CASCADE)
+              └── project_partners (1:N, RESTRICT)
+
 projects ─────┬── project_payments (1:N, CASCADE)
               ├── project_memos (1:N, CASCADE)
+              ├── project_partners (1:N, CASCADE)
               ├── project_schedule_lanes (1:N, CASCADE)
               │    └── project_schedules (1:N, CASCADE)
               └── schedules (1:N, SET NULL)
@@ -76,7 +83,7 @@ files ─── files (self-ref, folderId → RESTRICT)
 | 전략 | 적용 | 이유 |
 |------|------|------|
 | **CASCADE** | 메모, 입금 내역, 아이템, 세션 | 부모 삭제 시 자식 함께 삭제 |
-| **RESTRICT** | clients → estimates, projects | 고객에 연결된 견적서/프로젝트 있으면 삭제 차단 |
+| **RESTRICT** | clients → estimates, projects; partners → project_partners | 연결된 하위 엔티티 있으면 삭제 차단 |
 | **SET NULL** | schedules → project/client, estimates → author | 참조 대상 삭제 시 null로 변환 |
 
 ## 제약조건
@@ -105,7 +112,7 @@ files ─── files (self-ref, folderId → RESTRICT)
 `deleted` boolean 컬럼 + `updated_at` 타임스탬프.
 모든 SELECT에서 `softDeleteFilter(table.deleted)` 적용 필수.
 
-대상: clients, client_memos, estimates, projects, project_payments, project_memos, user, library_boards, library_documents, files
+대상: clients, client_memos, estimates, projects, project_payments, project_memos, partners, partner_memos, user, library_boards, library_documents, files
 
 ### 하드 삭제
 
@@ -134,6 +141,21 @@ files ─── files (self-ref, folderId → RESTRICT)
 - `contract_amount`: 공급가액 (`numeric(15,2)`). 견적서와 독립
 - `tax_type`: nullable. 신규 기본값 `"vat"`, 기존 withholding 유지
 - `estimate_number`: nullable. 견적서 없이도 프로젝트 생성 가능
+
+### 파트너 (partners)
+
+- `name`: 성명 (NOT NULL)
+- `resident_number`: 주민등록번호 (평문 저장, 원천세 신고용)
+- `bank_name`, `bank_account`, `account_holder`: 정산 계좌 정보
+- `specialties`: text[] — 전문분야 (PARTNER_SPECIALTIES 상수 + 기타)
+
+### 프로젝트 파트너 (project_partners)
+
+- `project_id`: NOT NULL FK → projects(id) ON DELETE CASCADE
+- `partner_id`: NOT NULL FK → partners(id) ON DELETE RESTRICT
+- `roles`: text[] — 배치 역할 (PARTNER_SPECIALTIES 상수 공유 + 기타)
+- `amount`: numeric — 파트너 비용
+- `tax_type`: text — 정산방식 (`"withholding"` 기본 | `"vat"`)
 
 ### 프로젝트 일정 레인 (project_schedule_lanes)
 
@@ -191,7 +213,7 @@ files ─── files (self-ref, folderId → RESTRICT)
 
 ## 마이그레이션 관리
 
-마이그레이션 파일: `0000_initial` ~ `0008_add_favorite_order_to_files` (9개). 0000~0003은 초기 스키마, 0004는 프로젝트 일정, 0006은 라이브러리/드라이브 테이블 추가, 0007~0008은 파일 즐겨찾기.
+마이그레이션 파일: `0000_initial` ~ `0011_add_partners` (12개). 0000~0003은 초기 스키마, 0004는 프로젝트 일정, 0006은 라이브러리/드라이브 테이블 추가, 0007~0008은 파일 즐겨찾기, 0011은 파트너 관리.
 
 ### 스키마 변경 절차
 

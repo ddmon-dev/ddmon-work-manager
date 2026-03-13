@@ -12,7 +12,7 @@ src/
 ├── pages/              # 라우팅 페이지 (컴포넌트만 배치, 로직 최소화)
 ├── layouts/            # 레이아웃 (RootLayout, AuthLayout, ProtectedLayout)
 ├── features/           # 기능 모듈
-│   ├── manage-modules/ # CRUD 시스템 (_base + 5개 모듈 + project-schedules)
+│   ├── manage-modules/ # CRUD 시스템 (_base + 6개 모듈 + project-schedules)
 │   ├── auth/           # 인증
 │   ├── dashboard/      # 대시보드
 │   ├── revenue/        # 매출 현황
@@ -56,7 +56,7 @@ ProtectedLayout 자식에 별도 `errorElement` 배치 — 에러 시에도 사�
 
 ### manage-modules 시스템
 
-`_base/` 인프라 + 5개 모듈 (clients, estimates, projects, schedules, admins).
+`_base/` 인프라 + 6개 모듈 (clients, partners, estimates, projects, schedules, admins).
 
 #### 프로젝트 일정 모듈 (`project-schedules/`)
 

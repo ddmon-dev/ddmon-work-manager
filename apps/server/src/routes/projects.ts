@@ -2,9 +2,9 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { projects, projectPayments, projectMemos, projectScheduleLanes, user } from "../db/schema";
+import { projects, projectPayments, projectMemos, projectPartners, projectScheduleLanes, user } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
-import { projectWriteSchema } from "@packages/schemas";
+import { projectWriteSchema, projectPartnerWriteSchema } from "@packages/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { searchFilter, softDeleteFilter, softDeletePayload, reorderSchema, executeReorder } from "../lib/query-helpers";
@@ -133,6 +133,43 @@ app.patch("/memos/:id", async (c) => {
   return successResponse(c, updated);
 });
 
+// DELETE /projects/partners/:id — 파트너 배치 해제 (하드 삭제)
+app.delete("/partners/:id", async (c) => {
+  const id = c.req.param("id");
+  const [deleted] = await db
+    .delete(projectPartners)
+    .where(eq(projectPartners.id, id))
+    .returning();
+
+  if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+  return successResponse(c, { id });
+});
+
+// PATCH /projects/partners/:id — 파트너 배치 수정
+app.patch("/partners/:id", async (c) => {
+  const id = c.req.param("id");
+  const parsed = z.object({
+    roles: z.array(z.string()).optional(),
+    amount: z.number().positive().nullable().optional(),
+    taxType: z.enum(["withholding", "vat"]).optional(),
+    notes: z.string().optional(),
+  }).safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  const { amount, ...rest } = parsed.data;
+  const [updated] = await db
+    .update(projectPartners)
+    .set({
+      ...rest,
+      ...(amount !== undefined && { amount: amount != null ? String(amount) : null }),
+    })
+    .where(eq(projectPartners.id, id))
+    .returning();
+
+  if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+  return successResponse(c, updated);
+});
+
 // DELETE /projects/memos/:id — 메모 소프트 삭제
 app.delete("/memos/:id", async (c) => {
   const id = c.req.param("id");
@@ -160,6 +197,9 @@ app.get("/:id", async (c) => {
       memos: {
         where: softDeleteFilter(projectMemos.deleted),
         orderBy: [desc(projectMemos.createdAt)],
+      },
+      projectPartners: {
+        with: { partner: true },
       },
     },
   });
@@ -290,6 +330,53 @@ app.post("/:id/payments", async (c) => {
     .returning();
 
   return successResponse(c, payment, 201);
+});
+
+// GET /projects/:id/partners — 프로젝트 파트너 목록
+app.get("/:id/partners", async (c) => {
+  const projectId = c.req.param("id");
+  const items = await db.query.projectPartners.findMany({
+    where: eq(projectPartners.projectId, projectId),
+    with: { partner: true },
+  });
+
+  return successResponse(c, items);
+});
+
+// POST /projects/:id/partners — 파트너 배치 (중복 체크)
+app.post("/:id/partners", async (c) => {
+  const projectId = c.req.param("id");
+  const parsed = projectPartnerWriteSchema.safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  // 프로젝트 존재 확인
+  const project = await db.query.projects.findFirst({
+    where: and(eq(projects.id, projectId), softDeleteFilter(projects.deleted)),
+  });
+  if (!project) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  // 중복 배치 체크
+  const [existing] = await db
+    .select({ id: projectPartners.id })
+    .from(projectPartners)
+    .where(and(eq(projectPartners.projectId, projectId), eq(projectPartners.partnerId, parsed.data.partnerId)))
+    .limit(1);
+
+  if (existing) {
+    return errorResponse(c, ERRORS.DUPLICATE_ASSIGNMENT, 409);
+  }
+
+  const { amount, ...rest } = parsed.data;
+  const [created] = await db
+    .insert(projectPartners)
+    .values({
+      projectId,
+      ...rest,
+      ...(amount != null && { amount: String(amount) }),
+    })
+    .returning();
+
+  return successResponse(c, created, 201);
 });
 
 // POST /projects/:id/memos — 메모 생성

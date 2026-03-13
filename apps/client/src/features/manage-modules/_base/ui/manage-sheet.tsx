@@ -145,9 +145,10 @@ export function useManageSheetData<T>() {
 
 // ── ManageSheet 컴포넌트 ────────────────────────────────────
 
-type SizeKey = "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+type SizeKey = "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 
 const SIZES: Record<SizeKey, string> = {
+  xs: "md:max-w-md",
   sm: "md:max-w-lg",
   md: "md:max-w-xl",
   lg: "md:max-w-2xl",

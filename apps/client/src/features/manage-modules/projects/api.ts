@@ -332,3 +332,76 @@ const {
 });
 
 export { useCreateProjectMemo, useUpdateProjectMemo, useDeleteProjectMemo };
+
+// ── 파트너 배치 ────────────────────────────────────────────────
+
+export function useAddProjectPartner() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      ...data
+    }: {
+      projectId: string;
+      partnerId: string;
+      roles?: string[];
+      amount?: number | null;
+      taxType?: string;
+      notes?: string;
+    }) => api.post(`/projects/${projectId}/partners`, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      toast.success("파트너가 배치되었습니다.");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "파트너 배치에 실패했습니다.");
+    },
+  });
+}
+
+export function useUpdateProjectPartner() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      assignmentId,
+      ...data
+    }: {
+      projectId: string;
+      assignmentId: string;
+      roles?: string[];
+      amount?: number | null;
+      taxType?: string;
+      notes?: string;
+    }) => api.patch(`/projects/partners/${assignmentId}`, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "파트너 배치 수정에 실패했습니다.");
+    },
+  });
+}
+
+export function useRemoveProjectPartner() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      assignmentId,
+    }: {
+      projectId: string;
+      assignmentId: string;
+    }) => api.delete(`/projects/partners/${assignmentId}`),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      toast.success("파트너 배치가 해제되었습니다.");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "파트너 배치 해제에 실패했습니다.");
+    },
+  });
+}

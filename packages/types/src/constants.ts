@@ -57,6 +57,19 @@ export const WORK_PHASE = {
 
 export type WorkPhase = (typeof WORK_PHASE)[keyof typeof WORK_PHASE];
 
+// ── 파트너 전문분야 ────────────────────────────────────────────
+
+export const PARTNER_SPECIALTIES = [
+  "기획",
+  "디자인",
+  "퍼블리싱",
+  "프론트엔드",
+  "백엔드",
+  "영상/모션",
+] as const;
+
+export type PartnerSpecialty = (typeof PARTNER_SPECIALTIES)[number];
+
 // ── 일정 반복 유형 ──────────────────────────────────────────────────
 
 export const RECURRENCE_TYPE = {

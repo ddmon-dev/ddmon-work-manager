@@ -8,3 +8,4 @@ export * from "./todos";
 export * from "./mindnotes";
 export * from "./memos";
 export * from "./library";
+export * from "./partners";

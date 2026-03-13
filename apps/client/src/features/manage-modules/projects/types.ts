@@ -44,9 +44,26 @@ export interface ProjectDTO {
   updatedAt: string;
 }
 
+export interface ProjectPartnerDTO {
+  id: string;
+  projectId: string;
+  partnerId: string;
+  partner: {
+    id: string;
+    name: string;
+    specialties: string[] | null;
+  };
+  roles: string[] | null;
+  amount: string | null;
+  taxType: string;
+  notes: string | null;
+  createdAt: string;
+}
+
 export interface ProjectWithDetails extends Omit<ProjectDTO, "totalPaid"> {
   payments: PaymentDTO[];
   memos: MemoItem[];
+  projectPartners: ProjectPartnerDTO[];
 }
 
 export interface ProjectListResponse {

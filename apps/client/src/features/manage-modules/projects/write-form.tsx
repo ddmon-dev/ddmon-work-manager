@@ -18,6 +18,7 @@ import {
 import { SheetFooter, SheetBody, SheetContainer } from "@/shared/ui/sheet";
 import {
   useManageSheet,
+  useManageSheetData,
   ManageFormSubmit,
   ManageSheetClose,
   ManageSheetModeChange,
@@ -25,6 +26,7 @@ import {
 } from "../_base/ui";
 import { useFormGuard } from "../_base/hooks";
 import { useCreateProject, useUpdateProject, fetchEstimateProjectInfo, useAvailableEstimates } from "./api";
+import { ProjectPartnerSection } from "./project-partner-section";
 import { PROJECT_STATUS_OPTIONS, WORK_PHASE_OPTIONS } from "./config";
 import { TAX_OPTIONS } from "../estimates/constants";
 import type { ProjectWithDetails } from "./types";
@@ -75,6 +77,7 @@ interface WriteFormProps {
 
 export function WriteForm({ id, prevValues }: WriteFormProps) {
   const sheet = useManageSheet();
+  const { refetch } = useManageSheetData<ProjectWithDetails>();
   const [searchParams] = useSearchParams();
   const createFrom = searchParams.get("create_from");
 
@@ -281,6 +284,16 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                 />
               </FieldGroup>
             </SheetContainer>
+
+            {id && prevValues && (
+              <SheetContainer>
+                <ProjectPartnerSection
+                  projectId={id}
+                  partners={prevValues.projectPartners ?? []}
+                  refetch={refetch}
+                />
+              </SheetContainer>
+            )}
           </div>
 
           <SheetFooter>

@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import { clients, clientMemos } from "./clients";
+import { partners, partnerMemos, projectPartners } from "./partners";
 import {
   estimateSeries,
   estimates,
@@ -84,6 +85,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   memos: many(projectMemos),
   projectSchedules: many(projectSchedules),
   lanes: many(projectScheduleLanes),
+  projectPartners: many(projectPartners),
 }));
 
 export const projectPaymentsRelations = relations(
@@ -145,6 +147,29 @@ export const libraryDocumentsRelations = relations(libraryDocuments, ({ one }) =
   board: one(libraryBoards, {
     fields: [libraryDocuments.boardId],
     references: [libraryBoards.id],
+  }),
+}));
+
+export const partnersRelations = relations(partners, ({ many }) => ({
+  memos: many(partnerMemos),
+  projectPartners: many(projectPartners),
+}));
+
+export const partnerMemosRelations = relations(partnerMemos, ({ one }) => ({
+  partner: one(partners, {
+    fields: [partnerMemos.parentId],
+    references: [partners.id],
+  }),
+}));
+
+export const projectPartnersRelations = relations(projectPartners, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectPartners.projectId],
+    references: [projects.id],
+  }),
+  partner: one(partners, {
+    fields: [projectPartners.partnerId],
+    references: [partners.id],
   }),
 }));
 

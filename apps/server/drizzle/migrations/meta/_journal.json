@@ -78,6 +78,13 @@
       "when": 1773410655419,
       "tag": "0010_add_business_info_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1773414979785,
+      "tag": "0011_add_partners",
+      "breakpoints": true
     }
   ]
 }

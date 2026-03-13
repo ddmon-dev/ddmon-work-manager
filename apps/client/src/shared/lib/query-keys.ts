@@ -38,6 +38,11 @@ export const queryKeys = {
     overview: (status: string) => ["project-schedules", "overview", status] as const,
     lanes: (params: Params) => ["project-schedules", "lanes", params] as const,
   },
+  partners: {
+    all: ["partners"] as const,
+    list: (params: Params) => ["partners", "list", params] as const,
+    detail: (id: string) => ["partners", "detail", id] as const,
+  },
   admins: {
     all: ["admins"] as const,
     list: (params: Params) => ["admins", "list", params] as const,
