@@ -36,40 +36,36 @@ export function MemoForm({ onSubmit, memo, onSuccess, onCancel }: MemoFormProps)
   };
 
   return (
-    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3">
-      <FormTextarea
-        control={form.control}
-        name="content"
-        placeholder="메모를 입력하세요..."
-        className="min-h-[100px]!"
-      />
-      {isEditMode ? (
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={onCancel}
-          >
-            취소
-          </Button>
+    <form onSubmit={form.handleSubmit(handleSubmit)}>
+      <div className="relative">
+        <FormTextarea
+          control={form.control}
+          name="content"
+          placeholder="메모를 입력하세요..."
+          className="min-h-[100px]! pb-10!"
+        />
+        <div className="absolute bottom-2 right-2 flex gap-1">
+          {isEditMode && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="xs"
+              rounded="full"
+              onClick={onCancel}
+            >
+              취소
+            </Button>
+          )}
           <LoadingButton
             type="submit"
-            size="sm"
+            size={isEditMode ? "xs" : "default"}
+            rounded="full"
             isLoading={form.formState.isSubmitting}
           >
             저장
           </LoadingButton>
         </div>
-      ) : (
-        <LoadingButton
-          type="submit"
-          isLoading={form.formState.isSubmitting}
-          size="sm"
-        >
-          저장
-        </LoadingButton>
-      )}
+      </div>
     </form>
   );
 }

@@ -77,8 +77,8 @@ export function PaymentForm({ projectId, payment, onSuccess, onCancel }: Payment
   return (
     <FormProvider {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3!">
-        <div className="grid grid-cols-[2fr_1.5fr] gap-2">
-          <div className="col-span-2">
+        <div className={`grid gap-2 ${payment ? "grid-cols-[2fr_1.5fr]" : "grid-cols-[2fr_1.5fr_auto]"}`}>
+          <div className={payment ? "col-span-2" : "col-span-3"}>
             <FormTextInput
               control={form.control}
               name="description"
@@ -100,8 +100,13 @@ export function PaymentForm({ projectId, payment, onSuccess, onCancel }: Payment
             placeholder="입금일"
             disableError
           />
+          {!payment && (
+            <LoadingButton type="submit" rounded="full" isLoading={form.formState.isSubmitting}>
+              추가
+            </LoadingButton>
+          )}
         </div>
-        {payment ? (
+        {payment && (
           <div className="flex justify-end gap-1">
             <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
               취소
@@ -110,10 +115,6 @@ export function PaymentForm({ projectId, payment, onSuccess, onCancel }: Payment
               저장
             </LoadingButton>
           </div>
-        ) : (
-          <LoadingButton type="submit" isLoading={form.formState.isSubmitting} size="sm">
-            입금 내역 추가
-          </LoadingButton>
         )}
       </form>
     </FormProvider>
