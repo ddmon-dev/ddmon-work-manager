@@ -29,7 +29,7 @@ export function LibraryModule() {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-svh flex-col">
       <Tabs value={tab} onValueChange={handleTabChange} className="flex h-full flex-col gap-0">
         <div className="border-b px-4 py-2">
           <TabsList>

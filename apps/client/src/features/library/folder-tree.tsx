@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Folder,
   FolderOpen,
@@ -104,21 +104,23 @@ export function FolderTree({
       <div className="flex items-center border-b px-3 py-2">
         <span className="text-sm font-medium">폴더</span>
       </div>
-      <div className="flex-1 overflow-y-auto p-1 space-y-0.5" role="tree">
-        {/* 즐겨찾기 */}
-        {showTrash && (
-          <FavoritesList
-            onNavigate={onNavigate}
-            onFileClick={onFileClick}
-            onContextMenu={onFavContextMenu}
-            renamingId={favRenamingId}
-            renameValue={favRenameValue}
-            onRenameChange={onFavRenameChange}
-            onRenameSubmit={onFavRenameSubmit}
-            onRenameCancel={onFavRenameCancel}
-          />
-        )}
 
+      {/* 즐겨찾기 */}
+      {showTrash && (
+        <FavoritesList
+          onNavigate={onNavigate}
+          onFileClick={onFileClick}
+          onContextMenu={onFavContextMenu}
+          renamingId={favRenamingId}
+          renameValue={favRenameValue}
+          onRenameChange={onFavRenameChange}
+          onRenameSubmit={onFavRenameSubmit}
+          onRenameCancel={onFavRenameCancel}
+        />
+      )}
+
+      {/* 폴더 트리 */}
+      <div className="min-h-0 flex-1 overflow-y-auto hide-scrollbar p-1 space-y-0.5" role="tree">
         {/* 루트 */}
         <DroppableTreeItem
           droppableId="tree-root"
@@ -182,39 +184,54 @@ function FavoritesList({
   onRenameCancel?: () => void;
 }) {
   const { data: favorites } = useFavoritesQuery();
+  const [expanded, setExpanded] = useState(true);
 
   if (!favorites || favorites.length === 0) return null;
 
   return (
-    <>
-      <div className="px-3 pt-1 pb-0.5">
-        <span className="text-xs font-medium text-muted-foreground">즐겨찾기</span>
-      </div>
-      {favorites.map((item) => (
-        <TreeItem
-          key={item.id}
-          label={renamingId === item.id ? (renameValue ?? "") : item.name}
-          icon={getFavoriteIcon(item)}
-          isActive={false}
-          isRenaming={renamingId === item.id}
-          onRenameChange={onRenameChange}
-          onRenameSubmit={() => onRenameSubmit?.(item.id)}
-          onRenameCancel={onRenameCancel}
-          onClick={() => {
-            if (item.isFolder) {
-              onNavigate(item.id);
-            } else {
-              onFileClick?.(item);
-            }
-          }}
-          onContextMenu={
-            onContextMenu ? (e) => onContextMenu(e, item) : undefined
-          }
-          ariaLevel={1}
+    <div className="border-b">
+      <button
+        type="button"
+        className="flex w-full items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <ChevronRight
+          className={cn(
+            "size-3 transition-transform",
+            expanded && "rotate-90"
+          )}
         />
-      ))}
-      <div className="my-1 h-px bg-border mx-2" />
-    </>
+        <Star className="size-3 fill-yellow-400 text-yellow-400" />
+        <span>즐겨찾기</span>
+      </button>
+      {expanded && (
+        <div className="max-h-[200px] overflow-y-auto hide-scrollbar p-1 pt-0 space-y-0.5">
+          {favorites.map((item) => (
+            <TreeItem
+              key={item.id}
+              label={renamingId === item.id ? (renameValue ?? "") : item.name}
+              icon={getFavoriteIcon(item)}
+              isActive={false}
+              isRenaming={renamingId === item.id}
+              onRenameChange={onRenameChange}
+              onRenameSubmit={() => onRenameSubmit?.(item.id)}
+              onRenameCancel={onRenameCancel}
+              onClick={() => {
+                if (item.isFolder) {
+                  onNavigate(item.id);
+                } else {
+                  onFileClick?.(item);
+                }
+              }}
+              onContextMenu={
+                onContextMenu ? (e) => onContextMenu(e, item) : undefined
+              }
+              ariaLevel={1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

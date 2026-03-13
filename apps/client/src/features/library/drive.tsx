@@ -231,7 +231,7 @@ export function Drive() {
     <div className="flex h-full">
       {/* 좌측: 폴더 트리 */}
       {showTree && (
-        <div className="w-[250px] shrink-0 border-r">
+        <div className="h-full w-[250px] shrink-0 overflow-hidden border-r">
           <FolderTree
             currentFolderId={currentFolderId}
             onNavigate={handleNavigate}
@@ -317,7 +317,7 @@ export function Drive() {
             {/* 파일 목록 */}
             <div
               ref={dragContainerRef}
-              className="relative flex-1 overflow-y-auto"
+              className="relative flex-1 overflow-y-auto hide-scrollbar"
               onMouseDown={handleDragSelectStart}
               onClick={(e) => {
                 if (wasDragSelectingRef.current) {
@@ -338,8 +338,6 @@ export function Drive() {
                       ? breadcrumbs[breadcrumbs.length - 2].id
                       : null
                   }
-                  isSelected={selectedIds.has("parent-folder")}
-                  onSelect={(e) => selectItem("parent-folder", e)}
                   onClick={() =>
                     navigateToBreadcrumb(breadcrumbs.length - 2)
                   }
@@ -855,13 +853,9 @@ function DraggableFileRow({
 
 function ParentFolderRow({
   parentFolderId,
-  isSelected,
-  onSelect,
   onClick,
 }: {
   parentFolderId: string | null;
-  isSelected: boolean;
-  onSelect: (e: React.MouseEvent) => void;
   onClick: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -873,11 +867,9 @@ function ParentFolderRow({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex cursor-pointer items-center gap-3 border-b px-4 py-2.5 text-muted-foreground hover:bg-accent/50",
-        isOver && "bg-primary/10 ring-1 ring-inset ring-primary",
-        isSelected && "bg-accent/50"
+        "flex cursor-pointer items-center gap-3 border-b px-4 py-2.5 text-muted-foreground hover:bg-accent/30",
+        isOver && "bg-primary/10 ring-1 ring-inset ring-primary"
       )}
-      onClick={onSelect}
       onDoubleClick={onClick}
     >
       <CornerLeftUp className="size-5" />
