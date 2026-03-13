@@ -55,6 +55,16 @@ export function ManageModuleHeader({
             {title ? title : `${moduleName} 관리`}
           </h1>
 
+          {headerAddons && (
+            <>
+              <Separator
+                orientation="vertical"
+                className="data-[orientation=vertical]:h-4 mx-2 hidden md:block"
+              />
+              <div className="hidden md:block">{headerAddons}</div>
+            </>
+          )}
+
           <div className="flex items-center gap-2 ml-auto">
             {!hideSearchBar && (
               <FilterDialog
@@ -62,9 +72,9 @@ export function ManageModuleHeader({
                 headerSearchBar={headerSearchBar}
               />
             )}
-            {!hideSearchBar && !headerAddons && !headerSearchBar && (
+            {!hideSearchBar && (
               <div className="hidden md:block">
-                <SearchBar />
+                {headerSearchBar ?? <SearchBar />}
               </div>
             )}
             {!hideCreateButton && (
@@ -75,14 +85,6 @@ export function ManageModuleHeader({
             )}
           </div>
         </div>
-
-        {/* 데스크톱: 필터 및 검색 표시 */}
-        {!hideSearchBar && (headerAddons || headerSearchBar) && (
-          <div className="hidden md:flex items-center gap-2 flex-wrap">
-            {headerAddons}
-            <div className="ml-auto">{headerSearchBar ?? <SearchBar />}</div>
-          </div>
-        )}
       </Container>
     </header>
   );

@@ -9,7 +9,7 @@ import { ItemSheet } from "./item-sheet";
 import { UrlSheetOpener } from "./url-sheet-opener";
 
 const PROJECT_CATEGORIES = [
-  { value: "incomplete", label: "미완료" },
+  { value: "incomplete", label: "진행중" },
   { value: "completed", label: "완료" },
   { value: "discarded", label: "폐기" },
 ];
@@ -21,7 +21,7 @@ export function ProjectsModule() {
     searchParams.get("pageSize") ?? APP_CONFIG.UI.PAGINATION.PAGE_SIZE_OPTIONS[0]
   );
   const search = searchParams.get("search") ?? undefined;
-  const category = searchParams.get("category") || undefined;
+  const category = searchParams.get("category") || "incomplete";
 
   const { data, isLoading } = useProjectList({ page, pageSize, search, category });
 
@@ -31,7 +31,7 @@ export function ProjectsModule() {
   return (
     <ManageContainer
       moduleName={CONFIG.moduleName}
-      headerAddons={<CategoryButtonGroup options={PROJECT_CATEGORIES} />}
+      headerAddons={<CategoryButtonGroup options={PROJECT_CATEGORIES} showAllOption={false} />}
     >
       <List data={items} totalCount={totalCount} isLoading={isLoading} />
       <ItemSheet />

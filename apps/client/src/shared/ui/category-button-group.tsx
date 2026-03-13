@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { useQueryParams } from "@/shared/hooks/use-query-params";
 
 interface CategoryOption {
@@ -14,7 +14,6 @@ interface CategoryButtonGroupProps {
   showAllOption?: boolean;
   allOptionLabel?: string;
   className?: string;
-  size?: 'default' | 'sm' | 'lg';
 }
 
 export function CategoryButtonGroup({
@@ -23,19 +22,17 @@ export function CategoryButtonGroup({
   showAllOption = true,
   allOptionLabel = '전체',
   className,
-  size = 'default',
 }: CategoryButtonGroupProps) {
   const { get, set } = useQueryParams();
-  const [value, setValue] = React.useState(get(paramKey) || 'all');
+  const defaultValue = showAllOption ? 'all' : options[0]?.value ?? 'all';
+  const [value, setValue] = React.useState(get(paramKey) || defaultValue);
 
   React.useEffect(() => {
     const categoryValue = get(paramKey);
-    setValue(categoryValue || 'all');
-  }, [get, paramKey]);
+    setValue(categoryValue || defaultValue);
+  }, [get, paramKey, defaultValue]);
 
   const handleValueChange = (newValue: string) => {
-    if (!newValue) return;
-
     setValue(newValue);
     if (newValue === 'all') {
       set({ [paramKey]: '', page: '1' });
@@ -45,23 +42,15 @@ export function CategoryButtonGroup({
   };
 
   return (
-    <ToggleGroup
-      type='single'
-      value={value}
-      variant='outline'
-      size={size}
-      onValueChange={handleValueChange}
-      className={className}
-    >
-      {showAllOption && <ToggleGroupItem value='all'>{allOptionLabel}</ToggleGroupItem>}
-      {options.map(option => (
-        <ToggleGroupItem
-          key={option.value}
-          value={option.value}
-        >
-          {option.label}
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+    <Tabs value={value} onValueChange={handleValueChange} className={className}>
+      <TabsList>
+        {showAllOption && <TabsTrigger value='all'>{allOptionLabel}</TabsTrigger>}
+        {options.map(option => (
+          <TabsTrigger key={option.value} value={option.value}>
+            {option.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }
