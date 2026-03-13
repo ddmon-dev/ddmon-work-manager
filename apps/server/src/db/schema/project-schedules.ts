@@ -22,7 +22,7 @@ export const projectSchedules = pgTable("project_schedules", {
     .references(() => projectScheduleLanes.id, { onDelete: "cascade" }),
   category: text("category").notNull().default("development"),
   categoryColor: text("category_color"),
-  title: text("title").notNull(),
+  title: text("title"),
   description: text("description"),
   startDate: date("start_date").notNull(),
   endDate: date("end_date"),

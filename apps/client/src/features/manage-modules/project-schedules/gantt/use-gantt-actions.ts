@@ -101,7 +101,7 @@ export function useGanttActions({ resolveLane, isCollapsedRow, onToggle }: UseGa
     }
   }, [resolveLane, updateSchedule]);
 
-  const handleCreateSubmit = useCallback((title: string, category: string, categoryColor: string | null) => {
+  const handleCreateSubmit = useCallback((title: string | null, category: string, categoryColor: string | null) => {
     if (!createState) return;
     createSchedule.mutate({
       title,

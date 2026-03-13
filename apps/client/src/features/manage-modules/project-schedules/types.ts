@@ -13,7 +13,7 @@ export interface ProjectScheduleDTO {
   laneId: string;
   category: string;
   categoryColor: string | null;
-  title: string;
+  title: string | null;
   description: string | null;
   startDate: string;
   endDate: string | null;

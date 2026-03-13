@@ -1,0 +1,1 @@
+ALTER TABLE "project_schedules" ALTER COLUMN "title" DROP NOT NULL;

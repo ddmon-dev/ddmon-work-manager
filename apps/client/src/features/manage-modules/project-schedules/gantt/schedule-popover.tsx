@@ -10,7 +10,7 @@ import { useUpdateProjectSchedule, useDeleteProjectSchedule } from "../api";
 import type { ProjectScheduleDTO } from "../types";
 import { format, parseISO } from "./utils";
 
-const POPOVER_WIDTH = 440;
+const POPOVER_WIDTH = 270;
 
 type SchedulePopoverProps = {
   anchorRect: DOMRect;
@@ -18,14 +18,14 @@ type SchedulePopoverProps = {
   onClose: () => void;
 } & (
   | { schedule: ProjectScheduleDTO }
-  | { schedule?: undefined; startDate: string; endDate?: string; onCreate: (title: string, category: string, categoryColor: string | null) => void }
+  | { schedule?: undefined; startDate: string; endDate?: string; onCreate: (title: string | null, category: string, categoryColor: string | null) => void }
 );
 
 export function SchedulePopover(props: SchedulePopoverProps) {
   const { anchorRect, containerRef, onClose } = props;
   const isEdit = !!props.schedule;
 
-  const [title, setTitle] = useState(isEdit ? props.schedule.title : "");
+  const [title, setTitle] = useState(isEdit ? (props.schedule.title ?? "") : "");
   const [category, setCategory] = useState<string>(isEdit ? props.schedule.category : "development");
   const [categoryColor, setCategoryColor] = useState<string | null>(isEdit ? props.schedule.categoryColor ?? null : null);
   const [showCustom, setShowCustom] = useState<boolean>(isEdit && !PRESET_COLORS[props.schedule.category as TaskCategory]);
@@ -35,6 +35,8 @@ export function SchedulePopover(props: SchedulePopoverProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const customNameRef = useRef<HTMLInputElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const savedCategoryRef = useRef(category);
+  const savedColorRef = useRef(categoryColor);
 
   const updateSchedule = useUpdateProjectSchedule();
   const deleteSchedule = useDeleteProjectSchedule();
@@ -66,18 +68,9 @@ export function SchedulePopover(props: SchedulePopoverProps) {
     };
   }, []);
 
-  const [titleError, setTitleError] = useState(false);
   const [customNameError, setCustomNameError] = useState(false);
 
   const handleSave = useCallback(() => {
-    const trimmed = title.trim();
-    if (!trimmed) {
-      setTitleError(true);
-      inputRef.current?.focus();
-      return;
-    }
-    setTitleError(false);
-
     if (showCustom && !customName.trim()) {
       setCustomNameError(true);
       customNameRef.current?.focus();
@@ -87,18 +80,19 @@ export function SchedulePopover(props: SchedulePopoverProps) {
 
     const effectiveCategory = showCustom ? customName.trim() : category;
     const effectiveColor = showCustom ? categoryColor : null;
+    const effectiveTitle = title.trim() || null;
 
     if (isEdit) {
       const changes: Record<string, unknown> = {};
-      if (trimmed !== props.schedule.title) changes.title = trimmed;
-      if (effectiveCategory !== props.schedule.category) changes.category = effectiveCategory;
-      if (effectiveColor !== props.schedule.categoryColor) changes.categoryColor = effectiveColor;
+      if (effectiveTitle !== (props.schedule.title ?? null)) changes.title = effectiveTitle;
+      if (effectiveCategory !== savedCategoryRef.current) changes.category = effectiveCategory;
+      if (effectiveColor !== savedColorRef.current) changes.categoryColor = effectiveColor;
       if (Object.keys(changes).length > 0) {
         updateSchedule.mutate({ id: props.schedule.id, data: changes });
       }
       onClose();
     } else {
-      props.onCreate(trimmed, effectiveCategory, effectiveColor);
+      props.onCreate(effectiveTitle, effectiveCategory, effectiveColor);
     }
   }, [title, category, categoryColor, showCustom, customName, isEdit, props.schedule, onClose, updateSchedule]);
 
@@ -109,8 +103,10 @@ export function SchedulePopover(props: SchedulePopoverProps) {
     setCategory(cat);
     setCategoryColor(null);
     setShowCustom(false);
-    if (isEdit && cat !== props.schedule.category) {
+    if (isEdit && (cat !== savedCategoryRef.current || savedColorRef.current !== null)) {
       updateSchedule.mutate({ id: props.schedule.id, data: { category: cat, categoryColor: null } });
+      savedCategoryRef.current = cat;
+      savedColorRef.current = null;
     }
   };
 
@@ -126,7 +122,7 @@ export function SchedulePopover(props: SchedulePopoverProps) {
     if (!isEdit) return;
     dialog.confirm({
       title: "일정 삭제",
-      description: `"${props.schedule.title}" 일정을 삭제하시겠습니까?`,
+      description: `"${props.schedule.title || getCategoryConfig(props.schedule.category, props.schedule.categoryColor).label}" 일정을 삭제하시겠습니까?`,
       variant: "destructive",
       confirmText: "삭제",
       onConfirm: async () => {
@@ -185,14 +181,11 @@ export function SchedulePopover(props: SchedulePopoverProps) {
           ref={inputRef}
           type="text"
           value={title}
-          onChange={(e) => { setTitle(e.target.value); setTitleError(false); }}
+          onChange={(e) => setTitle(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={isEdit ? undefined : "일정 제목"}
+          placeholder={getCategoryConfig(showCustom ? customName.trim() : category, showCustom ? categoryColor : null).label}
           className={cn(
-            "w-full text-sm px-2 py-1.5 rounded-md border bg-background outline-none focus:ring-1",
-            titleError
-              ? "border-destructive focus:ring-destructive/30"
-              : "border-border focus:ring-primary/30",
+            "w-full text-sm px-2 py-1.5 rounded-md border border-border bg-background outline-none focus:ring-1 focus:ring-primary/30",
             !isEdit && "placeholder:text-muted-foreground/60",
           )}
         />

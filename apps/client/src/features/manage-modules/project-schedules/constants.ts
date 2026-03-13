@@ -4,6 +4,8 @@ export const PRESET_COLORS: Record<TaskCategory, { label: string; color: string 
   planning:    { label: "기획",   color: "#3b82f6" },
   design:      { label: "디자인", color: "#a855f7" },
   development: { label: "개발",   color: "#22c55e" },
+  reply:       { label: "회신",   color: "#eab308" },
+  feedback:    { label: "피드백", color: "#06b6d4" },
   revision:    { label: "수정",   color: "#f97316" },
   delivery:    { label: "납품",   color: "#6b7280" },
 };

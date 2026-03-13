@@ -165,7 +165,7 @@ export function useCreateProjectSchedule() {
         laneId: data.laneId,
         category: data.category ?? "development",
         categoryColor: data.categoryColor ?? null,
-        title: data.title,
+        title: data.title ?? null,
         description: data.description ?? null,
         startDate: data.startDate,
         endDate: data.endDate ?? null,

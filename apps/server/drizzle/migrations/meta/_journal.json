@@ -64,6 +64,13 @@
       "when": 1773366975036,
       "tag": "0008_add_favorite_order_to_files",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1773407282970,
+      "tag": "0009_alter_project_schedules_title_nullable",
+      "breakpoints": true
     }
   ]
 }

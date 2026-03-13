@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const TASK_CATEGORIES = ["planning", "design", "development", "revision", "delivery"] as const;
+export const TASK_CATEGORIES = ["planning", "design", "development", "reply", "feedback", "revision", "delivery"] as const;
 export type TaskCategory = (typeof TASK_CATEGORIES)[number];
 
 export const projectScheduleWriteSchema = z.object({
@@ -8,7 +8,7 @@ export const projectScheduleWriteSchema = z.object({
   laneId: z.string().uuid(),
   category: z.string().default("development"),
   categoryColor: z.string().nullable().optional(),
-  title: z.string().min(1, "제목을 입력해주세요."),
+  title: z.string().nullable().optional(),
   description: z.string().optional(),
   startDate: z.string(),
   endDate: z.string().nullable().optional(),
