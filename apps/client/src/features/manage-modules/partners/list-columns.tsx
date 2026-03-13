@@ -26,7 +26,7 @@ export const listColumns: ColumnDef<PartnerDTO>[] = [
       return (
         <div className="flex flex-wrap gap-1">
           {specialties.map((s) => (
-            <Badge key={s} variant="secondary" className="text-xs">
+            <Badge key={s} variant="outline" className="text-xs">
               {s}
             </Badge>
           ))}
