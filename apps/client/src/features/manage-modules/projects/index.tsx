@@ -21,7 +21,7 @@ export function ProjectsModule() {
     searchParams.get("pageSize") ?? APP_CONFIG.UI.PAGINATION.PAGE_SIZE_OPTIONS[0]
   );
   const search = searchParams.get("search") ?? undefined;
-  const category = searchParams.get("category") || "incomplete";
+  const category = searchParams.get("category") || PROJECT_CATEGORIES[0].value;
 
   const { data, isLoading } = useProjectList({ page, pageSize, search, category });
 

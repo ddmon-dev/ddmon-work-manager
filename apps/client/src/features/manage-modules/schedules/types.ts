@@ -19,13 +19,6 @@ export interface ScheduleDTO {
   updatedAt: string;
 }
 
-export interface ScheduleListResponse {
-  items: ScheduleDTO[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
-
 export interface CalendarSchedule {
   id: string;
   title: string;
