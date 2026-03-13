@@ -702,7 +702,7 @@ function DraggableFileRow({
       data-item-id={item.id}
       {...nativeDragHandlers}
       className={cn(
-        "group flex cursor-grab items-center gap-3 border-b px-4 py-2.5 outline-none active:cursor-grabbing",
+        "group flex cursor-grab items-center gap-3 border-b px-4 py-1.5 outline-none active:cursor-grabbing",
         (isDragging || isMoving || isGroupDragging) && "opacity-30",
         (isOver || nativeDragOver) &&
           !isDropDisabled &&
@@ -750,11 +750,11 @@ function DraggableFileRow({
         )}
       </div>
 
-      <span className="w-20 shrink-0 text-right text-xs text-muted-foreground">
+      <span className="w-24 shrink-0 text-right text-sm text-muted-foreground">
         {item.isFolder ? "-" : item.size != null ? formatFileSize(item.size) : "-"}
       </span>
 
-      <span className="w-24 shrink-0 text-right text-xs text-muted-foreground">
+      <span className="w-28 shrink-0 text-right text-sm text-muted-foreground">
         {new Date(item.updatedAt).toLocaleDateString("ko-KR")}
       </span>
 
@@ -846,13 +846,13 @@ function ParentFolderRow({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex cursor-pointer items-center gap-3 border-b px-4 py-2.5 text-muted-foreground hover:bg-accent/30",
+        "flex cursor-pointer items-center gap-3 border-b px-4 py-1.5 text-muted-foreground hover:bg-accent/30",
         isOver && "bg-primary/10 ring-1 ring-inset ring-primary"
       )}
       onDoubleClick={onClick}
     >
       <CornerLeftUp className="size-5" />
-      <span className="flex-1 text-sm">..</span>
+      <span className="flex-1 text-sm">상위 폴더</span>
       {/* ...버튼 자리 — 다른 행과 높이 맞춤 */}
       <div className="size-9" />
     </div>
@@ -1066,7 +1066,7 @@ function Breadcrumbs({
   };
 
   return (
-    <div className="flex min-w-0 items-center gap-1 border-b px-2 py-2 text-sm">
+    <div className="flex min-w-0 items-center gap-1 border-b bg-muted/30 px-2 py-2 text-sm">
       <button
         className="-my-1 shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
         onClick={onToggleTree}

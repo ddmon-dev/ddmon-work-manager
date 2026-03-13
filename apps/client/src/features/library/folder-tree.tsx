@@ -127,7 +127,7 @@ export function FolderTree({
   );
 
   return (
-    <div className="flex h-full select-none flex-col">
+    <div className="flex h-full select-none flex-col bg-muted/30">
       <div className="flex shrink-0 items-center border-b px-3 py-2">
         <span className="whitespace-nowrap text-sm font-medium">탐색기</span>
       </div>
