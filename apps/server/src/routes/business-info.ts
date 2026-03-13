@@ -14,6 +14,11 @@ const businessInfoWriteSchema = z.object({
   ceo: z.string().optional(),
   bizNumber: z.string().optional(),
   address: z.string().optional(),
+  bankName: z.string().optional(),
+  bankAccount: z.string().optional(),
+  accountHolder: z.string().optional(),
+  bizType: z.string().optional(),
+  bizItem: z.string().optional(),
 });
 
 // GET /business-info — 사업자 정보 조회 (단일 행 싱글턴)

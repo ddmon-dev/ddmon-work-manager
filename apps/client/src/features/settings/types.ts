@@ -4,16 +4,11 @@ export interface BusinessInfo {
   ceo?: string | null;
   bizNumber?: string | null;
   address?: string | null;
+  bankName?: string | null;
+  bankAccount?: string | null;
+  accountHolder?: string | null;
+  bizType?: string | null;
+  bizItem?: string | null;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface PublisherInfo {
-  bizName?: string;
-  ceo?: string;
-  bizNumber?: string;
-  address?: string;
-  issuer?: string;
-  phone?: string;
-  email?: string;
 }

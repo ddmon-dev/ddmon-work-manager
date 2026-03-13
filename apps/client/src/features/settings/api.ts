@@ -15,7 +15,17 @@ export function useUpdateBusinessInfo() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { name: string; ceo: string; bizNumber: string; address: string }) =>
+    mutationFn: (data: {
+      name: string;
+      ceo: string;
+      bizNumber: string;
+      address: string;
+      bankName?: string;
+      bankAccount?: string;
+      accountHolder?: string;
+      bizType?: string;
+      bizItem?: string;
+    }) =>
       api.put<BusinessInfo>("/business-info", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.businessInfo.single });
