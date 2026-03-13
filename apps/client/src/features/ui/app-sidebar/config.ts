@@ -25,21 +25,21 @@ export const navigationConfig: MenuConfig = {
           url: "/project-schedules",
           icon: GanttChart,
         },
-        { title: "캘린더", url: "/schedules", icon: CalendarDays },
       ],
     },
     {
       title: "영업",
       items: [
+        { title: "견적서 관리", url: "/estimates", icon: FileSpreadsheet },
         { title: "클라이언트 관리", url: "/clients", icon: Briefcase },
         { title: "파트너 관리", url: "/partners", icon: Users },
-        { title: "견적서 관리", url: "/estimates", icon: FileSpreadsheet },
         { title: "매출/수금 통계", url: "/revenue", icon: BarChart3 },
       ],
     },
     {
       title: "도구",
       items: [
+        { title: "캘린더", url: "/schedules", icon: CalendarDays },
         { title: "라이브러리", url: "/library", icon: BookOpen },
       ],
     },
