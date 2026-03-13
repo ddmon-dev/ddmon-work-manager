@@ -1,0 +1,150 @@
+import { cn } from "@/shared/utils/classnames";
+import { formatCurrency } from "@/shared/utils/format";
+import { calculateTaxBreakdown } from "@packages/utils";
+
+interface PriceSummaryProps {
+  payments: { amount: string }[];
+  contractAmount: number;
+  taxType: string | null;
+}
+
+export function PriceSummary({ payments, contractAmount, taxType }: PriceSummaryProps) {
+  const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+  const isWithholding = taxType === "withholding";
+  const isVat = taxType === "vat";
+
+  const { supplyAmount, taxAmount, taxLabel } = calculateTaxBreakdown(contractAmount, taxType ?? "");
+
+  // VAT: 공급가액/부가세 순차 충당 분리 표기
+  if (isVat) {
+    const supplyPaid = Math.min(totalPaid, contractAmount);
+    const vatPaid = Math.max(totalPaid - contractAmount, 0);
+    const supplyRemaining = contractAmount - supplyPaid;
+    const vatRemaining = taxAmount - vatPaid;
+
+    return (
+      <div className="space-y-2">
+        <AmountRow label="공급가액" value={formatCurrency(contractAmount)}>
+          <AmountDetails
+            items={[
+              { label: "입금", value: formatCurrency(supplyPaid), variant: "positive" },
+              { label: "잔금", value: formatCurrency(supplyRemaining) },
+            ]}
+          />
+        </AmountRow>
+        <AmountRow label="부가세" value={formatCurrency(taxAmount)}>
+          <AmountDetails
+            showDivider={false}
+            items={[
+              { label: "입금", value: formatCurrency(vatPaid), variant: "positive" },
+              { label: "잔금", value: formatCurrency(vatRemaining) },
+            ]}
+          />
+        </AmountRow>
+      </div>
+    );
+  }
+
+  // withholding / null: 기존 방식 (실수령액 기준 잔금)
+  const remaining = supplyAmount - totalPaid;
+
+  return (
+    <div className="space-y-2">
+      <AmountRow label="계약금액" value={formatCurrency(contractAmount)}>
+        {isWithholding && (
+          <AmountDetails
+            items={[
+              { label: taxLabel, value: formatCurrency(taxAmount), variant: "negative" },
+              { label: "실수령액", value: formatCurrency(supplyAmount) },
+            ]}
+          />
+        )}
+      </AmountRow>
+      <AmountRow
+        label="입금"
+        value={formatCurrency(totalPaid)}
+        variant="positive"
+      />
+      <Divider />
+      <AmountRow
+        label="잔금"
+        value={formatCurrency(Math.max(remaining, 0))}
+      />
+    </div>
+  );
+}
+
+// ── 내부 컴포넌트 ─────────────────────────────────────────────
+
+interface AmountRowProps {
+  label: string;
+  value: string;
+  children?: React.ReactNode;
+  isDetail?: boolean;
+  variant?: "normal" | "positive" | "negative";
+}
+
+function AmountRow({ label, value, children, isDetail, variant = "normal" }: AmountRowProps) {
+  const formatted = `${variant === "negative" ? "-" : ""}${value}원`;
+
+  return (
+    <div className="group space-y-2">
+      <div className={cn("relative flex gap-x-4 justify-between text-sm", isDetail && "pl-6")}>
+        <span
+          className={cn(
+            "relative shrink-0 text-foreground",
+            !isDetail && "font-medium",
+            isDetail && "text-muted-foreground"
+          )}
+        >
+          {label}
+          {isDetail && (
+            <span className="absolute bottom-[0.75em] right-full mr-2 h-6 w-1.5 border-b border-l border-muted-foreground/40 group-first:h-4" />
+          )}
+        </span>
+        <span
+          className={cn(
+            "tabular-nums",
+            !isDetail && "font-semibold",
+            isDetail && "text-muted-foreground",
+            variant === "positive" && "text-info",
+            variant === "negative" && "text-destructive"
+          )}
+        >
+          {formatted}
+        </span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function AmountDetails({
+  items,
+  showDivider = true,
+}: {
+  items: { label: string; value: string; variant?: "positive" | "negative" }[];
+  showDivider?: boolean;
+}) {
+  return (
+    <>
+      <div className="relative space-y-0.5">
+        {items.map((item, i) => (
+          <AmountRow
+            key={i}
+            label={item.label}
+            value={item.value}
+            isDetail
+            variant={item.variant ?? "normal"}
+          />
+        ))}
+      </div>
+      {showDivider && <Divider />}
+    </>
+  );
+}
+
+function Divider() {
+  return <div className="border-t border-dashed border-border" />;
+}

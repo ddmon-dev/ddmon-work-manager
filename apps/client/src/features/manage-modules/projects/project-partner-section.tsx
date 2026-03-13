@@ -207,7 +207,7 @@ function PartnerItem({ projectId, assignment, onRemove, editOpen, onEditOpenChan
   const { partner, roles, amount, taxType } = assignment;
 
   return (
-    <li className="group flex items-center gap-3 py-2.5 px-3 -mx-3 rounded-lg hover:bg-accent/40 hover:mx-0 transition-all duration-200 ease-out">
+    <li className="group flex items-center gap-3 py-2.5 px-3 -mx-3 rounded-lg hover:bg-accent/30 hover:mx-0 transition-all duration-200 ease-out">
       <div className="shrink-0 size-7 rounded-full bg-primary/10 flex items-center justify-center">
         <UserIcon className="size-3.5 text-primary" />
       </div>
@@ -245,7 +245,7 @@ function PartnerItem({ projectId, assignment, onRemove, editOpen, onEditOpenChan
         </span>
       </div>
 
-      <ButtonGroup className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      <ButtonGroup className="shrink-0">
         <Popover open={editOpen} onOpenChange={onEditOpenChange}>
           <PopoverTrigger asChild>
             <Button type="button" variant="outline" size="icon-xs">
