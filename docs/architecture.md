@@ -216,6 +216,7 @@ FormTextInput, FormPhoneInput, FormEmailInput, FormPasswordInput, FormTextarea, 
 | `useTheme` | 다크모드 토글 (localStorage) |
 | `useMobile` | 모바일 판별 (md 브레이크포인트) |
 | `useScroll` | 스크롤 위치 감지 |
+| `useSortableReorder` | DnD 순서 변경 공통 훅 (@dnd-kit, 로컬 상태 + 서버 동기화) |
 
 ### PDF 생성
 
