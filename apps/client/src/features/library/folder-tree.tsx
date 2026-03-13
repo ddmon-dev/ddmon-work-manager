@@ -19,6 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis, restrictToFirstScrollableAncestor } from "@dnd-kit/modifiers";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/shared/ui/resizable";
 import { useFilesQuery, useFilePathQuery, useFavoritesQuery, useReorderFavorites } from "./api";
 import { getFileIconComponent, type FileItem } from "./types";
 
@@ -94,55 +95,69 @@ export function FolderTree({
     [onNavigate]
   );
 
+  const { data: favorites } = useFavoritesQuery();
+  const hasFavorites = showTrash && favorites && favorites.length > 0;
+
+  const treeContent = (
+    <>
+      <DroppableTreeItem
+        droppableId="tree-root"
+        folderId={null}
+        label="내 드라이브"
+        icon={<HardDrive className="size-4" />}
+        isActive={currentFolderId === null && !isTrashActive}
+        onClick={() => onNavigate(null)}
+        ariaLevel={1}
+      />
+      <FolderChildren
+        folderId={null}
+        currentFolderId={currentFolderId}
+        onNavigate={handleNavigateAndExpand}
+        expandedIds={expandedIds}
+        onToggle={toggleExpand}
+        onContextMenu={onContextMenu}
+        renamingId={renamingId}
+        renameValue={renameValue}
+        onRenameChange={onRenameChange}
+        onRenameSubmit={onRenameSubmit}
+        onRenameCancel={onRenameCancel}
+        depth={0}
+      />
+    </>
+  );
+
   return (
     <div className="flex h-full select-none flex-col">
       <div className="flex items-center border-b px-3 py-2">
         <span className="text-sm font-medium">폴더</span>
       </div>
 
-      {/* 즐겨찾기 */}
-      {showTrash && (
-        <FavoritesList
-          onNavigate={onNavigate}
-          onFileClick={onFileClick}
-          onContextMenu={onFavContextMenu}
-          renamingId={favRenamingId}
-          renameValue={renameValue}
-          onRenameChange={onRenameChange}
-          onRenameSubmit={onRenameSubmit}
-          onRenameCancel={onRenameCancel}
-        />
+      {hasFavorites ? (
+        <ResizablePanelGroup orientation="vertical" className="min-h-0 flex-1">
+          <ResizablePanel id="favorites" defaultSize="30%" minSize="10%">
+            <FavoritesList
+              onNavigate={onNavigate}
+              onFileClick={onFileClick}
+              onContextMenu={onFavContextMenu}
+              renamingId={favRenamingId}
+              renameValue={renameValue}
+              onRenameChange={onRenameChange}
+              onRenameSubmit={onRenameSubmit}
+              onRenameCancel={onRenameCancel}
+            />
+          </ResizablePanel>
+          <ResizableHandle />
+          <ResizablePanel id="folder-tree" minSize="20%">
+            <div className="h-full overflow-y-auto hide-scrollbar p-1 space-y-0.5" role="tree">
+              {treeContent}
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto hide-scrollbar p-1 space-y-0.5" role="tree">
+          {treeContent}
+        </div>
       )}
-
-      {/* 폴더 트리 */}
-      <div className="min-h-0 flex-1 overflow-y-auto hide-scrollbar p-1 space-y-0.5" role="tree">
-        {/* 루트 */}
-        <DroppableTreeItem
-          droppableId="tree-root"
-          folderId={null}
-          label="내 드라이브"
-          icon={<HardDrive className="size-4" />}
-          isActive={currentFolderId === null && !isTrashActive}
-          onClick={() => onNavigate(null)}
-          ariaLevel={1}
-        />
-
-        {/* 루트 폴더들 */}
-        <FolderChildren
-          folderId={null}
-          currentFolderId={currentFolderId}
-          onNavigate={handleNavigateAndExpand}
-          expandedIds={expandedIds}
-          onToggle={toggleExpand}
-          onContextMenu={onContextMenu}
-          renamingId={renamingId}
-          renameValue={renameValue}
-          onRenameChange={onRenameChange}
-          onRenameSubmit={onRenameSubmit}
-          onRenameCancel={onRenameCancel}
-          depth={0}
-        />
-      </div>
 
       {/* 휴지통 */}
       {showTrash && (
@@ -193,7 +208,7 @@ function FavoritesList({
   if (favorites.length === 0) return null;
 
   return (
-    <div className="border-b">
+    <div className="flex h-full flex-col">
       <button
         type="button"
         className="flex w-full items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60"
@@ -219,7 +234,7 @@ function FavoritesList({
             items={favorites.map((f) => f.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="max-h-[200px] overflow-y-auto hide-scrollbar p-1 pt-0">
+            <div className="min-h-0 flex-1 overflow-y-auto hide-scrollbar p-1 pt-0">
               {favorites.map((item) => (
                 <SortableFavoriteItem
                   key={item.id}

@@ -68,6 +68,7 @@ import { useUploadFile } from "./api";
 import { getFileIconComponent, type FileItem } from "./types";
 import { MiddleTruncate } from "@/shared/ui/middle-truncate";
 import { useClickOutside } from "@/shared/hooks/use-click-outside";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/shared/ui/resizable";
 import { ContextMenuPortal } from "@/shared/ui/context-menu-portal";
 import type { LucideIcon } from "lucide-react";
 
@@ -201,32 +202,36 @@ export function Drive() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-    <div className="flex h-full">
+    <ResizablePanelGroup orientation="horizontal" className="h-full">
       {/* 좌측: 폴더 트리 */}
       {showTree && (
-        <div className="h-full w-[250px] shrink-0 overflow-hidden border-r">
-          <FolderTree
-            currentFolderId={currentFolderId}
-            onNavigate={handleNavigate}
-            onFileClick={handleFileClick}
-            showTrash
-            onTrashClick={() => setShowTrash(true)}
-            isTrashActive={showTrash}
-            onContextMenu={(e, item) => openContextMenu(e, item, "tree")}
-            onFavContextMenu={(e, item) => openContextMenu(e, item, "favorite")}
-            renamingId={renaming?.source === "tree" ? renaming.id : null}
-            favRenamingId={renaming?.source === "favorite" ? renaming.id : null}
-            renameValue={renaming?.value ?? ""}
-            onRenameChange={setRenameValue}
-            onRenameSubmit={handleRename}
-            onRenameCancel={cancelRename}
-          />
-        </div>
+        <>
+          <ResizablePanel id="tree" defaultSize="20%" minSize="180px" maxSize="40%">
+            <FolderTree
+              currentFolderId={currentFolderId}
+              onNavigate={handleNavigate}
+              onFileClick={handleFileClick}
+              showTrash
+              onTrashClick={() => setShowTrash(true)}
+              isTrashActive={showTrash}
+              onContextMenu={(e, item) => openContextMenu(e, item, "tree")}
+              onFavContextMenu={(e, item) => openContextMenu(e, item, "favorite")}
+              renamingId={renaming?.source === "tree" ? renaming.id : null}
+              favRenamingId={renaming?.source === "favorite" ? renaming.id : null}
+              renameValue={renaming?.value ?? ""}
+              onRenameChange={setRenameValue}
+              onRenameSubmit={handleRename}
+              onRenameCancel={cancelRename}
+            />
+          </ResizablePanel>
+          <ResizableHandle />
+        </>
       )}
 
       {/* 우측: 파일 목록 */}
+      <ResizablePanel id="content">
       {showTrash ? (
-        <div className="min-w-0 flex-1">
+        <div className="h-full">
           <TrashView />
         </div>
       ) : (
@@ -435,6 +440,7 @@ export function Drive() {
           </div>
         </FileUpload>
       )}
+      </ResizablePanel>
 
       {/* 이동 Dialog */}
       <Dialog
@@ -569,7 +575,7 @@ export function Drive() {
           }}
         />
       )}
-    </div>
+    </ResizablePanelGroup>
     </DndContext>
   );
 }
