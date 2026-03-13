@@ -87,6 +87,7 @@ export function ConfirmDialogComponent({ data, onConfirm, onCancel }: ConfirmDia
             onClick={handleCancel}
             className="min-w-18"
             disabled={isLoading}
+            autoFocus={variant === 'destructive'}
           >
             {cancelText}
           </Button>
@@ -95,6 +96,7 @@ export function ConfirmDialogComponent({ data, onConfirm, onCancel }: ConfirmDia
             onClick={handleConfirm}
             isLoading={isLoading}
             className="min-w-18"
+            autoFocus={variant !== 'destructive'}
           >
             {confirmText}
           </LoadingButton>
