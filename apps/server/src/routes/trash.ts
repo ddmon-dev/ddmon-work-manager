@@ -59,39 +59,25 @@ app.get("/", async (c) => {
 app.delete("/empty", async (c) => {
   const trashedFiles = await db.query.files.findMany({
     where: eq(files.deleted, true),
-    columns: { id: true, s3Key: true, isFolder: true, folderId: true },
+    columns: { id: true, s3Key: true, isFolder: true },
   });
 
-  // FK RESTRICT 대응: 파일 먼저 삭제 → 폴더를 리프부터 삭제
-  const nonFolders = trashedFiles.filter((f) => !f.isFolder);
-  if (nonFolders.length > 0) {
-    await db.delete(files).where(and(eq(files.deleted, true), eq(files.isFolder, false)));
-  }
-
-  let remainingFolders = trashedFiles.filter((f) => f.isFolder);
-  while (remainingFolders.length > 0) {
-    const leaves = remainingFolders.filter(
-      (f) => !remainingFolders.some((other) => other.folderId === f.id)
-    );
-    if (leaves.length === 0) break;
-    for (const leaf of leaves) {
-      await db.delete(files).where(eq(files.id, leaf.id));
-    }
-    const leafIds = new Set(leaves.map((l) => l.id));
-    remainingFolders = remainingFolders.filter((f) => !leafIds.has(f.id));
-  }
+  // 비폴더 → 폴더 순서로 일괄 삭제 (FK RESTRICT 대응, statement 단위 FK 체크)
+  await db.delete(files).where(and(eq(files.deleted, true), eq(files.isFolder, false)));
+  await db.delete(files).where(and(eq(files.deleted, true), eq(files.isFolder, true)));
 
   await db.delete(libraryDocuments).where(eq(libraryDocuments.deleted, true));
 
-  // 스토리지 정리 (실패해도 warn만)
-  for (const file of trashedFiles) {
-    if (file.s3Key) {
-      try {
-        await deleteFile(file.s3Key);
-      } catch (err) {
-        console.warn(`[Storage] Failed to delete: ${file.s3Key}`, err);
-      }
-    }
+  // 스토리지 병렬 삭제 (실패해도 warn만)
+  const s3Keys = trashedFiles.filter((f) => f.s3Key).map((f) => f.s3Key!);
+  if (s3Keys.length > 0) {
+    await Promise.allSettled(
+      s3Keys.map((key) =>
+        deleteFile(key).catch((err) =>
+          console.warn(`[Storage] Failed to delete: ${key}`, err)
+        )
+      )
+    );
   }
 
   return successResponse(c, { success: true });

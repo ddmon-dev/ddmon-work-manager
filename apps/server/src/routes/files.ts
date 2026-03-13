@@ -3,7 +3,7 @@ import { and, eq, isNull, asc, desc, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { files } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
-import { fileRenameSchema, folderCreateSchema, fileFavoriteSchema } from "@packages/schemas";
+import { fileRenameSchema, folderCreateSchema, fileFavoriteSchema, batchDeleteSchema, batchMoveSchema } from "@packages/schemas";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { uploadFile, deleteFile, getFile, openFileNative, STORAGE_CONFIG } from "../lib/storage";
 import type { AppVariables } from "../lib/types";
@@ -57,77 +57,54 @@ async function resolveUniqueName(
   return `${base} (${counter})${ext}`;
 }
 
-/** 폴더와 하위 항목을 재귀적으로 소프트 삭제 */
+/** CTE 기반: 폴더와 하위 항목을 일괄 소프트 삭제 */
 async function softDeleteRecursive(tx: DbTransaction, folderId: string, deletedAt: Date) {
-  const children = await tx.query.files.findMany({
-    where: and(eq(files.folderId, folderId), eq(files.deleted, false)),
-    columns: { id: true, isFolder: true },
-  });
-
-  for (const child of children) {
-    if (child.isFolder) {
-      await softDeleteRecursive(tx, child.id, deletedAt);
-    }
-  }
-
-  if (children.length > 0) {
-    await tx
-      .update(files)
-      .set({ deleted: true, deletedAt, updatedAt: new Date() })
-      .where(
-        and(
-          eq(files.folderId, folderId),
-          eq(files.deleted, false)
-        )
-      );
-  }
+  await tx.execute(sql`
+    WITH RECURSIVE descendants AS (
+      SELECT id FROM files WHERE folder_id = ${folderId} AND deleted = false
+      UNION ALL
+      SELECT f.id FROM files f JOIN descendants d ON f.folder_id = d.id WHERE f.deleted = false
+    )
+    UPDATE files SET deleted = true, deleted_at = ${deletedAt}, updated_at = now()
+    WHERE id IN (SELECT id FROM descendants)
+  `);
 }
 
-/** 같은 deletedAt 타임스탬프를 가진 하위 항목을 재귀적으로 복원 */
+/** CTE 기반: 같은 deletedAt 타임스탬프를 가진 하위 항목을 일괄 복원 */
 async function restoreRecursive(tx: DbTransaction, folderId: string, deletedAt: Date) {
-  const children = await tx.query.files.findMany({
-    where: and(eq(files.folderId, folderId), eq(files.deleted, true), eq(files.deletedAt, deletedAt)),
-    columns: { id: true, isFolder: true },
-  });
-
-  for (const child of children) {
-    if (child.isFolder) {
-      await restoreRecursive(tx, child.id, deletedAt);
-    }
-  }
-
-  if (children.length > 0) {
-    const childIds = children.map((c) => c.id);
-    await tx
-      .update(files)
-      .set({ deleted: false, deletedAt: null, updatedAt: new Date() })
-      .where(inArray(files.id, childIds));
-  }
+  await tx.execute(sql`
+    WITH RECURSIVE descendants AS (
+      SELECT id FROM files WHERE folder_id = ${folderId} AND deleted = true AND deleted_at = ${deletedAt}
+      UNION ALL
+      SELECT f.id FROM files f JOIN descendants d ON f.folder_id = d.id WHERE f.deleted = true AND f.deleted_at = ${deletedAt}
+    )
+    UPDATE files SET deleted = false, deleted_at = NULL, updated_at = now()
+    WHERE id IN (SELECT id FROM descendants)
+  `);
 }
 
-/** 폴더와 하위 항목을 재귀적으로 영구 삭제 (리프부터). 삭제할 s3Key 목록 반환 */
+/** CTE 기반: 폴더와 하위 항목을 일괄 영구 삭제. 삭제할 s3Key 목록 반환 */
 async function permanentDeleteRecursive(tx: DbTransaction, folderId: string): Promise<string[]> {
-  const children = await tx.query.files.findMany({
-    where: eq(files.folderId, folderId),
-    columns: { id: true, isFolder: true, s3Key: true },
-  });
+  // 1. s3_key 수집
+  const rows = await tx.execute(sql`
+    WITH RECURSIVE descendants AS (
+      SELECT id, s3_key FROM files WHERE folder_id = ${folderId}
+      UNION ALL
+      SELECT f.id, f.s3_key FROM files f JOIN descendants d ON f.folder_id = d.id
+    )
+    SELECT s3_key FROM descendants WHERE s3_key IS NOT NULL
+  `);
+  const s3Keys = (rows as unknown as { s3_key: string }[]).map((r) => r.s3_key);
 
-  const s3Keys: string[] = [];
-
-  for (const child of children) {
-    if (child.isFolder) {
-      const childKeys = await permanentDeleteRecursive(tx, child.id);
-      s3Keys.push(...childKeys);
-    }
-    if (child.s3Key) {
-      s3Keys.push(child.s3Key);
-    }
-  }
-
-  // 자식 일괄 DB 삭제
-  if (children.length > 0) {
-    await tx.delete(files).where(eq(files.folderId, folderId));
-  }
+  // 2. 일괄 삭제 (PostgreSQL은 statement 종료 후 FK 체크 → 같은 statement 내 삭제 안전)
+  await tx.execute(sql`
+    WITH RECURSIVE descendants AS (
+      SELECT id FROM files WHERE folder_id = ${folderId}
+      UNION ALL
+      SELECT f.id FROM files f JOIN descendants d ON f.folder_id = d.id
+    )
+    DELETE FROM files WHERE id IN (SELECT id FROM descendants)
+  `);
 
   return s3Keys;
 }
@@ -251,22 +228,21 @@ app.post("/folder", async (c) => {
   return successResponse(c, created, 201);
 });
 
-// GET /:id/path — 폴더 조상 경로
+// GET /:id/path — CTE 기반 폴더 조상 경로
 app.get("/:id/path", async (c) => {
   const id = c.req.param("id");
-  const path: { id: string; name: string }[] = [];
 
-  let currentId: string | null = id;
-  while (currentId) {
-    const folder: { id: string; name: string; folderId: string | null } | undefined =
-      await db.query.files.findFirst({
-        where: and(eq(files.id, currentId), eq(files.deleted, false)),
-        columns: { id: true, name: true, folderId: true },
-      });
-    if (!folder) break;
-    path.unshift({ id: folder.id, name: folder.name });
-    currentId = folder.folderId;
-  }
+  const rows = await db.execute(sql`
+    WITH RECURSIVE ancestors AS (
+      SELECT id, name, folder_id FROM files WHERE id = ${id} AND deleted = false
+      UNION ALL
+      SELECT f.id, f.name, f.folder_id FROM files f JOIN ancestors a ON f.id = a.folder_id WHERE f.deleted = false
+    )
+    SELECT id, name FROM ancestors
+  `);
+
+  // CTE 결과: 자신 → 부모 → 조부모 → ... → 루트 순서 → reverse로 경로 생성
+  const path = (rows as unknown as { id: string; name: string }[]).reverse();
 
   return successResponse(c, { path });
 });
@@ -276,7 +252,7 @@ app.get("/:id/download", async (c) => {
   const id = c.req.param("id");
 
   const file = await db.query.files.findFirst({
-    where: eq(files.id, id),
+    where: and(eq(files.id, id), eq(files.deleted, false)),
   });
   if (!file || !file.s3Key) return errorResponse(c, ERRORS.NOT_FOUND, 404);
 
@@ -296,7 +272,7 @@ app.post("/:id/open", async (c) => {
   const id = c.req.param("id");
 
   const file = await db.query.files.findFirst({
-    where: eq(files.id, id),
+    where: and(eq(files.id, id), eq(files.deleted, false)),
   });
   if (!file || !file.s3Key) return errorResponse(c, ERRORS.NOT_FOUND, 404);
 
@@ -489,25 +465,23 @@ app.delete("/:id/permanent", async (c) => {
   if (file.s3Key) {
     s3KeysToDelete.push(file.s3Key);
   }
-  for (const key of s3KeysToDelete) {
-    try {
-      await deleteFile(key);
-    } catch (err) {
-      console.warn(`[Storage] Failed to delete file: ${key}`, err);
-    }
-  }
+  await Promise.allSettled(
+    s3KeysToDelete.map((key) =>
+      deleteFile(key).catch((err) =>
+        console.warn(`[Storage] Failed to delete file: ${key}`, err)
+      )
+    )
+  );
 
   return successResponse(c, { id });
 });
 
 // POST /batch-delete — 배치 소프트 삭제 (트랜잭션)
 app.post("/batch-delete", async (c) => {
-  const { ids } = (await c.req.json()) as { ids: string[] };
+  const parsed = batchDeleteSchema.safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
-  if (!Array.isArray(ids) || ids.length === 0) {
-    return errorResponse(c, ERRORS.VALIDATION, 400);
-  }
-
+  const { ids } = parsed.data;
   const deletedAt = new Date();
 
   const targets = await db.query.files.findMany({
@@ -535,17 +509,18 @@ app.post("/batch-delete", async (c) => {
 
 // POST /batch-move — 배치 이동 (트랜잭션, 충돌 시 전체 차단)
 app.post("/batch-move", async (c) => {
-  const { ids, folderId } = (await c.req.json()) as { ids: string[]; folderId: string | null };
+  const parsed = batchMoveSchema.safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
-  if (!Array.isArray(ids) || ids.length === 0) {
-    return errorResponse(c, ERRORS.VALIDATION, 400);
-  }
+  const { ids, folderId } = parsed.data;
 
   const duplicateNames: string[] = [];
   const movedIds: string[] = [];
 
   await db.transaction(async (tx) => {
-    // 1단계: 충돌 사전 검증
+    // 1단계: 대상 정보 조회 + 충돌 검증 (Map 캐싱)
+    const targetInfoMap = new Map<string, { name: string; isFolder: boolean }>();
+
     for (const id of ids) {
       if (id === folderId) continue;
 
@@ -558,6 +533,8 @@ app.post("/batch-move", async (c) => {
       if (target.isFolder && folderId && (await isDescendant(tx, folderId, id))) {
         continue;
       }
+
+      targetInfoMap.set(id, target);
 
       const duplicate = await (tx as unknown as typeof db)
         .select({ id: files.id })
@@ -580,19 +557,9 @@ app.post("/batch-move", async (c) => {
     // 충돌 항목이 있으면 아무것도 이동하지 않음
     if (duplicateNames.length > 0) return;
 
-    // 2단계: 전부 이동
+    // 2단계: 캐싱된 정보로 이동 (재조회 없음)
     for (const id of ids) {
-      if (id === folderId) continue;
-
-      const target = await tx.query.files.findFirst({
-        where: eq(files.id, id),
-        columns: { isFolder: true },
-      });
-      if (!target) continue;
-
-      if (target.isFolder && folderId && (await isDescendant(tx, folderId, id))) {
-        continue;
-      }
+      if (!targetInfoMap.has(id)) continue;
 
       await tx
         .update(files)

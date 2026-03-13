@@ -1,22 +1,19 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-  Folder,
   FolderOpen,
   ChevronRight,
   Trash2,
   HardDrive,
   Loader2,
   Star,
-  File as FileIcon,
-  Image,
-  FileText,
+  Folder,
 } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { Input } from "@/shared/ui/input";
 import { MiddleTruncate } from "@/shared/ui/middle-truncate";
 import { useDroppable } from "@dnd-kit/core";
 import { useFilesQuery, useFilePathQuery, useFavoritesQuery } from "./api";
-import type { FileItem } from "./types";
+import { getFileIconComponent, type FileItem } from "./types";
 
 interface FolderTreeProps {
   currentFolderId: string | null;
@@ -27,18 +24,13 @@ interface FolderTreeProps {
   isTrashActive?: boolean;
   onContextMenu?: (e: React.MouseEvent, item: FileItem) => void;
   onFavContextMenu?: (e: React.MouseEvent, item: FileItem) => void;
-  // 폴더 트리 이름변경
+  // 이름변경 (tree/favorite 통합)
   renamingId?: string | null;
+  favRenamingId?: string | null;
   renameValue?: string;
   onRenameChange?: (value: string) => void;
   onRenameSubmit?: (id: string) => void;
   onRenameCancel?: () => void;
-  // 즐겨찾기 이름변경 (별도 상태)
-  favRenamingId?: string | null;
-  favRenameValue?: string;
-  onFavRenameChange?: (value: string) => void;
-  onFavRenameSubmit?: (id: string) => void;
-  onFavRenameCancel?: () => void;
 }
 
 export function FolderTree({
@@ -51,15 +43,11 @@ export function FolderTree({
   onContextMenu,
   onFavContextMenu,
   renamingId,
+  favRenamingId,
   renameValue,
   onRenameChange,
   onRenameSubmit,
   onRenameCancel,
-  favRenamingId,
-  favRenameValue,
-  onFavRenameChange,
-  onFavRenameSubmit,
-  onFavRenameCancel,
 }: FolderTreeProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -112,10 +100,10 @@ export function FolderTree({
           onFileClick={onFileClick}
           onContextMenu={onFavContextMenu}
           renamingId={favRenamingId}
-          renameValue={favRenameValue}
-          onRenameChange={onFavRenameChange}
-          onRenameSubmit={onFavRenameSubmit}
-          onRenameCancel={onFavRenameCancel}
+          renameValue={renameValue}
+          onRenameChange={onRenameChange}
+          onRenameSubmit={onRenameSubmit}
+          onRenameCancel={onRenameCancel}
         />
       )}
 
@@ -210,7 +198,7 @@ function FavoritesList({
             <TreeItem
               key={item.id}
               label={renamingId === item.id ? (renameValue ?? "") : item.name}
-              icon={getFavoriteIcon(item)}
+              icon={getFileIconComponent(item, "size-4")}
               isActive={false}
               isRenaming={renamingId === item.id}
               onRenameChange={onRenameChange}
@@ -233,13 +221,6 @@ function FavoritesList({
       )}
     </div>
   );
-}
-
-function getFavoriteIcon(item: FileItem) {
-  if (item.isFolder) return <Folder className="size-4 text-blue-500" />;
-  if (item.mimeType?.startsWith("image/")) return <Image className="size-4 text-green-500" />;
-  if (item.mimeType === "application/pdf") return <FileText className="size-4 text-red-500" />;
-  return <FileIcon className="size-4 text-muted-foreground" />;
 }
 
 function FolderChildren({

@@ -343,6 +343,12 @@ export function useEmptyTrash() {
   });
 }
 
+export function useOpenFile() {
+  return useMutation({
+    mutationFn: (id: string) => api.post(`/files/${id}/open`),
+  });
+}
+
 // ─── 에디터 이미지 업로드 ───
 
 export async function uploadEditorImage(file: File): Promise<string> {

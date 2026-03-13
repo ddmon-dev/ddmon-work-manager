@@ -1,11 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode, type Dispatch, type SetStateAction } from "react";
-import {
-  File as FileIcon,
-  Folder,
-  Image,
-  FileText,
-} from "lucide-react";
-import { createElement } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type Dispatch, type SetStateAction } from "react";
 import { toast } from "sonner";
 import {
   useFilesQuery,
@@ -17,14 +10,22 @@ import {
   useBatchDeleteFiles,
   useBatchMoveFiles,
   useToggleFavorite,
+  useOpenFile,
 } from "./api";
-import { api } from "@/shared/lib/api-client";
 import { useDialog } from "@/shared/ui/app-dialog";
 import type { FileItem } from "./types";
 
 interface Breadcrumb {
   id: string | null;
   name: string;
+}
+
+export type RenameSource = "list" | "tree" | "favorite";
+
+export interface RenameState {
+  id: string;
+  value: string;
+  source: RenameSource;
 }
 
 export interface ContextMenuState {
@@ -99,21 +100,27 @@ function useSorting() {
 }
 
 function useRenaming() {
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
+  const [renaming, setRenaming] = useState<RenameState | null>(null);
   const renameFile = useRenameFile();
   const { alert } = useDialog();
 
-  const startRename = useCallback((id: string, name: string) => {
-    setRenamingId(id);
-    setRenameValue(name);
+  const startRename = useCallback((id: string, name: string, source: RenameSource = "list") => {
+    setRenaming({ id, value: name, source });
+  }, []);
+
+  const setRenameValue = useCallback((value: string) => {
+    setRenaming((prev) => (prev ? { ...prev, value } : null));
+  }, []);
+
+  const cancelRename = useCallback(() => {
+    setRenaming(null);
   }, []);
 
   const handleRename = async (id: string) => {
-    if (!renameValue.trim()) return;
+    if (!renaming?.value.trim()) return;
     try {
-      await renameFile.mutateAsync({ id, name: renameValue.trim() });
-      setRenamingId(null);
+      await renameFile.mutateAsync({ id, name: renaming.value.trim() });
+      setRenaming(null);
     } catch (err) {
       alert({
         variant: "error",
@@ -124,11 +131,10 @@ function useRenaming() {
   };
 
   return {
-    renamingId,
-    renameValue,
-    setRenamingId,
-    setRenameValue,
+    renaming,
     startRename,
+    setRenameValue,
+    cancelRename,
     handleRename,
   };
 }
@@ -208,6 +214,7 @@ export function useDrive() {
   const moveFile = useMoveFile();
   const batchMoveFiles = useBatchMoveFiles();
   const toggleFavoriteMutation = useToggleFavorite();
+  const openFileMutation = useOpenFile();
 
   // 선택 핸들러
   const selectItem = useCallback(
@@ -294,9 +301,9 @@ export function useDrive() {
         clearSelection();
         return;
       }
-      api.post(`/files/${file.id}/open`);
+      openFileMutation.mutate(file.id);
     },
-    [nav.handleNavigate, clearSelection]
+    [nav.handleNavigate, clearSelection, openFileMutation]
   );
 
   const handleMove = async (targetFolderId: string | null) => {
@@ -413,7 +420,7 @@ export function useDrive() {
         target.tagName === "INPUT" ||
         target.tagName === "TEXTAREA" ||
         target.isContentEditable ||
-        renaming.renamingId
+        renaming.renaming
       ) {
         return;
       }
@@ -476,7 +483,7 @@ export function useDrive() {
     return () => window.removeEventListener("keydown", handler);
   }, [
     selectedIds,
-    renaming.renamingId,
+    renaming.renaming,
     renaming.startRename,
     items,
     handleDelete,
@@ -494,8 +501,7 @@ export function useDrive() {
     order: sorting.order,
     newFolderName: folder.newFolderName,
     showNewFolder: folder.showNewFolder,
-    renamingId: renaming.renamingId,
-    renameValue: renaming.renameValue,
+    renaming: renaming.renaming,
     items,
     isLoading,
     moveTargetIds,
@@ -505,7 +511,6 @@ export function useDrive() {
     // 세터
     setNewFolderName: folder.setNewFolderName,
     setShowNewFolder: folder.setShowNewFolder,
-    setRenamingId: renaming.setRenamingId,
     setRenameValue: renaming.setRenameValue,
     setShowTrash: nav.setShowTrash,
     setMoveTargetIds,
@@ -525,15 +530,14 @@ export function useDrive() {
     selectItem,
     clearSelection,
     startMove,
+    startRename: renaming.startRename,
+    cancelRename: renaming.cancelRename,
     isMultiSelection,
     // 드래그 선택
     dragRect: dragSelection.dragRect,
     dragContainerRef: dragSelection.containerRef,
     handleDragSelectStart: dragSelection.handleDragSelectStart,
     wasDragSelectingRef: dragSelection.wasDragSelectingRef,
-    // 유틸
-    formatSize,
-    getFileIcon,
   };
 }
 
@@ -631,23 +635,4 @@ function useDragSelection(
   }, [setSelectedIds]);
 
   return { dragRect, containerRef, handleDragSelectStart, wasDragSelectingRef };
-}
-
-// ─── 유틸 ───
-
-function formatSize(bytes: number | null) {
-  if (!bytes) return "-";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function getFileIcon(file: FileItem): ReactNode {
-  if (file.isFolder)
-    return createElement(Folder, { className: "size-5 text-blue-500" });
-  if (file.mimeType?.startsWith("image/"))
-    return createElement(Image, { className: "size-5 text-green-500" });
-  if (file.mimeType === "application/pdf")
-    return createElement(FileText, { className: "size-5 text-red-500" });
-  return createElement(FileIcon, { className: "size-5 text-muted-foreground" });
 }

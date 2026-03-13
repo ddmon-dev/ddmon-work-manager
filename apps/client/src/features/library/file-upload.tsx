@@ -5,6 +5,29 @@ import { Spinner } from "@/shared/ui/spinner";
 import { useUploadFile } from "./api";
 import { toast } from "sonner";
 
+/** 파일 배열을 순차 업로드하는 공유 함수 */
+export async function uploadFiles(
+  fileList: File[],
+  folderId: string | null,
+  uploadMutation: ReturnType<typeof useUploadFile>
+): Promise<{ successCount: number; failCount: number }> {
+  let successCount = 0;
+  let failCount = 0;
+  for (const file of fileList) {
+    try {
+      await uploadMutation.mutateAsync({ file, folderId });
+      successCount++;
+    } catch {
+      toast.error(`${file.name} 업로드 실패`);
+      failCount++;
+    }
+  }
+  if (successCount > 0) {
+    toast.success(`${successCount}개 파일 업로드 완료`);
+  }
+  return { successCount, failCount };
+}
+
 interface FileUploadProps {
   folderId: string | null;
   children: React.ReactNode;
@@ -131,22 +154,11 @@ export function UploadButton({ folderId }: UploadButtonProps) {
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
     setIsUploading(true);
-    let successCount = 0;
-    for (const file of Array.from(files)) {
-      try {
-        await uploadFile.mutateAsync({ file, folderId });
-        successCount++;
-      } catch {
-        toast.error(`${file.name} 업로드 실패`);
-      }
-    }
+    await uploadFiles(Array.from(files), folderId, uploadFile);
     setIsUploading(false);
-    if (successCount > 0) {
-      toast.success(`${successCount}개 파일 업로드 완료`);
-    }
     if (inputRef.current) inputRef.current.value = "";
   };
 

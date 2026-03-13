@@ -38,3 +38,18 @@ export const folderCreateSchema = z.object({
 });
 
 export type FolderCreateInput = z.infer<typeof folderCreateSchema>;
+
+// 배치 삭제
+export const batchDeleteSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1, "하나 이상의 항목을 선택해주세요."),
+});
+
+export type BatchDeleteInput = z.infer<typeof batchDeleteSchema>;
+
+// 배치 이동
+export const batchMoveSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1, "하나 이상의 항목을 선택해주세요."),
+  folderId: z.string().uuid().nullable(),
+});
+
+export type BatchMoveInput = z.infer<typeof batchMoveSchema>;

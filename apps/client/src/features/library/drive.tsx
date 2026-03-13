@@ -1,11 +1,8 @@
 import { Fragment, useState, useCallback, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import {
   File as FileIcon,
   Files,
-  FileText,
-  Image,
   FolderPlus,
   Folder,
   FolderOpen,
@@ -47,6 +44,7 @@ import {
   EmptyDescription,
 } from "@/shared/ui/empty";
 import { cn } from "@/shared/utils/classnames";
+import { formatFileSize } from "@/shared/utils/format";
 import {
   DndContext,
   DragOverlay,
@@ -59,14 +57,15 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { FileUpload, UploadButton } from "./file-upload";
+import { FileUpload, UploadButton, uploadFiles } from "./file-upload";
 import { FolderTree } from "./folder-tree";
 import { TrashView } from "./trash";
-import { toast } from "sonner";
 import { useDrive, type ContextMenuState } from "./use-drive";
-import { useUploadFile, useRenameFile } from "./api";
-import type { FileItem } from "./types";
+import { useUploadFile } from "./api";
+import { getFileIconComponent, type FileItem } from "./types";
 import { MiddleTruncate } from "@/shared/ui/middle-truncate";
+import { useClickOutside } from "@/shared/hooks/use-click-outside";
+import { ContextMenuPortal } from "@/shared/ui/context-menu-portal";
 import type { LucideIcon } from "lucide-react";
 
 export function Drive() {
@@ -77,15 +76,13 @@ export function Drive() {
     order,
     newFolderName,
     showNewFolder,
-    renamingId,
-    renameValue,
+    renaming,
     items,
     isLoading,
     moveTargetIds,
     breadcrumbs,
     setNewFolderName,
     setShowNewFolder,
-    setRenamingId,
     setRenameValue,
     setShowTrash,
     setMoveTargetIds,
@@ -106,9 +103,9 @@ export function Drive() {
     selectItem,
     clearSelection,
     startMove,
+    startRename,
+    cancelRename,
     isMultiSelection,
-    formatSize,
-    getFileIcon,
     dragRect,
     dragContainerRef,
     handleDragSelectStart,
@@ -119,25 +116,6 @@ export function Drive() {
     null
   );
   const [showTree, setShowTree] = useState(true);
-  const [treeRenamingId, setTreeRenamingId] = useState<string | null>(null);
-  const [treeRenameValue, setTreeRenameValue] = useState("");
-  const [favRenamingId, setFavRenamingId] = useState<string | null>(null);
-  const [favRenameValue, setFavRenameValue] = useState("");
-  const treeRenameFile = useRenameFile();
-  const handleTreeRename = async (id: string) => {
-    if (!treeRenameValue.trim()) return;
-    try {
-      await treeRenameFile.mutateAsync({ id, name: treeRenameValue.trim() });
-    } catch {}
-    setTreeRenamingId(null);
-  };
-  const handleFavRename = async (id: string) => {
-    if (!favRenameValue.trim()) return;
-    try {
-      await treeRenameFile.mutateAsync({ id, name: favRenameValue.trim() });
-    } catch {}
-    setFavRenamingId(null);
-  };
   const [draggedItem, setDraggedItem] = useState<FileItem | null>(null);
   const [dragRowWidth, setDragRowWidth] = useState<number | null>(null);
   const [movingId, setMovingId] = useState<string | null>(null);
@@ -145,16 +123,7 @@ export function Drive() {
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const newFolderRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!showNewFolder) return;
-    const handler = (e: MouseEvent) => {
-      if (newFolderRef.current && !newFolderRef.current.contains(e.target as Node)) {
-        setShowNewFolder(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showNewFolder, setShowNewFolder]);
+  useClickOutside(newFolderRef, () => setShowNewFolder(false), showNewFolder);
 
   // 드래그 시 선택된 항목 수 (draggedItem이 selectedIds에 포함되면 전체, 아니면 1)
   const dragCount =
@@ -162,19 +131,7 @@ export function Drive() {
 
   const handleDropUpload = useCallback(
     async (fileList: FileList, targetFolderId: string) => {
-      const files = Array.from(fileList);
-      let successCount = 0;
-      for (const file of files) {
-        try {
-          await uploadFile.mutateAsync({ file, folderId: targetFolderId });
-          successCount++;
-        } catch {
-          toast.error(`${file.name} 업로드 실패`);
-        }
-      }
-      if (successCount > 0) {
-        toast.success(`${successCount}개 파일 업로드 완료`);
-      }
+      await uploadFiles(Array.from(fileList), targetFolderId, uploadFile);
     },
     [uploadFile]
   );
@@ -241,16 +198,12 @@ export function Drive() {
             isTrashActive={showTrash}
             onContextMenu={(e, item) => openContextMenu(e, item, "tree")}
             onFavContextMenu={(e, item) => openContextMenu(e, item, "favorite")}
-            renamingId={treeRenamingId}
-            renameValue={treeRenameValue}
-            onRenameChange={setTreeRenameValue}
-            onRenameSubmit={handleTreeRename}
-            onRenameCancel={() => setTreeRenamingId(null)}
-            favRenamingId={favRenamingId}
-            favRenameValue={favRenameValue}
-            onFavRenameChange={setFavRenameValue}
-            onFavRenameSubmit={handleFavRename}
-            onFavRenameCancel={() => setFavRenamingId(null)}
+            renamingId={renaming?.source === "tree" ? renaming.id : null}
+            favRenamingId={renaming?.source === "favorite" ? renaming.id : null}
+            renameValue={renaming?.value ?? ""}
+            onRenameChange={setRenameValue}
+            onRenameSubmit={handleRename}
+            onRenameCancel={cancelRename}
           />
         </div>
       )}
@@ -412,8 +365,8 @@ export function Drive() {
                     <DraggableFileRow
                       key={item.id}
                       item={item}
-                      renamingId={renamingId}
-                      renameValue={renameValue}
+                      renamingId={renaming?.source === "list" ? renaming.id : null}
+                      renameValue={renaming?.value ?? ""}
                       currentFolderId={currentFolderId}
                       isMoving={item.id === movingId}
                       isGroupDragging={
@@ -432,13 +385,10 @@ export function Drive() {
                       onSelect={(e) => selectItem(item.id, e)}
                       onFileClick={handleFileClick}
                       onContextMenu={openContextMenu}
-                      onRenameStart={(id, name) => {
-                        setRenamingId(id);
-                        setRenameValue(name);
-                      }}
+                      onRenameStart={(id, name) => startRename(id, name, "list")}
                       onRenameChange={setRenameValue}
                       onRenameSubmit={handleRename}
-                      onRenameCancel={() => setRenamingId(null)}
+                      onRenameCancel={cancelRename}
                       onToggleFavorite={(id, isFavorited) =>
                         handleToggleFavorite(id, isFavorited)
                       }
@@ -448,8 +398,6 @@ export function Drive() {
                       }}
                       onDelete={handleDelete}
                       onDropUpload={handleDropUpload}
-                      formatSize={formatSize}
-                      getFileIcon={getFileIcon}
                     />
                   ))}
                 </div>
@@ -541,21 +489,7 @@ export function Drive() {
         onChange={async (e) => {
           const files = e.target.files;
           if (!files || files.length === 0) return;
-          let successCount = 0;
-          for (const file of Array.from(files)) {
-            try {
-              await uploadFile.mutateAsync({
-                file,
-                folderId: currentFolderId,
-              });
-              successCount++;
-            } catch {
-              toast.error(`${file.name} 업로드 실패`);
-            }
-          }
-          if (successCount > 0) {
-            toast.success(`${successCount}개 파일 업로드 완료`);
-          }
+          await uploadFiles(Array.from(files), currentFolderId, uploadFile);
           e.target.value = "";
         }}
       />
@@ -579,16 +513,8 @@ export function Drive() {
             closeContextMenu();
           }}
           onRename={(item) => {
-            if (contextMenu?.source === "favorite") {
-              setFavRenamingId(item.id);
-              setFavRenameValue(item.name);
-            } else if (contextMenu?.source === "tree") {
-              setTreeRenamingId(item.id);
-              setTreeRenameValue(item.name);
-            } else {
-              setRenamingId(item.id);
-              setRenameValue(item.name);
-            }
+            const source = contextMenu?.source ?? "list";
+            startRename(item.id, item.name, source);
             closeContextMenu();
           }}
           onMove={(item) => {
@@ -637,8 +563,6 @@ function DraggableFileRow({
   onSelect,
   onContextMenu,
   onDropUpload,
-  formatSize,
-  getFileIcon,
 }: {
   item: FileItem;
   renamingId: string | null;
@@ -659,8 +583,6 @@ function DraggableFileRow({
   onMoveStart: (id: string) => void;
   onDelete: (id: string) => void;
   onDropUpload: (files: FileList, folderId: string) => void;
-  formatSize: (bytes: number | null) => string;
-  getFileIcon: (file: FileItem) => React.ReactNode;
 }) {
   const {
     attributes,
@@ -740,7 +662,7 @@ function DraggableFileRow({
       }}
       onContextMenu={(e) => onContextMenu(e, item)}
     >
-      <span className="shrink-0">{getFileIcon(item)}</span>
+      <span className="shrink-0">{getFileIconComponent(item, "size-5")}</span>
 
       <div className="min-w-0 flex-1 overflow-hidden">
         {renamingId === item.id ? (
@@ -772,7 +694,7 @@ function DraggableFileRow({
       </div>
 
       <span className="w-20 shrink-0 text-right text-xs text-muted-foreground">
-        {item.isFolder ? "-" : formatSize(item.size)}
+        {item.isFolder ? "-" : item.size != null ? formatFileSize(item.size) : "-"}
       </span>
 
       <span className="w-24 shrink-0 text-right text-xs text-muted-foreground">
@@ -885,15 +807,10 @@ function ParentFolderRow({
 function DragOverlayIcon({ item, isMulti }: { item: FileItem; isMulti?: boolean }) {
   const className = "size-5 shrink-0";
   if (isMulti) return <Files className={cn(className, "text-muted-foreground")} />;
-  if (item.isFolder) return <Folder className={cn(className, "text-blue-500")} />;
-  if (item.mimeType?.startsWith("image/"))
-    return <Image className={cn(className, "text-green-500")} />;
-  if (item.mimeType === "application/pdf")
-    return <FileText className={cn(className, "text-red-500")} />;
-  return <FileIcon className={cn(className, "text-muted-foreground")} />;
+  return <>{getFileIconComponent(item, className)}</>;
 }
 
-// ─── FileContextMenu (Portal) ───
+// ─── FileContextMenu (ContextMenuPortal 사용) ───
 
 function FileContextMenu({
   contextMenu,
@@ -922,52 +839,10 @@ function FileContextMenu({
   onNewFolder: () => void;
   onUpload: () => void;
 }) {
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // 뷰포트 경계 보정
-  const [position, setPosition] = useState({ x: contextMenu.x, y: contextMenu.y });
-
-  useEffect(() => {
-    const el = menuRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const x = contextMenu.x + rect.width > window.innerWidth
-      ? window.innerWidth - rect.width - 8
-      : contextMenu.x;
-    const y = contextMenu.y + rect.height > window.innerHeight
-      ? window.innerHeight - rect.height - 8
-      : contextMenu.y;
-    setPosition({ x, y });
-  }, [contextMenu.x, contextMenu.y]);
-
-  // 바깥 클릭 닫기
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
-
-  // ESC 닫기
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
-
   const { item } = contextMenu;
 
-  return createPortal(
-    <div
-      ref={menuRef}
-      className="fixed z-50 min-w-[180px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
-      style={{ left: position.x, top: position.y }}
-    >
+  return (
+    <ContextMenuPortal x={contextMenu.x} y={contextMenu.y} onClose={onClose} minWidth={180}>
       {item ? (
         isMulti ? (
           // 다중 선택 컨텍스트 메뉴
@@ -1044,8 +919,7 @@ function FileContextMenu({
           />
         </>
       )}
-    </div>,
-    document.body
+    </ContextMenuPortal>
   );
 }
 

@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { RotateCcw, Trash2, AlertTriangle } from "lucide-react";
-import { createPortal } from "react-dom";
 import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/utils/classnames";
@@ -23,6 +22,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { toast } from "sonner";
 import { useDialog } from "@/shared/ui/app-dialog";
+import { ContextMenuPortal } from "@/shared/ui/context-menu-portal";
 import type { TrashItem } from "./types";
 
 interface ContextMenuState {
@@ -206,7 +206,7 @@ export function TrashView() {
   );
 }
 
-// ─── TrashContextMenu (Portal) ───
+// ─── TrashContextMenu (ContextMenuPortal 사용) ───
 
 function TrashContextMenu({
   contextMenu,
@@ -219,48 +219,10 @@ function TrashContextMenu({
   onRestore: (item: TrashItem) => void;
   onDelete: (item: TrashItem) => void;
 }) {
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ x: contextMenu.x, y: contextMenu.y });
-
-  useEffect(() => {
-    const el = menuRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const x = contextMenu.x + rect.width > window.innerWidth
-      ? window.innerWidth - rect.width - 8
-      : contextMenu.x;
-    const y = contextMenu.y + rect.height > window.innerHeight
-      ? window.innerHeight - rect.height - 8
-      : contextMenu.y;
-    setPosition({ x, y });
-  }, [contextMenu.x, contextMenu.y]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
-
   const { item } = contextMenu;
 
-  return createPortal(
-    <div
-      ref={menuRef}
-      className="fixed z-50 min-w-[160px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
-      style={{ left: position.x, top: position.y }}
-    >
+  return (
+    <ContextMenuPortal x={contextMenu.x} y={contextMenu.y} onClose={onClose}>
       <button
         className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
         onClick={() => onRestore(item)}
@@ -279,7 +241,6 @@ function TrashContextMenu({
         <Trash2 className="size-3.5" />
         <span>영구 삭제</span>
       </button>
-    </div>,
-    document.body
+    </ContextMenuPortal>
   );
 }
