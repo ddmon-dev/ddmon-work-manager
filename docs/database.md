@@ -185,11 +185,13 @@ files ─── files (self-ref, folderId → RESTRICT)
 - `mime_type`, `size`: 파일 메타데이터
 - `folder_id`: self-referencing FK → files(id) ON DELETE RESTRICT. null이면 루트
 - `is_folder`: 폴더 여부 (기본 false). 폴더는 DB에만 존재 (스토리지에 물리 디렉토리 없음)
+- `is_favorited`: 즐겨찾기 여부 (기본 false)
+- `favorite_order`: 즐겨찾기 정렬 순서 (nullable)
 - `deleted` + `deleted_at`: 휴지통 (소프트 삭제)
 
 ## 마이그레이션 관리
 
-마이그레이션 파일: `0000_initial` ~ `0006_add_library_and_files` (7개). 0000~0003은 초기 스키마, 0004는 프로젝트 일정, 0006은 라이브러리/드라이브 테이블 추가.
+마이그레이션 파일: `0000_initial` ~ `0008_add_favorite_order_to_files` (9개). 0000~0003은 초기 스키마, 0004는 프로젝트 일정, 0006은 라이브러리/드라이브 테이블 추가, 0007~0008은 파일 즐겨찾기.
 
 ### 스키마 변경 절차
 

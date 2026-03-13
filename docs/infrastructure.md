@@ -166,7 +166,9 @@ npm run build:production    # 클라이언트(dist-production) + 서버(tsup) �
 - **클라이언트**: Vite → `apps/client/dist-production/`
 - **서버**: tsup → `apps/server/dist/`
   - `noExternal: [/@packages\/.*/]` — 워크스페이스 패키지를 번들에 포함
+  - `clean: true` — 빌드 전 dist/ 디렉토리 정리
   - tsup 사용 이유: `moduleResolution: bundler`와 Node.js ESM 간 디렉토리 임포트 충돌 해결
+  - **tsc/tsup 분리**: 모든 tsconfig에 `emitDeclarationOnly: true` 설정. tsc는 .d.ts만 생성하고, JS 빌드는 tsup이 전담
 
 ### 스크립트 (`scripts/`)
 
@@ -213,7 +215,7 @@ Drizzle Kit 사용. 설정 파일: `apps/server/drizzle.config.ts`
 출력:  apps/server/drizzle/migrations/
 ```
 
-`0000_initial` ~ `0006_add_library_and_files` (7개).
+`0000_initial` ~ `0008_add_favorite_order_to_files` (9개).
 
 ### 새 마이그레이션 생성
 
