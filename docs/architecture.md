@@ -44,6 +44,7 @@ RootLayout (Toaster, ThemeContext)
     ├── /estimates     → EstimatesPage
     ├── /projects            → ProjectsPage
     ├── /project-schedules   → ProjectSchedulesPage
+    ├── /partners      → PartnersPage
     ├── /schedules           → SchedulesPage
     ├── /revenue       → RevenuePage
     ├── /admins        → AdminsPage
@@ -124,8 +125,9 @@ features/manage-modules/{module}/
 | `ManageList` | DataList 래퍼 (행 클릭 → 시트 열기, 벌크 액션) |
 | `ManageFormSubmit` | 폼 제출 버튼 |
 | `RowActions` / `RowActionMenu` | 행 액션 (buttons / menu 타입) |
-| `MemoSection` | 메모 폼 + 히스토리 (clients, projects 공유) |
+| `MemoSection` | 메모 폼 + 히스토리 (hooks prop으로 CRUD 내장, clients/partners/projects 공유) |
 | `ClientSelect` | 클라이언트 선택 컴포넌트 |
+| `PartnerSelect` | 파트너 선택 컴포넌트 |
 | `DeleteButton` / `DuplicateButton` / `ModifyButton` / `ViewButton` | 상세뷰 액션 버튼 |
 | `ExportDataButton` | 엑셀 내보내기 |
 | `DetailSectionTitle` / `DetailInfoRow` | 상세뷰 레이아웃 |
@@ -135,7 +137,6 @@ features/manage-modules/{module}/
 | 훅 | 역할 |
 |---|------|
 | `useFormGuard` | RHF isDirty 감지 → 닫기/모드 변경 시 확인 다이얼로그 |
-| `createMemoHooks` | 메모 CRUD mutation 팩토리 (optimistic update 포함, clients/projects 공유) |
 
 #### ManageSheet 상태 머신
 
@@ -168,7 +169,7 @@ useManageSheet() → { open, close, closeWithGuard, setMode, setModeWithGuard, s
 
 #### Optimistic Update
 
-적용 모듈: schedules 수정/순서 변경, schedules 인라인 편집, projects/clients 메모 CRUD, projects 입금 내역 CRUD, projects 상태 변경, estimates 상태/계약버전 변경.
+적용 모듈: schedules 수정/순서 변경, schedules 인라인 편집, projects/clients/partners 메모 CRUD, projects 입금 내역 CRUD, projects 상태 변경, estimates 상태/계약버전 변경.
 
 패턴: `onMutate` → 캐시 즉시 반영 + `onError` → 롤백 + `cancelQueries` (list + detail 모두)
 
@@ -237,7 +238,7 @@ src/
 ├── middleware/auth.ts     # requireAuth, requireSuperAdmin
 ├── routes/               # API 라우트 (모듈별 1파일)
 │   ├── index.ts          # 라우트 조합
-│   ├── clients.ts, estimates.ts, projects.ts, project-schedules.ts, schedules.ts
+│   ├── clients.ts, partners.ts, estimates.ts, projects.ts, project-schedules.ts, schedules.ts
 │   ├── todos.ts, mindnotes.ts, admins.ts, dashboard.ts, revenue.ts
 │   ├── library-boards.ts, library-documents.ts, files.ts, uploads.ts, trash.ts
 │   └── business-info.ts
@@ -274,13 +275,13 @@ src/
 
 모듈별 Zod 스키마. 클라이언트 폼 검증과 서버 입력 검증에 동시 사용.
 
-파일: `admins.ts`, `clients.ts`, `estimates.ts`, `library.ts`, `mindnotes.ts`, `projects.ts`, `project-schedules.ts`, `schedules.ts`, `todos.ts`
+파일: `admins.ts`, `clients.ts`, `estimates.ts`, `library.ts`, `mindnotes.ts`, `partners.ts`, `projects.ts`, `project-schedules.ts`, `schedules.ts`, `todos.ts`
 
 ### types (`@packages/types`)
 
 공유 상수 및 타입 정의.
 
-- `constants.ts` — `TAX_TYPE`, `DISCOUNT_TYPE`, `PROJECT_STATUS`, `ESTIMATE_STATUS` 등
+- `constants.ts` — `TAX_TYPE`, `DISCOUNT_TYPE`, `PROJECT_STATUS`, `ESTIMATE_STATUS`, `PARTNER_SPECIALTIES` 등
 - `common.ts` — 공통 타입
 - `results.ts` — API 응답 타입 (`ApiResponse`, `PaginatedResponse`)
 
