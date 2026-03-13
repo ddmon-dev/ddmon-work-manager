@@ -699,7 +699,7 @@ function DraggableFileRow({
     >
       <span className="shrink-0">{getFileIconComponent(item, "size-5")}</span>
 
-      <div className="min-w-0 flex-1 overflow-hidden">
+      <div className={cn("min-w-0 flex-1", renamingId === item.id ? "overflow-visible" : "overflow-hidden")}>
         {renamingId === item.id ? (
           <Input
             value={renameValue}

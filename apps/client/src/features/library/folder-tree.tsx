@@ -4,7 +4,6 @@ import {
   ChevronRight,
   Trash2,
   HardDrive,
-  Loader2,
   Star,
   Folder,
 } from "lucide-react";
@@ -19,7 +18,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { restrictToVerticalAxis, restrictToFirstScrollableAncestor } from "@dnd-kit/modifiers";
 import { useFilesQuery, useFilePathQuery, useFavoritesQuery, useReorderFavorites } from "./api";
 import { getFileIconComponent, type FileItem } from "./types";
 
@@ -213,7 +212,7 @@ function FavoritesList({
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
-          modifiers={[restrictToVerticalAxis]}
+          modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
           onDragEnd={handleDragEnd}
         >
           <SortableContext
@@ -360,17 +359,7 @@ function FolderChildren({
   const { data: items, isLoading } = useFilesQuery(folderId);
   const folders = items?.filter((f) => f.isFolder) ?? [];
 
-  if (isLoading) {
-    return (
-      <div
-        className="flex items-center gap-1.5 py-1.5 text-muted-foreground"
-        style={{ paddingLeft: `${8 + depth * 16}px` }}
-      >
-        <Loader2 className="size-3.5 animate-spin" />
-        <span className="text-xs">로딩 중...</span>
-      </div>
-    );
-  }
+  if (isLoading) return null;
 
   if (folders.length === 0) return null;
 

@@ -85,7 +85,7 @@ export function ConfirmDialogComponent({ data, onConfirm, onCancel }: ConfirmDia
           <Button
             variant="outline"
             onClick={handleCancel}
-            className="min-w-18"
+            className={cn("min-w-18", variant === 'destructive' && "focus:ring-ring focus:ring-[3px] focus:border-ring")}
             disabled={isLoading}
             autoFocus={variant === 'destructive'}
           >
@@ -95,7 +95,7 @@ export function ConfirmDialogComponent({ data, onConfirm, onCancel }: ConfirmDia
             variant={variant === 'destructive' ? 'destructive' : 'default'}
             onClick={handleConfirm}
             isLoading={isLoading}
-            className="min-w-18"
+            className={cn("min-w-18", variant !== 'destructive' && "focus:ring-ring focus:ring-[3px] focus:border-ring")}
             autoFocus={variant !== 'destructive'}
           >
             {confirmText}
@@ -202,6 +202,8 @@ export function AlertDialogComponent({ data, onClose }: AlertDialogComponentProp
             onClick={handleClose}
             isLoading={isLoading}
             variant={variantConfig.buttonVariant}
+            className="focus:ring-ring focus:ring-[3px] focus:border-ring"
+            autoFocus
           >
             {isLoading ? <Spinner /> : confirmText}
           </LoadingButton>

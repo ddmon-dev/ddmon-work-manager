@@ -124,10 +124,12 @@ function useRenaming() {
   }, []);
 
   const handleRename = async (id: string) => {
-    if (!renaming?.value.trim()) return;
+    if (!renaming?.value.trim()) {
+      setRenaming(null);
+      return;
+    }
     try {
       await renameFile.mutateAsync({ id, name: renaming.value.trim() });
-      setRenaming(null);
     } catch (err) {
       alert({
         variant: "error",
@@ -135,6 +137,7 @@ function useRenaming() {
         description: err instanceof Error ? err.message : "이름 변경에 실패했습니다.",
       });
     }
+    setRenaming(null);
   };
 
   return {
@@ -499,6 +502,27 @@ export function useDrive() {
     setContextMenu(null);
   }, []);
 
+  // 빈 영역 클릭 시 선택 해제
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.closest('[data-item-id]') ||
+        target.closest('[role="menu"]') ||
+        target.closest('[role="dialog"]') ||
+        target.closest('[role="alertdialog"]') ||
+        target.closest('button') ||
+        target.closest('input') ||
+        target.closest('textarea')
+      ) {
+        return;
+      }
+      clearSelection();
+    };
+    window.addEventListener("mousedown", handler);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [clearSelection]);
+
   // 키보드 단축키
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -507,7 +531,8 @@ export function useDrive() {
         target.tagName === "INPUT" ||
         target.tagName === "TEXTAREA" ||
         target.isContentEditable ||
-        renaming.renaming
+        renaming.renaming ||
+        target.closest('[role="dialog"], [role="alertdialog"]')
       ) {
         return;
       }
