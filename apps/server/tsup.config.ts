@@ -5,5 +5,6 @@ export default defineConfig({
   format: ["esm"],
   splitting: false,
   outDir: "dist",
+  clean: true,
   noExternal: [/@packages\/.*/],
 });
