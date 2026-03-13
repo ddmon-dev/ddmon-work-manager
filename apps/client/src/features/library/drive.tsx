@@ -69,6 +69,7 @@ import { getFileIconComponent, type FileItem } from "./types";
 import { MiddleTruncate } from "@/shared/ui/middle-truncate";
 import { useClickOutside } from "@/shared/hooks/use-click-outside";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/shared/ui/resizable";
+import type { PanelImperativeHandle } from "react-resizable-panels";
 import { ContextMenuPortal } from "@/shared/ui/context-menu-portal";
 import type { LucideIcon } from "lucide-react";
 
@@ -126,6 +127,7 @@ export function Drive() {
     null
   );
   const [showTree, setShowTree] = useState(true);
+  const treePanelRef = useRef<PanelImperativeHandle>(null);
   const [draggedItem, setDraggedItem] = useState<FileItem | null>(null);
   const [dragRowWidth, setDragRowWidth] = useState<number | null>(null);
   const [movingId, setMovingId] = useState<string | null>(null);
@@ -204,29 +206,37 @@ export function Drive() {
     >
     <ResizablePanelGroup orientation="horizontal" className="h-full">
       {/* 좌측: 폴더 트리 */}
-      {showTree && (
-        <>
-          <ResizablePanel id="tree" defaultSize="20%" minSize="180px" maxSize="40%">
-            <FolderTree
-              currentFolderId={currentFolderId}
-              onNavigate={handleNavigate}
-              onFileClick={handleFileClick}
-              showTrash
-              onTrashClick={() => setShowTrash(true)}
-              isTrashActive={showTrash}
-              onContextMenu={(e, item) => openContextMenu(e, item, "tree")}
-              onFavContextMenu={(e, item) => openContextMenu(e, item, "favorite")}
-              renamingId={renaming?.source === "tree" ? renaming.id : null}
-              favRenamingId={renaming?.source === "favorite" ? renaming.id : null}
-              renameValue={renaming?.value ?? ""}
-              onRenameChange={setRenameValue}
-              onRenameSubmit={handleRename}
-              onRenameCancel={cancelRename}
-            />
-          </ResizablePanel>
-          <ResizableHandle />
-        </>
-      )}
+      <ResizablePanel
+        id="tree"
+        panelRef={treePanelRef}
+        defaultSize="20%"
+        minSize="0px"
+        maxSize="40%"
+        collapsible
+        collapsedSize="0px"
+        onResize={() => {
+          const collapsed = treePanelRef.current?.isCollapsed() ?? false;
+          setShowTree(!collapsed);
+        }}
+      >
+        <FolderTree
+          currentFolderId={currentFolderId}
+          onNavigate={handleNavigate}
+          onFileClick={handleFileClick}
+          showTrash
+          onTrashClick={() => setShowTrash(true)}
+          isTrashActive={showTrash}
+          onContextMenu={(e, item) => openContextMenu(e, item, "tree")}
+          onFavContextMenu={(e, item) => openContextMenu(e, item, "favorite")}
+          renamingId={renaming?.source === "tree" ? renaming.id : null}
+          favRenamingId={renaming?.source === "favorite" ? renaming.id : null}
+          renameValue={renaming?.value ?? ""}
+          onRenameChange={setRenameValue}
+          onRenameSubmit={handleRename}
+          onRenameCancel={cancelRename}
+        />
+      </ResizablePanel>
+      <ResizableHandle className={cn(!showTree && "opacity-0")} />
 
       {/* 우측: 파일 목록 */}
       <ResizablePanel id="content">
@@ -241,7 +251,13 @@ export function Drive() {
             <Breadcrumbs
               breadcrumbs={breadcrumbs}
               showTree={showTree}
-              onToggleTree={() => setShowTree((v) => !v)}
+              onToggleTree={() => {
+                if (showTree) {
+                  treePanelRef.current?.collapse();
+                } else {
+                  treePanelRef.current?.expand();
+                }
+              }}
               onNavigate={navigateToBreadcrumb}
             />
 

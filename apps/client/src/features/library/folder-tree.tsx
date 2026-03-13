@@ -128,8 +128,8 @@ export function FolderTree({
 
   return (
     <div className="flex h-full select-none flex-col">
-      <div className="flex items-center border-b px-3 py-2">
-        <span className="text-sm font-medium">폴더</span>
+      <div className="flex shrink-0 items-center border-b px-3 py-2">
+        <span className="whitespace-nowrap text-sm font-medium">탐색기</span>
       </div>
 
       {hasFavorites ? (
@@ -198,7 +198,6 @@ function FavoritesList({
   onRenameCancel?: () => void;
 }) {
   const { data: serverFavorites } = useFavoritesQuery();
-  const [expanded, setExpanded] = useState(true);
   const reorderFavorites = useReorderFavorites();
   const { items: favorites, sensors, handleDragEnd } = useSortableReorder({
     serverData: serverFavorites,
@@ -209,50 +208,38 @@ function FavoritesList({
 
   return (
     <div className="flex h-full flex-col">
-      <button
-        type="button"
-        className="flex w-full items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60"
-        onClick={() => setExpanded((v) => !v)}
+      <div className="flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+        <Star className="size-3 shrink-0 fill-yellow-400 text-yellow-400" />
+        <span className="whitespace-nowrap">즐겨찾기</span>
+      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
+        onDragEnd={handleDragEnd}
       >
-        <ChevronRight
-          className={cn(
-            "size-3 transition-transform",
-            expanded && "rotate-90"
-          )}
-        />
-        <Star className="size-3 fill-yellow-400 text-yellow-400" />
-        <span>즐겨찾기</span>
-      </button>
-      {expanded && (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
-          onDragEnd={handleDragEnd}
+        <SortableContext
+          items={favorites.map((f) => f.id)}
+          strategy={verticalListSortingStrategy}
         >
-          <SortableContext
-            items={favorites.map((f) => f.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="min-h-0 flex-1 overflow-y-auto hide-scrollbar p-1 pt-0">
-              {favorites.map((item) => (
-                <SortableFavoriteItem
-                  key={item.id}
-                  item={item}
-                  renamingId={renamingId}
-                  renameValue={renameValue}
-                  onRenameChange={onRenameChange}
-                  onRenameSubmit={onRenameSubmit}
-                  onRenameCancel={onRenameCancel}
-                  onNavigate={onNavigate}
-                  onFileClick={onFileClick}
-                  onContextMenu={onContextMenu}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      )}
+          <div className="min-h-0 flex-1 overflow-y-auto hide-scrollbar p-1 pt-0">
+            {favorites.map((item) => (
+              <SortableFavoriteItem
+                key={item.id}
+                item={item}
+                renamingId={renamingId}
+                renameValue={renameValue}
+                onRenameChange={onRenameChange}
+                onRenameSubmit={onRenameSubmit}
+                onRenameCancel={onRenameCancel}
+                onNavigate={onNavigate}
+                onFileClick={onFileClick}
+                onContextMenu={onContextMenu}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 }
