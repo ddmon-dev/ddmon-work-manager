@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, MoreHorizontal, Pencil, Trash2, GripVertical } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import {
@@ -9,19 +9,12 @@ import {
 } from "@/shared/ui/dropdown-menu";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/utils/classnames";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
+import { useSortableReorder } from "@/shared/hooks";
+import { DndContext, closestCenter } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
-  arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
@@ -36,30 +29,12 @@ interface BoardListProps {
 
 export function BoardList({ selectedBoardId, onSelectBoard }: BoardListProps) {
   const { data: serverBoards, isLoading } = useBoardsQuery();
-  const [boards, setBoards] = useState<LibraryBoard[]>([]);
   const deleteBoard = useDeleteBoard();
   const reorderBoards = useReorderBoards();
-
-  useEffect(() => {
-    if (serverBoards) setBoards(serverBoards);
-  }, [serverBoards]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    setBoards((prev) => {
-      const oldIndex = prev.findIndex((b) => b.id === active.id);
-      const newIndex = prev.findIndex((b) => b.id === over.id);
-      if (oldIndex === -1 || newIndex === -1) return prev;
-      const reordered = arrayMove(prev, oldIndex, newIndex);
-      reorderBoards.mutate(reordered.map((b) => b.id));
-      return reordered;
-    });
-  };
+  const { items: boards, sensors, handleDragEnd } = useSortableReorder({
+    serverData: serverBoards,
+    onReorder: (ids) => reorderBoards.mutate(ids),
+  });
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editBoard, setEditBoard] = useState<LibraryBoard | null>(null);

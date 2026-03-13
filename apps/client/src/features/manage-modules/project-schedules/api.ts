@@ -264,31 +264,7 @@ export function useReorderProjectSchedules() {
   return useMutation({
     mutationFn: (items: { id: string; sortOrder: number }[]) =>
       api.put<{ updated: number }>("/project-schedules/reorder", { items }),
-    onMutate: async (reorderedItems) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.projectSchedules.all });
-      const orderMap = new Map(reorderedItems.map((item) => [item.id, item.sortOrder]));
-
-      const listQueries = updateListCache(queryClient, (items) =>
-        items
-          .map((item) => ({ ...item, sortOrder: orderMap.get(item.id) ?? item.sortOrder }))
-          .sort((a, b) => a.sortOrder - b.sortOrder)
-      );
-
-      const overviewQueries = updateOverviewCache(
-        queryClient,
-        (lanes) => lanes.map((lane) => ({
-          ...lane,
-          schedules: lane.schedules
-            .map((s) => ({ ...s, sortOrder: orderMap.get(s.id) ?? s.sortOrder }))
-            .sort((a, b) => a.sortOrder - b.sortOrder),
-        })),
-      );
-
-      return { listQueries, overviewQueries };
-    },
-    onError: (error, _, ctx) => {
-      if (ctx?.listQueries) rollbackQueries(ctx.listQueries, queryClient);
-      if (ctx?.overviewQueries) rollbackQueries(ctx.overviewQueries, queryClient);
+    onError: (error) => {
       toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("프로젝트 일정"));
     },
     onSettled: () => {
@@ -305,27 +281,7 @@ export function useReorderProjects() {
   return useMutation({
     mutationFn: (items: { id: string; sortOrder: number }[]) =>
       api.put<{ updated: number }>("/projects/reorder", { items }),
-    onMutate: async (reorderedItems) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.projectSchedules.overviews });
-      const orderMap = new Map(reorderedItems.map((item) => [item.id, item.sortOrder]));
-
-      const overviewQueries = queryClient.getQueriesData<OverviewResponse>({
-        queryKey: queryKeys.projectSchedules.overviews,
-      });
-      for (const [key, old] of overviewQueries) {
-        if (!old) continue;
-        queryClient.setQueryData(key, {
-          ...old,
-          items: [...old.items]
-            .map((p) => ({ ...p, sortOrder: orderMap.get(p.id) ?? p.sortOrder }))
-            .sort((a, b) => a.sortOrder - b.sortOrder),
-        });
-      }
-
-      return { overviewQueries };
-    },
-    onError: (error, _, ctx) => {
-      if (ctx?.overviewQueries) rollbackQueries(ctx.overviewQueries, queryClient);
+    onError: (error) => {
       toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("프로젝트 순서"));
     },
     onSettled: () => {

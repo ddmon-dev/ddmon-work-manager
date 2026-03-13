@@ -1,10 +1,11 @@
-import { useRef, useCallback, useState, useMemo } from "react";
+import { useRef, useCallback, useState, useMemo, useEffect } from "react";
 import { DetailSectionTitle } from "../../_base/ui";
 import {
   useProjectScheduleList,
   useLaneList,
+  useReorderLanes,
 } from "../api";
-import type { ProjectScheduleDTO } from "../types";
+import type { ProjectScheduleDTO, ProjectScheduleLaneDTO } from "../types";
 import { useGantt } from "./use-gantt";
 import { useScrollToToday } from "./use-scroll-to-today";
 import { useLaneDrag } from "./use-lane-drag";
@@ -40,7 +41,8 @@ export function ProjectGantt({
   const { data: scheduleData } = useProjectScheduleList(projectId);
   const { data: laneData } = useLaneList(projectId);
   const items = scheduleData?.items ?? [];
-  const lanes = laneData?.items ?? [];
+  const [lanes, setLanes] = useState<ProjectScheduleLaneDTO[]>([]);
+  useEffect(() => { if (laneData?.items) setLanes(laneData.items); }, [laneData?.items]);
 
   // 행별 일정 그룹핑
   const laneSchedules = useMemo(() => {
@@ -68,16 +70,22 @@ export function ProjectGantt({
   // 공유 훅
   useScrollToToday(scrollRef, range.start);
 
+  const reorderLanes = useReorderLanes();
   const {
     editingLaneId, editingLaneTitle, setEditingLaneTitle,
     startEdit, saveEdit, cancelEdit,
     handleDelete: laneDelete, handleAddBelow: laneAddBelow,
-    reorder: reorderLane,
   } = useLaneActions();
 
   const handleLaneReorder = useCallback((fromLocal: number, toLocal: number) => {
-    reorderLane(lanes, fromLocal, toLocal);
-  }, [lanes, reorderLane]);
+    setLanes((prev) => {
+      const reordered = [...prev];
+      const [moved] = reordered.splice(fromLocal, 1);
+      reordered.splice(toLocal, 0, moved);
+      reorderLanes.mutate(reordered.map((l, i) => ({ id: l.id, sortOrder: i })));
+      return reordered;
+    });
+  }, [reorderLanes]);
 
   const { laneDrag, laneDropLocal, handleLanePointerDown } = useLaneDrag({
     laneCount: lanes.length,

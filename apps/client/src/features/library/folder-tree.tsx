@@ -11,20 +11,12 @@ import {
 import { cn } from "@/shared/utils/classnames";
 import { Input } from "@/shared/ui/input";
 import { MiddleTruncate } from "@/shared/ui/middle-truncate";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  useDroppable,
-  type DragEndEvent,
-} from "@dnd-kit/core";
+import { useSortableReorder } from "@/shared/hooks";
+import { DndContext, closestCenter, useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
-  arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
@@ -192,34 +184,12 @@ function FavoritesList({
   onRenameCancel?: () => void;
 }) {
   const { data: serverFavorites } = useFavoritesQuery();
-  const [favorites, setFavorites] = useState<FileItem[]>([]);
   const [expanded, setExpanded] = useState(true);
   const reorderFavorites = useReorderFavorites();
-
-  useEffect(() => {
-    if (serverFavorites) setFavorites(serverFavorites);
-  }, [serverFavorites]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
-  );
-
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event;
-      if (!over || active.id === over.id) return;
-
-      setFavorites((prev) => {
-        const oldIndex = prev.findIndex((f) => f.id === active.id);
-        const newIndex = prev.findIndex((f) => f.id === over.id);
-        if (oldIndex === -1 || newIndex === -1) return prev;
-        const reordered = arrayMove(prev, oldIndex, newIndex);
-        reorderFavorites.mutate(reordered.map((f) => f.id));
-        return reordered;
-      });
-    },
-    [reorderFavorites]
-  );
+  const { items: favorites, sensors, handleDragEnd } = useSortableReorder({
+    serverData: serverFavorites,
+    onReorder: (ids) => reorderFavorites.mutate(ids),
+  });
 
   if (favorites.length === 0) return null;
 

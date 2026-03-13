@@ -72,13 +72,6 @@ export function useLaneActions() {
     });
   }, [createLane, reorderLanes]);
 
-  const reorder = useCallback((lanes: LaneBase[], fromLocal: number, toLocal: number) => {
-    const reordered = [...lanes];
-    const [moved] = reordered.splice(fromLocal, 1);
-    reordered.splice(toLocal, 0, moved);
-    reorderLanes.mutate(reordered.map((l, i) => ({ id: l.id, sortOrder: i })));
-  }, [reorderLanes]);
-
   return {
     editingLaneId,
     editingLaneTitle,
@@ -88,6 +81,5 @@ export function useLaneActions() {
     cancelEdit,
     handleDelete,
     handleAddBelow,
-    reorder,
   };
 }

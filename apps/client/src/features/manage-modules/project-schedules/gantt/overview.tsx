@@ -1,4 +1,4 @@
-import { useRef, useMemo, useState, useCallback } from "react";
+import { useRef, useMemo, useState, useCallback, useEffect } from "react";
 import { ChevronsUpDownIcon } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { Container } from "@/shared/ui/container";
@@ -101,10 +101,13 @@ type OverviewRow =
   | { type: "lane"; project: OverviewProject; lane: LaneWithSchedules; localIndex: number; globalRow: number; isFirstOfProject: boolean; projectLaneCount: number }
   | { type: "empty"; project: OverviewProject; globalRow: number };
 
-function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProject[]; defaultExpanded?: boolean }) {
+function OverviewGantt({ projects: serverProjects, defaultExpanded }: { projects: OverviewProject[]; defaultExpanded?: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [projects, setProjects] = useState<OverviewProject[]>(serverProjects);
+  useEffect(() => { setProjects(serverProjects); }, [serverProjects]);
+
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
-    () => defaultExpanded ? new Set(projects.map((p) => p.id)) : new Set()
+    () => defaultExpanded ? new Set(serverProjects.map((p) => p.id)) : new Set()
   );
 
   const reorderProjects = useReorderProjects();
@@ -123,13 +126,15 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
   }, [projects]);
 
   const handleLaneReorder = useCallback((fromLocal: number, toLocal: number, projectId?: string) => {
-    const project = projects.find((p) => p.id === projectId);
-    if (!project) return;
-    const reordered = [...project.lanes];
-    const [moved] = reordered.splice(fromLocal, 1);
-    reordered.splice(toLocal, 0, moved);
-    reorderLanes.mutate(reordered.map((l, i) => ({ id: l.id, sortOrder: i })));
-  }, [projects, reorderLanes]);
+    setProjects((prev) => prev.map((p) => {
+      if (p.id !== projectId) return p;
+      const reordered = [...p.lanes];
+      const [moved] = reordered.splice(fromLocal, 1);
+      reordered.splice(toLocal, 0, moved);
+      reorderLanes.mutate(reordered.map((l, i) => ({ id: l.id, sortOrder: i })));
+      return { ...p, lanes: reordered };
+    }));
+  }, [reorderLanes]);
 
   const { laneDrag, laneDropLocal, handleLanePointerDown: hookLanePointerDown } = useLaneDrag({
     laneCount: getLaneCount,
@@ -284,11 +289,14 @@ function OverviewGantt({ projects, defaultExpanded }: { projects: OverviewProjec
 
   // 프로젝트 리오더
   const handleProjectReorder = useCallback((fromIndex: number, toIndex: number) => {
-    const reordered = [...projects];
-    const [moved] = reordered.splice(fromIndex, 1);
-    reordered.splice(toIndex, 0, moved);
-    reorderProjects.mutate(reordered.map((p, i) => ({ id: p.id, sortOrder: i })));
-  }, [projects, reorderProjects]);
+    setProjects((prev) => {
+      const reordered = [...prev];
+      const [moved] = reordered.splice(fromIndex, 1);
+      reordered.splice(toIndex, 0, moved);
+      reorderProjects.mutate(reordered.map((p, i) => ({ id: p.id, sortOrder: i })));
+      return reordered;
+    });
+  }, [reorderProjects]);
 
   // 프로젝트 드래그 훅
   const { projectDrag, dropIndex, handleProjectPointerDown } = useProjectDrag({
