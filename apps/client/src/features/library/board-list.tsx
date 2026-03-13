@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, MoreHorizontal, Pencil, Trash2, GripVertical } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import {
@@ -35,9 +35,14 @@ interface BoardListProps {
 }
 
 export function BoardList({ selectedBoardId, onSelectBoard }: BoardListProps) {
-  const { data: boards, isLoading } = useBoardsQuery();
+  const { data: serverBoards, isLoading } = useBoardsQuery();
+  const [boards, setBoards] = useState<LibraryBoard[]>([]);
   const deleteBoard = useDeleteBoard();
   const reorderBoards = useReorderBoards();
+
+  useEffect(() => {
+    if (serverBoards) setBoards(serverBoards);
+  }, [serverBoards]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -45,12 +50,15 @@ export function BoardList({ selectedBoardId, onSelectBoard }: BoardListProps) {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id || !boards) return;
-    const oldIndex = boards.findIndex((b) => b.id === active.id);
-    const newIndex = boards.findIndex((b) => b.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(boards, oldIndex, newIndex);
-    reorderBoards.mutate(reordered.map((b) => b.id));
+    if (!over || active.id === over.id) return;
+    setBoards((prev) => {
+      const oldIndex = prev.findIndex((b) => b.id === active.id);
+      const newIndex = prev.findIndex((b) => b.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      const reordered = arrayMove(prev, oldIndex, newIndex);
+      reorderBoards.mutate(reordered.map((b) => b.id));
+      return reordered;
+    });
   };
 
   const [dialogOpen, setDialogOpen] = useState(false);

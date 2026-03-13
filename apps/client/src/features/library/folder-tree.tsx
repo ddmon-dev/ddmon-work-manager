@@ -7,7 +7,6 @@ import {
   Loader2,
   Star,
   Folder,
-  GripVertical,
 } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { Input } from "@/shared/ui/input";
@@ -192,9 +191,14 @@ function FavoritesList({
   onRenameSubmit?: (id: string) => void;
   onRenameCancel?: () => void;
 }) {
-  const { data: favorites } = useFavoritesQuery();
+  const { data: serverFavorites } = useFavoritesQuery();
+  const [favorites, setFavorites] = useState<FileItem[]>([]);
   const [expanded, setExpanded] = useState(true);
   const reorderFavorites = useReorderFavorites();
+
+  useEffect(() => {
+    if (serverFavorites) setFavorites(serverFavorites);
+  }, [serverFavorites]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -203,19 +207,21 @@ function FavoritesList({
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
-      if (!over || active.id === over.id || !favorites) return;
+      if (!over || active.id === over.id) return;
 
-      const oldIndex = favorites.findIndex((f) => f.id === active.id);
-      const newIndex = favorites.findIndex((f) => f.id === over.id);
-      if (oldIndex === -1 || newIndex === -1) return;
-
-      const reordered = arrayMove(favorites, oldIndex, newIndex);
-      reorderFavorites.mutate(reordered.map((f) => f.id));
+      setFavorites((prev) => {
+        const oldIndex = prev.findIndex((f) => f.id === active.id);
+        const newIndex = prev.findIndex((f) => f.id === over.id);
+        if (oldIndex === -1 || newIndex === -1) return prev;
+        const reordered = arrayMove(prev, oldIndex, newIndex);
+        reorderFavorites.mutate(reordered.map((f) => f.id));
+        return reordered;
+      });
     },
-    [favorites, reorderFavorites]
+    [reorderFavorites]
   );
 
-  if (!favorites || favorites.length === 0) return null;
+  if (favorites.length === 0) return null;
 
   return (
     <div className="border-b">
@@ -244,7 +250,7 @@ function FavoritesList({
             items={favorites.map((f) => f.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="max-h-[200px] overflow-y-auto hide-scrollbar p-1 pt-0 space-y-0.5">
+            <div className="max-h-[200px] overflow-y-auto hide-scrollbar p-1 pt-0">
               {favorites.map((item) => (
                 <SortableFavoriteItem
                   key={item.id}
@@ -295,9 +301,9 @@ function SortableFavoriteItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id });
+  } = useSortable({ id: item.id, animateLayoutChanges: () => false });
 
-  const style = {
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
@@ -309,11 +315,13 @@ function SortableFavoriteItem({
     <div
       ref={setNodeRef}
       style={style}
+      className={cn(
+        "group flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-muted/60 touch-none"
+      )}
+      {...attributes}
+      {...listeners}
       role="treeitem"
       aria-level={1}
-      className={cn(
-        "group flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-muted/60"
-      )}
       onClick={
         isRenaming
           ? undefined
@@ -327,14 +335,6 @@ function SortableFavoriteItem({
       }
       onContextMenu={onContextMenu ? (e) => onContextMenu(e, item) : undefined}
     >
-      <button
-        type="button"
-        className="shrink-0 cursor-grab touch-none text-muted-foreground opacity-0 group-hover:opacity-100"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="size-3" />
-      </button>
       <span className="shrink-0">{getFileIconComponent(item, "size-4")}</span>
       {isRenaming ? (
         <Input
