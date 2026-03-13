@@ -18,10 +18,21 @@ app.use("*", requireAuth);
 app.get("/", async (c) => {
   const { page, pageSize, search } = parsePagination(c.req.query());
   const offset = calcOffset(page, pageSize);
+  const category = c.req.query("category");
+
+  const categoryStatusMap: Record<string, string[]> = {
+    incomplete: ["pending", "active", "settling"],
+    completed: ["completed"],
+    discarded: ["discarded"],
+  };
+  const statusFilter = category && categoryStatusMap[category]
+    ? inArray(projects.status, categoryStatusMap[category])
+    : undefined;
 
   const where = and(
     softDeleteFilter(projects.deleted),
-    search ? searchFilter([projects.name], search) : undefined
+    search ? searchFilter([projects.name], search) : undefined,
+    statusFilter
   );
 
   const [rows, countRows] = await Promise.all([

@@ -46,6 +46,8 @@ app.get("/", async (c) => {
   const { page, pageSize, search } = parsePagination(c.req.query());
   const offset = calcOffset(page, pageSize);
 
+  const status = c.req.query("status");
+
   const searchFilter = search
     ? or(
         ilike(estimates.estimateNumber, `%${search}%`),
@@ -54,7 +56,9 @@ app.get("/", async (c) => {
       )
     : undefined;
 
-  const whereCondition = and(softDeleteFilter(estimates.deleted), searchFilter);
+  const statusCondition = status ? eq(estimateSeries.status, status) : undefined;
+
+  const whereCondition = and(softDeleteFilter(estimates.deleted), searchFilter, statusCondition);
 
   // DISTINCT ON 서브쿼리: finalEstimateId 우선, 없으면 최신 version
   const sq = db
@@ -94,6 +98,7 @@ app.get("/", async (c) => {
       .select({ total: countDistinct(estimates.estimateNumber) })
       .from(estimates)
       .innerJoin(clients, eq(estimates.clientId, clients.id))
+      .innerJoin(estimateSeries, eq(estimates.estimateNumber, estimateSeries.estimateNumber))
       .where(whereCondition),
   ]);
 

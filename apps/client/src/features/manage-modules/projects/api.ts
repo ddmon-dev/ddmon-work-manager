@@ -19,6 +19,7 @@ type ListParams = {
   page?: number;
   pageSize?: number;
   search?: string;
+  category?: string;
 };
 
 // ── 목록 조회 ────────────────────────────────────────────────
@@ -31,6 +32,7 @@ export function useProjectList(params: ListParams = {}) {
         page: params.page,
         pageSize: params.pageSize,
         search: params.search,
+        category: params.category,
       }),
     placeholderData: keepPreviousData,
   });

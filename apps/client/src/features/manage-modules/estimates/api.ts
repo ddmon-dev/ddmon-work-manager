@@ -15,6 +15,7 @@ interface ListParams {
   page?: number;
   pageSize?: number;
   search?: string;
+  status?: string;
 }
 
 export function useEstimateList(params: ListParams = {}) {
@@ -25,6 +26,7 @@ export function useEstimateList(params: ListParams = {}) {
         page: params.page,
         pageSize: params.pageSize,
         search: params.search,
+        status: params.status,
       }),
     placeholderData: keepPreviousData,
   });
