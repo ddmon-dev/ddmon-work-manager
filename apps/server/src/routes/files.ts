@@ -3,9 +3,9 @@ import { and, eq, isNull, asc, desc, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { files } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
-import { fileRenameSchema, folderCreateSchema, fileFavoriteSchema, batchDeleteSchema, batchMoveSchema } from "@packages/schemas";
+import { fileRenameSchema, folderCreateSchema, fileFavoriteSchema, batchDeleteSchema, batchMoveSchema, favoriteReorderSchema, fileCopySchema } from "@packages/schemas";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { uploadFile, deleteFile, getFile, openFileNative, STORAGE_CONFIG } from "../lib/storage";
+import { uploadFile, deleteFile, getFile, copyStorageFile, openFileNative, STORAGE_CONFIG } from "../lib/storage";
 import type { AppVariables } from "../lib/types";
 import { randomUUID } from "crypto";
 
@@ -59,24 +59,26 @@ async function resolveUniqueName(
 
 /** CTE 기반: 폴더와 하위 항목을 일괄 소프트 삭제 */
 async function softDeleteRecursive(tx: DbTransaction, folderId: string, deletedAt: Date) {
+  const ts = deletedAt.toISOString();
   await tx.execute(sql`
     WITH RECURSIVE descendants AS (
       SELECT id FROM files WHERE folder_id = ${folderId} AND deleted = false
       UNION ALL
       SELECT f.id FROM files f JOIN descendants d ON f.folder_id = d.id WHERE f.deleted = false
     )
-    UPDATE files SET deleted = true, deleted_at = ${deletedAt}, updated_at = now()
+    UPDATE files SET deleted = true, deleted_at = ${ts}::timestamptz, updated_at = now()
     WHERE id IN (SELECT id FROM descendants)
   `);
 }
 
 /** CTE 기반: 같은 deletedAt 타임스탬프를 가진 하위 항목을 일괄 복원 */
 async function restoreRecursive(tx: DbTransaction, folderId: string, deletedAt: Date) {
+  const ts = deletedAt.toISOString();
   await tx.execute(sql`
     WITH RECURSIVE descendants AS (
-      SELECT id FROM files WHERE folder_id = ${folderId} AND deleted = true AND deleted_at = ${deletedAt}
+      SELECT id FROM files WHERE folder_id = ${folderId} AND deleted = true AND deleted_at = ${ts}::timestamptz
       UNION ALL
-      SELECT f.id FROM files f JOIN descendants d ON f.folder_id = d.id WHERE f.deleted = true AND f.deleted_at = ${deletedAt}
+      SELECT f.id FROM files f JOIN descendants d ON f.folder_id = d.id WHERE f.deleted = true AND f.deleted_at = ${ts}::timestamptz
     )
     UPDATE files SET deleted = false, deleted_at = NULL, updated_at = now()
     WHERE id IN (SELECT id FROM descendants)
@@ -119,7 +121,7 @@ app.get("/", async (c) => {
   if (favorites === "true") {
     const items = await db.query.files.findMany({
       where: and(eq(files.isFavorited, true), eq(files.deleted, false)),
-      orderBy: [desc(files.isFolder), asc(files.name)],
+      orderBy: [asc(files.favoriteOrder), asc(files.name)],
     });
     return successResponse(c, { items });
   }
@@ -287,14 +289,46 @@ app.patch("/:id/favorite", async (c) => {
   const parsed = fileFavoriteSchema.safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
+  let favoriteOrder: number | null = null;
+  if (parsed.data.isFavorited) {
+    const maxResult = await db
+      .select({ max: sql<number>`coalesce(max(${files.favoriteOrder}), 0)` })
+      .from(files)
+      .where(eq(files.isFavorited, true));
+    favoriteOrder = (maxResult[0]?.max ?? 0) + 1;
+  }
+
   const [updated] = await db
     .update(files)
-    .set({ isFavorited: parsed.data.isFavorited, updatedAt: new Date() })
+    .set({
+      isFavorited: parsed.data.isFavorited,
+      favoriteOrder,
+      updatedAt: new Date(),
+    })
     .where(eq(files.id, id))
     .returning();
 
   if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
   return successResponse(c, updated);
+});
+
+// PUT /favorites/reorder — 즐겨찾기 순서 변경
+app.put("/favorites/reorder", async (c) => {
+  const parsed = favoriteReorderSchema.safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  const { ids } = parsed.data;
+
+  await db.transaction(async (tx) => {
+    for (let i = 0; i < ids.length; i++) {
+      await tx
+        .update(files)
+        .set({ favoriteOrder: i + 1 })
+        .where(eq(files.id, ids[i]));
+    }
+  });
+
+  return successResponse(c, { ids });
 });
 
 // PATCH /:id — 이름 변경
@@ -577,5 +611,121 @@ app.post("/batch-move", async (c) => {
 
   return successResponse(c, { ids: movedIds });
 });
+
+// POST /copy — 다른 폴더에 복사 (배치)
+app.post("/copy", async (c) => {
+  const parsed = fileCopySchema.safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  const { ids, folderId } = parsed.data;
+  const user = c.get("user");
+
+  const originals = await db.query.files.findMany({
+    where: and(inArray(files.id, ids), eq(files.deleted, false)),
+  });
+  if (originals.length === 0) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  const copiedS3Keys: string[] = [];
+
+  try {
+    const results = await db.transaction(async (tx) => {
+      const copied = [];
+      for (const original of originals) {
+        const result = await copyItem(tx, original, folderId, user.name ?? null, copiedS3Keys);
+        copied.push(result);
+      }
+      return copied;
+    });
+
+    return successResponse(c, { items: results }, 201);
+  } catch (err) {
+    await Promise.allSettled(copiedS3Keys.map((key) => deleteFile(key).catch(() => {})));
+    throw err;
+  }
+});
+
+// POST /:id/duplicate — 같은 폴더에 복제
+app.post("/:id/duplicate", async (c) => {
+  const id = c.req.param("id");
+  const user = c.get("user");
+
+  const original = await db.query.files.findFirst({
+    where: and(eq(files.id, id), eq(files.deleted, false)),
+  });
+  if (!original) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  const copiedS3Keys: string[] = [];
+
+  try {
+    const result = await db.transaction(async (tx) => {
+      return copyItem(tx, original, original.folderId, user.name ?? null, copiedS3Keys);
+    });
+
+    return successResponse(c, result, 201);
+  } catch (err) {
+    // rollback 시 복사된 스토리지 파일 정리
+    await Promise.allSettled(copiedS3Keys.map((key) => deleteFile(key).catch(() => {})));
+    throw err;
+  }
+});
+
+/** 단일 파일/폴더 복사 (재귀) */
+async function copyItem(
+  tx: DbTransaction,
+  original: typeof files.$inferSelect,
+  targetFolderId: string | null,
+  author: string | null,
+  copiedS3Keys: string[]
+): Promise<typeof files.$inferSelect> {
+  const uniqueName = await resolveUniqueName(tx as unknown as typeof db, original.name, targetFolderId);
+
+  if (!original.isFolder) {
+    // 파일 복사
+    let newS3Key: string | null = null;
+    if (original.s3Key) {
+      const ext = original.s3Key.includes(".") ? `.${original.s3Key.split(".").pop()}` : "";
+      newS3Key = `files/${randomUUID()}${ext}`;
+      await copyStorageFile(original.s3Key, newS3Key);
+      copiedS3Keys.push(newS3Key);
+    }
+
+    const [created] = await (tx as unknown as typeof db)
+      .insert(files)
+      .values({
+        name: uniqueName,
+        s3Key: newS3Key,
+        mimeType: original.mimeType,
+        size: original.size,
+        folderId: targetFolderId,
+        isFolder: false,
+        author,
+      })
+      .returning();
+
+    return created;
+  }
+
+  // 폴더 복사: 먼저 폴더 생성 → 하위 항목 재귀 복사
+  const [newFolder] = await (tx as unknown as typeof db)
+    .insert(files)
+    .values({
+      name: uniqueName,
+      folderId: targetFolderId,
+      isFolder: true,
+      author,
+    })
+    .returning();
+
+  // 하위 항목 조회
+  const children = await (tx as unknown as typeof db).query.files.findMany({
+    where: and(eq(files.folderId, original.id), eq(files.deleted, false)),
+  });
+
+  for (const child of children) {
+    await copyItem(tx, child, newFolder.id, author, copiedS3Keys);
+  }
+
+  return newFolder;
+}
 
 export default app;

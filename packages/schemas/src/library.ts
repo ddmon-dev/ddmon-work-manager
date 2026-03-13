@@ -53,3 +53,18 @@ export const batchMoveSchema = z.object({
 });
 
 export type BatchMoveInput = z.infer<typeof batchMoveSchema>;
+
+// 즐겨찾기 순서 변경
+export const favoriteReorderSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1),
+});
+
+export type FavoriteReorderInput = z.infer<typeof favoriteReorderSchema>;
+
+// 파일 복사
+export const fileCopySchema = z.object({
+  ids: z.array(z.string().uuid()).min(1),
+  folderId: z.string().uuid().nullable(),
+});
+
+export type FileCopyInput = z.infer<typeof fileCopySchema>;

@@ -1,4 +1,4 @@
-import { mkdir, writeFile, unlink, stat } from "fs/promises";
+import { mkdir, writeFile, unlink, stat, copyFile as fsCopyFile } from "fs/promises";
 import { createReadStream } from "fs";
 import { exec } from "child_process";
 import { join, dirname, extname, resolve as pathResolve } from "path";
@@ -77,6 +77,13 @@ export async function deleteFile(key: string) {
 export function openFileNative(key: string): void {
   const filePath = resolve(key);
   exec(`open "${filePath}"`);
+}
+
+export async function copyStorageFile(srcKey: string, destKey: string) {
+  const srcPath = resolve(srcKey);
+  const destPath = resolve(destKey);
+  await mkdir(dirname(destPath), { recursive: true });
+  await fsCopyFile(srcPath, destPath);
 }
 
 export async function getFile(key: string): Promise<{

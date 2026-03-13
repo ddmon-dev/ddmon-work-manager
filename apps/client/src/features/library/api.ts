@@ -349,6 +349,38 @@ export function useOpenFile() {
   });
 }
 
+export function useReorderFavorites() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      api.put("/files/favorites/reorder", { ids }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: queryKeys.files.favorites }),
+  });
+}
+
+export function useDuplicateFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post<FileItem>(`/files/${id}/duplicate`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.files.all }),
+  });
+}
+
+export function useCopyFiles() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      ids,
+      folderId,
+    }: {
+      ids: string[];
+      folderId: string | null;
+    }) => api.post("/files/copy", { ids, folderId }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.files.all }),
+  });
+}
+
 // ─── 에디터 이미지 업로드 ───
 
 export async function uploadEditorImage(file: File): Promise<string> {

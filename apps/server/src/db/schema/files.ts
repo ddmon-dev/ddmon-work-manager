@@ -25,6 +25,7 @@ export const files = pgTable("files", {
     .notNull()
     .defaultNow(),
   isFavorited: boolean("is_favorited").notNull().default(false),
+  favoriteOrder: integer("favorite_order"),
   deleted: boolean("deleted").notNull().default(false),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });

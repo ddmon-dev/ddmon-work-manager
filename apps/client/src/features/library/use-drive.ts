@@ -11,6 +11,8 @@ import {
   useBatchMoveFiles,
   useToggleFavorite,
   useOpenFile,
+  useDuplicateFile,
+  useCopyFiles,
 } from "./api";
 import { useDialog } from "@/shared/ui/app-dialog";
 import type { FileItem } from "./types";
@@ -33,6 +35,11 @@ export interface ContextMenuState {
   y: number;
   item: FileItem | null;
   source: "tree" | "list" | "favorite";
+}
+
+export interface ClipboardState {
+  ids: string[];
+  sourceFolderId: string | null;
 }
 
 // ─── 소규모 로컬 함수 ───
@@ -174,6 +181,7 @@ export function useDrive() {
   const [moveTargetIds, setMoveTargetIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [clipboard, setClipboard] = useState<ClipboardState | null>(null);
   const lastSelectedIdRef = useRef<string | null>(null);
 
   const { data: rawItems, isLoading } = useFilesQuery(
@@ -215,6 +223,8 @@ export function useDrive() {
   const batchMoveFiles = useBatchMoveFiles();
   const toggleFavoriteMutation = useToggleFavorite();
   const openFileMutation = useOpenFile();
+  const duplicateFileMutation = useDuplicateFile();
+  const copyFilesMutation = useCopyFiles();
 
   // 선택 핸들러
   const selectItem = useCallback(
@@ -393,6 +403,83 @@ export function useDrive() {
     [toggleFavoriteMutation]
   );
 
+  const handleDragToTrash = useCallback(
+    async (itemId: string) => {
+      const multi = selectedIds.has(itemId) && selectedIds.size > 1;
+      const ids = multi ? Array.from(selectedIds) : [itemId];
+
+      try {
+        if (ids.length === 1) {
+          await deleteFile.mutateAsync(ids[0]);
+        } else {
+          await batchDeleteFiles.mutateAsync(ids);
+        }
+        toast.success("휴지통으로 이동했습니다.");
+        clearSelection();
+      } catch {
+        toast.error("삭제에 실패했습니다.");
+      }
+    },
+    [deleteFile, batchDeleteFiles, selectedIds, clearSelection]
+  );
+
+  const handleCopy = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    setClipboard({ ids: Array.from(selectedIds), sourceFolderId: nav.currentFolderId });
+    toast.success(`${selectedIds.size}개 항목을 클립보드에 복사했습니다.`);
+  }, [selectedIds, nav.currentFolderId]);
+
+  // 붙여넣기 대상 폴더: 선택된 항목이 폴더 1개면 그 폴더, 아니면 현재 폴더
+  const getPasteTargetFolderId = useCallback(() => {
+    if (selectedIds.size === 1) {
+      const selectedId = Array.from(selectedIds)[0];
+      const selectedItem = items?.find((i) => i.id === selectedId);
+      if (selectedItem?.isFolder) return selectedItem.id;
+    }
+    return nav.currentFolderId;
+  }, [selectedIds, items, nav.currentFolderId]);
+
+  const handlePaste = useCallback(async () => {
+    if (!clipboard) return;
+    const targetFolderId = getPasteTargetFolderId();
+    try {
+      await copyFilesMutation.mutateAsync({
+        ids: clipboard.ids,
+        folderId: targetFolderId,
+      });
+      toast.success("붙여넣기 완료 (복사)");
+      setClipboard(null);
+    } catch {
+      toast.error("붙여넣기에 실패했습니다.");
+    }
+  }, [clipboard, getPasteTargetFolderId, copyFilesMutation]);
+
+  const handleMovePaste = useCallback(async () => {
+    if (!clipboard) return;
+    const targetFolderId = getPasteTargetFolderId();
+    try {
+      await batchMoveFiles.mutateAsync({
+        ids: clipboard.ids,
+        folderId: targetFolderId,
+      });
+      toast.success("붙여넣기 완료 (이동)");
+      setClipboard(null);
+    } catch {
+      toast.error("이동 붙여넣기에 실패했습니다.");
+    }
+  }, [clipboard, getPasteTargetFolderId, batchMoveFiles]);
+
+  const handleDuplicate = useCallback(async () => {
+    if (selectedIds.size !== 1) return;
+    const id = Array.from(selectedIds)[0];
+    try {
+      await duplicateFileMutation.mutateAsync(id);
+      toast.success("복제했습니다.");
+    } catch {
+      toast.error("복제에 실패했습니다.");
+    }
+  }, [selectedIds, duplicateFileMutation]);
+
   const openContextMenu = useCallback(
     (e: React.MouseEvent, item: FileItem | null, source: "tree" | "list" | "favorite" = "list") => {
       e.preventDefault();
@@ -476,6 +563,31 @@ export function useDrive() {
           }
           break;
         }
+        case "KeyC": {
+          if ((e.metaKey || e.ctrlKey) && selectedIds.size > 0) {
+            e.preventDefault();
+            handleCopy();
+          }
+          break;
+        }
+        case "KeyV": {
+          if ((e.metaKey || e.ctrlKey) && clipboard) {
+            e.preventDefault();
+            if (e.altKey) {
+              handleMovePaste();
+            } else {
+              handlePaste();
+            }
+          }
+          break;
+        }
+        case "KeyD": {
+          if ((e.metaKey || e.ctrlKey) && selectedIds.size === 1) {
+            e.preventDefault();
+            handleDuplicate();
+          }
+          break;
+        }
       }
     };
 
@@ -491,6 +603,11 @@ export function useDrive() {
     closeContextMenu,
     clearSelection,
     folder.setShowNewFolder,
+    handleCopy,
+    handlePaste,
+    handleMovePaste,
+    handleDuplicate,
+    clipboard,
   ]);
 
   return {
@@ -524,7 +641,12 @@ export function useDrive() {
     toggleSort: sorting.toggleSort,
     handleMove,
     handleDragDrop,
+    handleDragToTrash,
     handleToggleFavorite,
+    handleCopy,
+    handlePaste,
+    handleMovePaste,
+    handleDuplicate,
     openContextMenu,
     closeContextMenu,
     selectItem,
@@ -533,6 +655,7 @@ export function useDrive() {
     startRename: renaming.startRename,
     cancelRename: renaming.cancelRename,
     isMultiSelection,
+    clipboard,
     // 드래그 선택
     dragRect: dragSelection.dragRect,
     dragContainerRef: dragSelection.containerRef,

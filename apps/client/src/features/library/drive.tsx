@@ -20,6 +20,9 @@ import {
   PanelLeftOpen,
   Star,
   StarOff,
+  Copy,
+  ClipboardPaste,
+  CopyPlus,
 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import {
@@ -95,11 +98,17 @@ export function Drive() {
     toggleSort,
     handleMove,
     handleDragDrop,
+    handleDragToTrash,
     handleToggleFavorite,
+    handleCopy,
+    handlePaste,
+    handleMovePaste,
+    handleDuplicate,
     openContextMenu,
     closeContextMenu,
     selectedIds,
     contextMenu,
+    clipboard,
     selectItem,
     clearSelection,
     startMove,
@@ -161,6 +170,13 @@ export function Drive() {
       setDragRowWidth(null);
       const { active, over } = event;
       if (!over || active.id === over.id) return;
+
+      // 휴지통 드롭
+      if (over.data.current?.isTrash === true) {
+        handleDragToTrash(active.id as string);
+        return;
+      }
+
       const targetFolderId = over.data.current?.folderId as
         | string
         | null
@@ -174,7 +190,7 @@ export function Drive() {
         setMovingId(null)
       );
     },
-    [handleDragDrop, selectedIds]
+    [handleDragDrop, handleDragToTrash, selectedIds]
   );
 
 
@@ -499,6 +515,7 @@ export function Drive() {
           contextMenu={contextMenu}
           isMulti={isMultiSelection(contextMenu.item?.id)}
           multiCount={selectedIds.size}
+          hasClipboard={!!clipboard}
           onClose={closeContextMenu}
           onOpen={(item) => {
             handleFileClick(item);
@@ -524,6 +541,22 @@ export function Drive() {
           }}
           onDelete={(item) => {
             handleDelete(item.id);
+            closeContextMenu();
+          }}
+          onCopy={() => {
+            handleCopy();
+            closeContextMenu();
+          }}
+          onPaste={() => {
+            handlePaste();
+            closeContextMenu();
+          }}
+          onMovePaste={() => {
+            handleMovePaste();
+            closeContextMenu();
+          }}
+          onDuplicate={() => {
+            handleDuplicate();
             closeContextMenu();
           }}
           onNewFolder={() => {
@@ -647,12 +680,14 @@ function DraggableFileRow({
       data-item-id={item.id}
       {...nativeDragHandlers}
       className={cn(
-        "group flex cursor-grab items-center gap-3 border-b px-4 py-2.5 outline-none hover:bg-accent/50 active:cursor-grabbing",
+        "group flex cursor-grab items-center gap-3 border-b px-4 py-2.5 outline-none active:cursor-grabbing",
         (isDragging || isMoving || isGroupDragging) && "opacity-30",
         (isOver || nativeDragOver) &&
           !isDropDisabled &&
           "bg-primary/10 ring-1 ring-inset ring-primary",
-        isSelected && "bg-accent/50"
+        isSelected
+          ? "bg-primary/8 hover:bg-primary/12 dark:bg-primary/12 dark:hover:bg-primary/16"
+          : "hover:bg-muted/50"
       )}
       onClick={(e) => {
         if (!isDragging) onSelect(e);
@@ -816,6 +851,7 @@ function FileContextMenu({
   contextMenu,
   isMulti,
   multiCount,
+  hasClipboard,
   onClose,
   onOpen,
   onDownload,
@@ -823,12 +859,17 @@ function FileContextMenu({
   onRename,
   onMove,
   onDelete,
+  onCopy,
+  onPaste,
+  onMovePaste,
+  onDuplicate,
   onNewFolder,
   onUpload,
 }: {
   contextMenu: ContextMenuState;
   isMulti: boolean;
   multiCount: number;
+  hasClipboard: boolean;
   onClose: () => void;
   onOpen: (item: FileItem) => void;
   onDownload: (item: FileItem) => void;
@@ -836,6 +877,10 @@ function FileContextMenu({
   onRename: (item: FileItem) => void;
   onMove: (item: FileItem) => void;
   onDelete: (item: FileItem) => void;
+  onCopy: () => void;
+  onPaste: () => void;
+  onMovePaste: () => void;
+  onDuplicate: () => void;
   onNewFolder: () => void;
   onUpload: () => void;
 }) {
@@ -847,6 +892,12 @@ function FileContextMenu({
         isMulti ? (
           // 다중 선택 컨텍스트 메뉴
           <>
+            <ContextMenuButton
+              icon={Copy}
+              label={`${multiCount}개 항목 복사`}
+              shortcut="⌘C"
+              onClick={onCopy}
+            />
             <ContextMenuButton
               icon={FolderInput}
               label={`${multiCount}개 항목 이동`}
@@ -884,6 +935,19 @@ function FileContextMenu({
             />
             <div className="my-1 h-px bg-border" />
             <ContextMenuButton
+              icon={Copy}
+              label="복사"
+              shortcut="⌘C"
+              onClick={onCopy}
+            />
+            <ContextMenuButton
+              icon={CopyPlus}
+              label="복제"
+              shortcut="⌘D"
+              onClick={onDuplicate}
+            />
+            <div className="my-1 h-px bg-border" />
+            <ContextMenuButton
               icon={Pencil}
               label="이름 변경"
               shortcut="⏎"
@@ -917,6 +981,23 @@ function FileContextMenu({
             label="파일 업로드"
             onClick={onUpload}
           />
+          {hasClipboard && (
+            <>
+              <div className="my-1 h-px bg-border" />
+              <ContextMenuButton
+                icon={ClipboardPaste}
+                label="붙여넣기 (복사)"
+                shortcut="⌘V"
+                onClick={onPaste}
+              />
+              <ContextMenuButton
+                icon={FolderInput}
+                label="붙여넣기 (이동)"
+                shortcut="⌥⌘V"
+                onClick={onMovePaste}
+              />
+            </>
+          )}
         </>
       )}
     </ContextMenuPortal>

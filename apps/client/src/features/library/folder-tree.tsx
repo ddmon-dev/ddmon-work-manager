@@ -7,12 +7,29 @@ import {
   Loader2,
   Star,
   Folder,
+  GripVertical,
 } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { Input } from "@/shared/ui/input";
 import { MiddleTruncate } from "@/shared/ui/middle-truncate";
-import { useDroppable } from "@dnd-kit/core";
-import { useFilesQuery, useFilePathQuery, useFavoritesQuery } from "./api";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { useFilesQuery, useFilePathQuery, useFavoritesQuery, useReorderFavorites } from "./api";
 import { getFileIconComponent, type FileItem } from "./types";
 
 interface FolderTreeProps {
@@ -140,7 +157,11 @@ export function FolderTree({
       {/* 휴지통 */}
       {showTrash && (
         <div className="border-t p-1">
-          <TreeItem
+          <DroppableTreeItem
+            droppableId="trash-drop"
+            folderId={null}
+            droppableData={{ isTrash: true }}
+            dropVariant="destructive"
             label="휴지통"
             icon={<Trash2 className="size-4" />}
             isActive={!!isTrashActive}
@@ -173,6 +194,26 @@ function FavoritesList({
 }) {
   const { data: favorites } = useFavoritesQuery();
   const [expanded, setExpanded] = useState(true);
+  const reorderFavorites = useReorderFavorites();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id || !favorites) return;
+
+      const oldIndex = favorites.findIndex((f) => f.id === active.id);
+      const newIndex = favorites.findIndex((f) => f.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const reordered = arrayMove(favorites, oldIndex, newIndex);
+      reorderFavorites.mutate(reordered.map((f) => f.id));
+    },
+    [favorites, reorderFavorites]
+  );
 
   if (!favorites || favorites.length === 0) return null;
 
@@ -180,7 +221,7 @@ function FavoritesList({
     <div className="border-b">
       <button
         type="button"
-        className="flex w-full items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent"
+        className="flex w-full items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60"
         onClick={() => setExpanded((v) => !v)}
       >
         <ChevronRight
@@ -193,31 +234,127 @@ function FavoritesList({
         <span>즐겨찾기</span>
       </button>
       {expanded && (
-        <div className="max-h-[200px] overflow-y-auto hide-scrollbar p-1 pt-0 space-y-0.5">
-          {favorites.map((item) => (
-            <TreeItem
-              key={item.id}
-              label={renamingId === item.id ? (renameValue ?? "") : item.name}
-              icon={getFileIconComponent(item, "size-4")}
-              isActive={false}
-              isRenaming={renamingId === item.id}
-              onRenameChange={onRenameChange}
-              onRenameSubmit={() => onRenameSubmit?.(item.id)}
-              onRenameCancel={onRenameCancel}
-              onClick={() => {
-                if (item.isFolder) {
-                  onNavigate(item.id);
-                } else {
-                  onFileClick?.(item);
-                }
-              }}
-              onContextMenu={
-                onContextMenu ? (e) => onContextMenu(e, item) : undefined
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[restrictToVerticalAxis]}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={favorites.map((f) => f.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="max-h-[200px] overflow-y-auto hide-scrollbar p-1 pt-0 space-y-0.5">
+              {favorites.map((item) => (
+                <SortableFavoriteItem
+                  key={item.id}
+                  item={item}
+                  renamingId={renamingId}
+                  renameValue={renameValue}
+                  onRenameChange={onRenameChange}
+                  onRenameSubmit={onRenameSubmit}
+                  onRenameCancel={onRenameCancel}
+                  onNavigate={onNavigate}
+                  onFileClick={onFileClick}
+                  onContextMenu={onContextMenu}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
+    </div>
+  );
+}
+
+function SortableFavoriteItem({
+  item,
+  renamingId,
+  renameValue,
+  onRenameChange,
+  onRenameSubmit,
+  onRenameCancel,
+  onNavigate,
+  onFileClick,
+  onContextMenu,
+}: {
+  item: FileItem;
+  renamingId?: string | null;
+  renameValue?: string;
+  onRenameChange?: (value: string) => void;
+  onRenameSubmit?: (id: string) => void;
+  onRenameCancel?: () => void;
+  onNavigate: (folderId: string | null) => void;
+  onFileClick?: (item: FileItem) => void;
+  onContextMenu?: (e: React.MouseEvent, item: FileItem) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const isRenaming = renamingId === item.id;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      role="treeitem"
+      aria-level={1}
+      className={cn(
+        "group flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-muted/60"
+      )}
+      onClick={
+        isRenaming
+          ? undefined
+          : () => {
+              if (item.isFolder) {
+                onNavigate(item.id);
+              } else {
+                onFileClick?.(item);
               }
-              ariaLevel={1}
-            />
-          ))}
-        </div>
+            }
+      }
+      onContextMenu={onContextMenu ? (e) => onContextMenu(e, item) : undefined}
+    >
+      <button
+        type="button"
+        className="shrink-0 cursor-grab touch-none text-muted-foreground opacity-0 group-hover:opacity-100"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-3" />
+      </button>
+      <span className="shrink-0">{getFileIconComponent(item, "size-4")}</span>
+      {isRenaming ? (
+        <Input
+          value={renameValue ?? ""}
+          onChange={(e) => onRenameChange?.(e.target.value)}
+          className="h-auto! -my-0.5 min-w-0 flex-1 select-text rounded-sm border-0 px-1 py-0.5 text-sm shadow-none ring-1 ring-ring"
+          autoFocus
+          onFocus={(e) => e.currentTarget.select()}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing) return;
+            if (e.key === "Enter") onRenameSubmit?.(item.id);
+            if (e.key === "Escape") onRenameCancel?.();
+          }}
+          onBlur={() => onRenameSubmit?.(item.id)}
+        />
+      ) : (
+        <MiddleTruncate className="min-w-0 flex-1 text-sm">
+          {item.name}
+        </MiddleTruncate>
       )}
     </div>
   );
@@ -371,19 +508,23 @@ function FolderNode({
 function DroppableTreeItem({
   droppableId,
   folderId,
+  droppableData,
+  dropVariant,
   ...props
 }: {
   droppableId: string;
   folderId: string | null;
+  droppableData?: Record<string, unknown>;
+  dropVariant?: "destructive";
 } & TreeItemProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: droppableId,
-    data: { folderId },
+    data: { folderId, ...droppableData },
   });
 
   return (
     <div ref={setNodeRef}>
-      <TreeItem {...props} isDropTarget={isOver} />
+      <TreeItem {...props} isDropTarget={isOver} dropVariant={isOver ? dropVariant : undefined} />
     </div>
   );
 }
@@ -393,6 +534,7 @@ interface TreeItemProps {
   icon: React.ReactNode;
   isActive: boolean;
   isDropTarget?: boolean;
+  dropVariant?: "destructive";
   isRenaming?: boolean;
   onRenameChange?: (value: string) => void;
   onRenameSubmit?: () => void;
@@ -411,6 +553,7 @@ function TreeItem({
   icon,
   isActive,
   isDropTarget,
+  dropVariant,
   isRenaming,
   onRenameChange,
   onRenameSubmit,
@@ -430,9 +573,13 @@ function TreeItem({
       aria-level={ariaLevel}
       aria-selected={isActive}
       className={cn(
-        "flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-accent",
-        isActive && "bg-accent font-medium",
-        isDropTarget && "bg-primary/10 ring-1 ring-inset ring-primary"
+        "flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm cursor-pointer",
+        isActive
+          ? "bg-primary/10 font-medium text-primary"
+          : "hover:bg-muted/60",
+        isDropTarget && (dropVariant === "destructive"
+          ? "bg-destructive/10 ring-1 ring-inset ring-destructive"
+          : "bg-primary/10 ring-1 ring-inset ring-primary")
       )}
       style={{ paddingLeft: `${8 + depth * 16}px` }}
       onClick={isRenaming ? undefined : onClick}
