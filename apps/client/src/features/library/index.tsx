@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router";
+import { useQueryParams } from "@/shared/hooks/use-query-params";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/ui/tabs";
 import { BoardList } from "./board-list";
 import { DocumentList } from "./document-list";
@@ -7,25 +7,19 @@ import { DocumentPanel } from "./document-panel";
 import { Drive } from "./drive";
 
 export function LibraryModule() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { get, set } = useQueryParams();
 
-  const tab = searchParams.get("tab") ?? "documents";
-  const boardId = searchParams.get("board");
+  const tab = get("tab") ?? "documents";
+  const boardId = get("board");
 
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
 
   const handleTabChange = (value: string) => {
-    setSearchParams((prev) => {
-      prev.set("tab", value);
-      return prev;
-    });
+    set({ tab: value });
   };
 
   const handleSelectBoard = (id: string) => {
-    setSearchParams((prev) => {
-      prev.set("board", id);
-      return prev;
-    });
+    set({ board: id });
   };
 
   return (

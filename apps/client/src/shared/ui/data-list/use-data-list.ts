@@ -34,10 +34,10 @@ export function useDataList({
   const search = get(searchKey) || "";
   const category = get(categoryKey) || "";
 
-  const setPage = (p: number) => set(pageKey, String(p));
-  const setSort = (s: string) => set(sortKey, s);
+  const setPage = (p: number) => set({ [pageKey]: String(p) });
+  const setSort = (s: string) => set({ [sortKey]: s });
   const setSearch = (s: string) => set({ [searchKey]: s, [pageKey]: "1" });
-  const setCategory = (c: string) => set(categoryKey, c);
+  const setCategory = (c: string) => set({ [categoryKey]: c });
 
   const pageCount = Math.ceil(totalCount / pageSize);
   const page = Math.min(Math.max(1, rawPage), Math.max(1, pageCount));

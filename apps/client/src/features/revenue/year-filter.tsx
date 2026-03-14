@@ -1,4 +1,4 @@
-import { useNavigate, useSearchParams } from "react-router";
+import { useQueryParams } from "@/shared/hooks/use-query-params";
 import {
   Select,
   SelectContent,
@@ -11,12 +11,11 @@ const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i);
 
 export function YearFilter() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const currentYear = searchParams.get("year") ?? String(CURRENT_YEAR);
+  const { get, set } = useQueryParams();
+  const currentYear = get("year") ?? String(CURRENT_YEAR);
 
   function handleChange(value: string) {
-    navigate(`/revenue?year=${value}`);
+    set({ year: value });
   }
 
   return (

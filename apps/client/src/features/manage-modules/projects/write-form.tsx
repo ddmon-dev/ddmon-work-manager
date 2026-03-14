@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link } from "react-router";
 import { useForm, FormProvider, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryParams } from "@/shared/hooks/use-query-params";
 import { format, parseISO } from "date-fns";
 import { z } from "zod";
 import { projectWriteSchema, type ProjectWriteInput } from "@packages/schemas";
@@ -78,8 +79,8 @@ interface WriteFormProps {
 export function WriteForm({ id, prevValues }: WriteFormProps) {
   const sheet = useManageSheet();
   const { refetch } = useManageSheetData<ProjectWithDetails>();
-  const [searchParams] = useSearchParams();
-  const createFrom = searchParams.get("create_from");
+  const { get } = useQueryParams();
+  const createFrom = get("create_from");
 
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();

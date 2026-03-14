@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useQueryParams } from "@/shared/hooks/use-query-params";
 import { Button } from "@/shared/ui/button";
 import {
   Popover,
@@ -17,7 +17,7 @@ interface CalendarNavProps {
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 export function CalendarNav({ year, month }: CalendarNavProps) {
-  const [, setSearchParams] = useSearchParams();
+  const { set, remove } = useQueryParams();
   const [open, setOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(year);
 
@@ -26,16 +26,11 @@ export function CalendarNav({ year, month }: CalendarNavProps) {
     year === now.getFullYear() && month === now.getMonth() + 1;
 
   function navigateTo(y: number, m: number) {
-    setSearchParams((prev) => {
-      if (y === now.getFullYear() && m === now.getMonth() + 1) {
-        prev.delete("year");
-        prev.delete("month");
-      } else {
-        prev.set("year", String(y));
-        prev.set("month", String(m));
-      }
-      return prev;
-    });
+    if (y === now.getFullYear() && m === now.getMonth() + 1) {
+      remove(["year", "month"]);
+    } else {
+      set({ year: String(y), month: String(m) });
+    }
   }
 
   function navigate(direction: -1 | 1) {

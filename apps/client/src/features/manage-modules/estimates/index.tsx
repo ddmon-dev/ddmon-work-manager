@@ -1,5 +1,5 @@
-import { useSearchParams } from "react-router";
 import { APP_CONFIG } from "@/app.config";
+import { useQueryParams } from "@/shared/hooks/use-query-params";
 import { CategoryButtonGroup } from "@/shared/ui/category-button-group";
 import { ManageContainer } from "../_base/ui";
 import { useEstimateList } from "./api";
@@ -14,13 +14,13 @@ const ESTIMATE_STATUSES = [
 ];
 
 export function EstimatesModule() {
-  const [searchParams] = useSearchParams();
-  const page = Number(searchParams.get("page") ?? 1);
+  const { get } = useQueryParams();
+  const page = Number(get("page") ?? 1);
   const pageSize = Number(
-    searchParams.get("pageSize") ?? APP_CONFIG.UI.PAGINATION.PAGE_SIZE_OPTIONS[0]
+    get("pageSize") ?? APP_CONFIG.UI.PAGINATION.PAGE_SIZE_OPTIONS[0]
   );
-  const search = searchParams.get("search") ?? undefined;
-  const status = searchParams.get("status") || undefined;
+  const search = get("search") ?? undefined;
+  const status = get("status") || undefined;
 
   const { data, isLoading } = useEstimateList({ page, pageSize, search, status });
 

@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router";
+import { useQueryParams } from "@/shared/hooks/use-query-params";
 import { AppHeader } from "@/shared/ui/app-header";
 import { Container } from "@/shared/ui/container";
 import { useRevenueData } from "./api";
@@ -9,8 +9,8 @@ import { OutstandingTable } from "./outstanding-table";
 const CURRENT_YEAR = new Date().getFullYear();
 
 export function RevenueModule() {
-  const [searchParams] = useSearchParams();
-  const year = Number(searchParams.get("year")) || CURRENT_YEAR;
+  const { get } = useQueryParams();
+  const year = Number(get("year")) || CURRENT_YEAR;
   const { data, isLoading } = useRevenueData(year);
 
   return (

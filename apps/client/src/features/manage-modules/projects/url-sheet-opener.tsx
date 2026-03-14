@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useSearchParams } from "react-router";
+import { useQueryParams } from "@/shared/hooks/use-query-params";
 import { useManageSheet } from "../_base/ui";
 
 /**
@@ -8,9 +8,9 @@ import { useManageSheet } from "../_base/ui";
  * - create_from: 프로젝트 생성 시트 열기 (예: /projects?create_from=EST-2025-001)
  */
 export function UrlSheetOpener() {
-  const [searchParams] = useSearchParams();
-  const idParam = searchParams.get("id");
-  const createFrom = searchParams.get("create_from");
+  const { get } = useQueryParams();
+  const idParam = get("id");
+  const createFrom = get("create_from");
   const sheet = useManageSheet();
   const triggered = useRef(false);
 
