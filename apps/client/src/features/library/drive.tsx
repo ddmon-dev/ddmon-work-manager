@@ -302,12 +302,12 @@ export function Drive() {
                   wasDragSelectingRef.current = false;
                   return;
                 }
-                if (!(e.target as HTMLElement).closest("[data-item-id]")) {
+                if (!(e.target as HTMLElement).closest("[data-item-id], [data-parent-row]")) {
                   clearSelection();
                 }
               }}
               onContextMenu={(e) => {
-                if (!(e.target as HTMLElement).closest("[data-item-id]")) {
+                if (!(e.target as HTMLElement).closest("[data-item-id], [data-parent-row]")) {
                   openContextMenu(e, null);
                 }
               }}
@@ -723,7 +723,7 @@ function ParentFolderRow({
   return (
     <div
       ref={setNodeRef}
-      data-item-id={PARENT_ROW_ID}
+      data-parent-row
       className={cn(
         "flex cursor-pointer items-center gap-3 border-b px-4 py-3 text-muted-foreground",
         isOver && "bg-primary/10 ring-1 ring-inset ring-primary",

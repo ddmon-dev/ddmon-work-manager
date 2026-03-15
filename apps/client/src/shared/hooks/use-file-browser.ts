@@ -622,7 +622,6 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
 
       const target = e.target as HTMLElement;
       if (
-        target.closest("[data-item-id]") ||
         target.closest('[role="menu"]') ||
         target.closest('[role="alertdialog"]') ||
         target.closest("button") ||
