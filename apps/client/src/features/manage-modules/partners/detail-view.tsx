@@ -76,7 +76,7 @@ export function DetailView({ data }: DetailViewProps) {
         </SheetContainer>
 
         <SheetContainer>
-          <FileSection partnerId={data.id} />
+          <FileSection partnerId={data.id} partnerName={data.name} />
         </SheetContainer>
       </SheetBody>
 

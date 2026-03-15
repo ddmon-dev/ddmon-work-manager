@@ -133,3 +133,59 @@ export function useOpenFile() {
     mutationFn: (id: string) => api.post(`/files/${id}/open`),
   });
 }
+
+export function useMoveFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, folderId }: { id: string; folderId: string | null }) =>
+      api.patch(`/files/${id}/move`, { folderId }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.files.all }),
+  });
+}
+
+export function useBatchDeleteFiles() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => api.post("/files/batch-delete", { ids }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.files.all });
+      qc.invalidateQueries({ queryKey: queryKeys.trash.all });
+    },
+  });
+}
+
+export function useBatchMoveFiles() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      ids,
+      folderId,
+    }: {
+      ids: string[];
+      folderId: string | null;
+    }) => api.post("/files/batch-move", { ids, folderId }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.files.all }),
+  });
+}
+
+export function useDuplicateFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post<FileItem>(`/files/${id}/duplicate`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.files.all }),
+  });
+}
+
+export function useCopyFiles() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      ids,
+      folderId,
+    }: {
+      ids: string[];
+      folderId: string | null;
+    }) => api.post("/files/copy", { ids, folderId }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.files.all }),
+  });
+}

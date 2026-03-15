@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { Upload } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { Spinner } from "@/shared/ui/spinner";
+import { Button } from "@/shared/ui/button";
 import { useUploadFile, type FileOwner } from "@/shared/lib/file-api";
 import { toast } from "sonner";
 
@@ -147,9 +148,10 @@ export function FileUploadZone({ folderId, owner, children }: FileUploadZoneProp
 interface UploadButtonProps {
   folderId: string | null;
   owner?: FileOwner;
+  size?: "sm" | "xs";
 }
 
-export function UploadButton({ folderId, owner }: UploadButtonProps) {
+export function UploadButton({ folderId, owner, size = "sm" }: UploadButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadFile = useUploadFile(owner);
   const [isUploading, setIsUploading] = useState(false);
@@ -167,18 +169,14 @@ export function UploadButton({ folderId, owner }: UploadButtonProps) {
   return (
     <>
       <input ref={inputRef} type="file" multiple className="hidden" onChange={handleChange} />
-      <button
-        type="button"
+      <Button
+        size={size === "xs" ? "xs" : "sm"}
         onClick={() => inputRef.current?.click()}
         disabled={isUploading}
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90",
-          isUploading && "opacity-50 cursor-not-allowed"
-        )}
       >
-        <Upload className="size-4" />
+        <Upload />
         {isUploading ? "업로드 중..." : "업로드"}
-      </button>
+      </Button>
     </>
   );
 }

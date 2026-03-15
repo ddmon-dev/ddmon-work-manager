@@ -717,6 +717,8 @@ async function copyItem(
         folderId: targetFolderId,
         isFolder: false,
         author,
+        ownerType: original.ownerType,
+        ownerId: original.ownerId,
       })
       .returning();
 
@@ -731,6 +733,8 @@ async function copyItem(
       folderId: targetFolderId,
       isFolder: true,
       author,
+      ownerType: original.ownerType,
+      ownerId: original.ownerId,
     })
     .returning();
 
