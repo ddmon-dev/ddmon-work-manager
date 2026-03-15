@@ -328,14 +328,14 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
 
   // 폴더 이동 후 컨테이너 자동 포커스
   useEffect(() => {
-    dragSelection.containerRef.current?.focus();
+    dragSelection.containerRef.current?.focus({ preventScroll: true });
   }, [nav.currentFolderId]);
 
   // 포커스 유실 시 컨테이너 재포커스 (rename 종료 후 등)
   const restoreFocus = useCallback(() => {
     requestAnimationFrame(() => {
       if (!document.activeElement || document.activeElement === document.body) {
-        dragSelection.containerRef.current?.focus();
+        dragSelection.containerRef.current?.focus({ preventScroll: true });
       }
     });
   }, []);
@@ -398,7 +398,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
         lastSelectedIdRef.current = id;
         return new Set([id]);
       });
-      dragSelection.containerRef.current?.focus();
+      dragSelection.containerRef.current?.focus({ preventScroll: true });
     },
     [items]
   );
@@ -611,14 +611,19 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     setContextMenu(null);
   }, []);
 
-  // 빈 영역 클릭 시 선택 해제
+  // 컨테이너 밖 클릭 시 선택 해제
   useEffect(() => {
     const handler = (e: MouseEvent) => {
+      const container = dragSelection.containerRef.current;
+      if (!container) return;
+
+      // 컨테이너 안쪽은 컨테이너 onClick이 처리
+      if (container.contains(e.target as Node)) return;
+
       const target = e.target as HTMLElement;
       if (
         target.closest("[data-item-id]") ||
         target.closest('[role="menu"]') ||
-        target.closest('[role="dialog"]') ||
         target.closest('[role="alertdialog"]') ||
         target.closest("button") ||
         target.closest("input") ||

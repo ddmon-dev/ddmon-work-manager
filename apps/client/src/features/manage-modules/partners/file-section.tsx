@@ -246,7 +246,9 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
                   wasDragSelectingRef.current = false;
                   return;
                 }
-                if (e.target === e.currentTarget) clearSelection();
+                if (!(e.target as HTMLElement).closest("[data-item-id]")) {
+                  clearSelection();
+                }
               }}
               onContextMenu={(e) => {
                 if (!(e.target as HTMLElement).closest("[data-item-id]")) {
@@ -701,6 +703,7 @@ function ParentFolderRow({
   return (
     <div
       ref={setNodeRef}
+      data-item-id={PARENT_ROW_ID}
       className={cn(
         "flex cursor-pointer items-center gap-3 px-3 py-3 text-muted-foreground",
         isOver && "bg-primary/10 ring-1 ring-inset ring-primary",
