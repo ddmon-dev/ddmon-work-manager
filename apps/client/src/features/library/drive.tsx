@@ -865,75 +865,122 @@ function FileContextMenu({
             />
           </>
         ) : (
-          // 단건 컨텍스트 메뉴
+          // 단건 컨텍스트 메뉴 (source별 분기)
           <>
-            <ContextMenuButton
-              icon={item.isFolder ? FolderOpen : Eye}
-              label="열기"
-              shortcut="⌘O"
-              onClick={() => onOpen(item)}
-            />
-            {!item.isFolder && (
-              <ContextMenuButton
-                icon={Download}
-                label="다운로드"
-                onClick={() => onDownload(item)}
-              />
-            )}
-            <ContextMenuButton
-              icon={item.isFavorited ? StarOff : Star}
-              label={item.isFavorited ? "즐겨찾기 해제" : "즐겨찾기 추가"}
-              onClick={() => onToggleFavorite(item)}
-            />
-            <div className="my-1 h-px bg-border" />
-            <ContextMenuButton
-              icon={Copy}
-              label="복사"
-              shortcut="⌘C"
-              onClick={onCopy}
-            />
-            <ContextMenuButton
-              icon={CopyPlus}
-              label="복제"
-              shortcut="⌘D"
-              onClick={onDuplicate}
-            />
-            {hasClipboard && (
+            {contextMenu.source === "tree" ? (
               <>
                 <ContextMenuButton
-                  icon={ClipboardPaste}
-                  label="붙여넣기"
-                  shortcut="⌘V"
-                  onClick={onPaste}
+                  icon={Pencil}
+                  label="이름 변경"
+                  shortcut="⏎"
+                  onClick={() => onRename(item)}
+                />
+                <ContextMenuButton
+                  icon={item.isFavorited ? StarOff : Star}
+                  label={item.isFavorited ? "즐겨찾기 해제" : "즐겨찾기 추가"}
+                  onClick={() => onToggleFavorite(item)}
+                />
+                <div className="my-1 h-px bg-border" />
+                <ContextMenuButton
+                  icon={Trash2}
+                  label="삭제"
+                  shortcut="⌘⌫"
+                  variant="destructive"
+                  onClick={() => onDelete(item)}
+                />
+              </>
+            ) : contextMenu.source === "favorite" ? (
+              <>
+                <ContextMenuButton
+                  icon={item.isFolder ? FolderOpen : Eye}
+                  label="열기"
+                  shortcut="⌘O"
+                  onClick={() => onOpen(item)}
+                />
+                <ContextMenuButton
+                  icon={StarOff}
+                  label="즐겨찾기 해제"
+                  onClick={() => onToggleFavorite(item)}
+                />
+                <div className="my-1 h-px bg-border" />
+                <ContextMenuButton
+                  icon={Pencil}
+                  label="이름 변경"
+                  shortcut="⏎"
+                  onClick={() => onRename(item)}
+                />
+              </>
+            ) : (
+              <>
+                <ContextMenuButton
+                  icon={item.isFolder ? FolderOpen : Eye}
+                  label="열기"
+                  shortcut="⌘O"
+                  onClick={() => onOpen(item)}
+                />
+                {!item.isFolder && (
+                  <ContextMenuButton
+                    icon={Download}
+                    label="다운로드"
+                    onClick={() => onDownload(item)}
+                  />
+                )}
+                <ContextMenuButton
+                  icon={item.isFavorited ? StarOff : Star}
+                  label={item.isFavorited ? "즐겨찾기 해제" : "즐겨찾기 추가"}
+                  onClick={() => onToggleFavorite(item)}
+                />
+                <div className="my-1 h-px bg-border" />
+                <ContextMenuButton
+                  icon={Copy}
+                  label="복사"
+                  shortcut="⌘C"
+                  onClick={onCopy}
+                />
+                <ContextMenuButton
+                  icon={CopyPlus}
+                  label="복제"
+                  shortcut="⌘D"
+                  onClick={onDuplicate}
+                />
+                {hasClipboard && (
+                  <>
+                    <ContextMenuButton
+                      icon={ClipboardPaste}
+                      label="붙여넣기"
+                      shortcut="⌘V"
+                      onClick={onPaste}
+                    />
+                    <ContextMenuButton
+                      icon={FolderInput}
+                      label="잘라넣기"
+                      shortcut="⌥⌘V"
+                      onClick={onMovePaste}
+                    />
+                  </>
+                )}
+                <div className="my-1 h-px bg-border" />
+                <ContextMenuButton
+                  icon={Pencil}
+                  label="이름 변경"
+                  shortcut="⏎"
+                  onClick={() => onRename(item)}
                 />
                 <ContextMenuButton
                   icon={FolderInput}
-                  label="잘라넣기"
-                  shortcut="⌥⌘V"
-                  onClick={onMovePaste}
+                  label="이동"
+                  onClick={() => onMove(item)}
+                />
+                <div className="my-1 h-px bg-border" />
+                <ContextMenuButton
+                  icon={Trash2}
+                  label="삭제"
+                  shortcut="⌘⌫"
+                  variant="destructive"
+                  onClick={() => onDelete(item)}
                 />
               </>
             )}
-            <div className="my-1 h-px bg-border" />
-            <ContextMenuButton
-              icon={Pencil}
-              label="이름 변경"
-              shortcut="⏎"
-              onClick={() => onRename(item)}
-            />
-            <ContextMenuButton
-              icon={FolderInput}
-              label="이동"
-              onClick={() => onMove(item)}
-            />
-            <div className="my-1 h-px bg-border" />
-            <ContextMenuButton
-              icon={Trash2}
-              label="삭제"
-              shortcut="⌘⌫"
-              variant="destructive"
-              onClick={() => onDelete(item)}
-            />
           </>
         )
       ) : (
