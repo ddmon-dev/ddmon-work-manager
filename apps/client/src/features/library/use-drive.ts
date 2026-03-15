@@ -10,7 +10,7 @@ export type {
   ClipboardState,
   DragRect,
 } from "@/shared/hooks/use-file-browser";
-export { PARENT_ROW_ID } from "@/shared/hooks/use-file-browser";
+
 
 export function useDrive() {
   const [showTrash, setShowTrash] = useState(false);

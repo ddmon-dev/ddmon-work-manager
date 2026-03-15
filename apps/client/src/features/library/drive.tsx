@@ -55,7 +55,7 @@ import {
 import { FileUploadZone as FileUpload, UploadButton, uploadFiles } from "@/shared/ui/file-upload-zone";
 import { FolderTree } from "./folder-tree";
 import { TrashView } from "./trash";
-import { useDrive, type ContextMenuState, PARENT_ROW_ID } from "./use-drive";
+import { useDrive, type ContextMenuState } from "./use-drive";
 import { useUploadFile } from "./api";
 import { getFileIconComponent, type FileItem } from "./types";
 import { MiddleTruncate } from "@/shared/ui/middle-truncate";
@@ -302,12 +302,12 @@ export function Drive() {
                   wasDragSelectingRef.current = false;
                   return;
                 }
-                if (!(e.target as HTMLElement).closest("[data-item-id], [data-parent-row]")) {
+                if (e.target === e.currentTarget) {
                   clearSelection();
                 }
               }}
               onContextMenu={(e) => {
-                if (!(e.target as HTMLElement).closest("[data-item-id], [data-parent-row]")) {
+                if (!(e.target as HTMLElement).closest("[data-item-id]")) {
                   openContextMenu(e, null);
                 }
               }}
@@ -320,15 +320,9 @@ export function Drive() {
                       ? breadcrumbs[breadcrumbs.length - 2].id
                       : null
                   }
-                  isSelected={selectedIds.has(PARENT_ROW_ID)}
-                  onClick={() => selectItem(PARENT_ROW_ID)}
-                  onDoubleClick={() =>
+                  onClick={() =>
                     navigateToBreadcrumb(breadcrumbs.length - 2)
                   }
-                  onContextMenu={(e) => {
-                    selectItem(PARENT_ROW_ID);
-                    openContextMenu(e, null, "parent");
-                  }}
                 />
               )}
 
@@ -505,8 +499,7 @@ export function Drive() {
             closeContextMenu();
           }}
           onRename={(item) => {
-            const source = contextMenu?.source === "tree" ? "tree" : contextMenu?.source === "favorite" ? "favorite" : "list";
-            startRename(item.id, item.name, source);
+            startRename(item.id, item.name, contextMenu?.source ?? "list");
             closeContextMenu();
           }}
           onDelete={(item) => {
@@ -704,16 +697,10 @@ function DraggableFileRow({
 
 function ParentFolderRow({
   parentFolderId,
-  isSelected,
   onClick,
-  onDoubleClick,
-  onContextMenu,
 }: {
   parentFolderId: string | null;
-  isSelected: boolean;
   onClick: () => void;
-  onDoubleClick: () => void;
-  onContextMenu: (e: React.MouseEvent) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: "parent-folder",
@@ -723,17 +710,11 @@ function ParentFolderRow({
   return (
     <div
       ref={setNodeRef}
-      data-parent-row
       className={cn(
-        "flex cursor-pointer items-center gap-3 border-b px-4 py-3 text-muted-foreground",
+        "flex cursor-pointer items-center gap-3 border-b px-4 py-3 text-muted-foreground hover:bg-accent/30",
         isOver && "bg-primary/10 ring-1 ring-inset ring-primary",
-        isSelected
-          ? "bg-primary/8 hover:bg-primary/12 dark:bg-primary/12 dark:hover:bg-primary/16"
-          : "hover:bg-muted/50"
       )}
-      onClick={onClick}
-      onDoubleClick={onDoubleClick}
-      onContextMenu={onContextMenu}
+      onDoubleClick={onClick}
     >
       <CornerLeftUp className="size-5" />
       <span className="flex-1 text-sm">상위 폴더</span>
@@ -938,23 +919,6 @@ function FileContextMenu({
                 />
               </>
             )}
-          </>
-        )
-      ) : contextMenu.source === "parent" ? (
-        hasClipboard && (
-          <>
-            <ContextMenuButton
-              icon={ClipboardPaste}
-              label="상위 폴더에 붙여넣기"
-              shortcut="⌘V"
-              onClick={onPaste}
-            />
-            <ContextMenuButton
-              icon={FolderInput}
-              label="상위 폴더에 잘라넣기"
-              shortcut="⌥⌘V"
-              onClick={onMovePaste}
-            />
           </>
         )
       ) : (

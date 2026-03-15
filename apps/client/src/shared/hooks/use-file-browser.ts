@@ -25,10 +25,6 @@ import {
 import { useDialog } from "@/shared/ui/app-dialog";
 import type { FileItem } from "@/shared/lib/file-types";
 
-// ─── 상수 ───
-
-export const PARENT_ROW_ID = "__parent__";
-
 // ─── 타입 ───
 
 export interface Breadcrumb {
@@ -48,7 +44,7 @@ export interface ContextMenuState {
   x: number;
   y: number;
   item: FileItem | null;
-  source: "tree" | "list" | "favorite" | "parent";
+  source: "tree" | "list" | "favorite";
 }
 
 export interface ClipboardState {
@@ -506,7 +502,6 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
 
   const handleCopy = useCallback(() => {
     if (selectedIds.size === 0) return;
-    if (selectedIds.has(PARENT_ROW_ID)) return;
     setClipboard({
       ids: Array.from(selectedIds),
       sourceFolderId: nav.currentFolderId,
@@ -514,23 +509,14 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     toast.success(`${selectedIds.size}개 항목을 클립보드에 복사했습니다.`);
   }, [selectedIds, nav.currentFolderId]);
 
-  const parentFolderId = useMemo(
-    () =>
-      nav.breadcrumbs.length >= 2
-        ? nav.breadcrumbs[nav.breadcrumbs.length - 2].id
-        : null,
-    [nav.breadcrumbs]
-  );
-
   const getPasteTargetFolderId = useCallback(() => {
     if (selectedIds.size === 1) {
       const selectedId = Array.from(selectedIds)[0];
-      if (selectedId === PARENT_ROW_ID) return parentFolderId;
       const selectedItem = items?.find((i) => i.id === selectedId);
       if (selectedItem?.isFolder) return selectedItem.id;
     }
     return nav.currentFolderId;
-  }, [selectedIds, items, nav.currentFolderId, parentFolderId]);
+  }, [selectedIds, items, nav.currentFolderId]);
 
   const handlePaste = useCallback(async () => {
     if (!clipboard) return;
@@ -546,12 +532,8 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
       });
       toast.success("붙여넣기 완료 (복사)");
       setClipboard(null);
-    } catch (err) {
-      alert({
-        variant: "error",
-        title: "붙여넣기 실패",
-        description: err instanceof Error ? err.message : "붙여넣기에 실패했습니다.",
-      });
+    } catch {
+      toast.error("붙여넣기에 실패했습니다.");
     }
   }, [clipboard, getPasteTargetFolderId, copyFilesMutation, alert]);
 
@@ -569,12 +551,8 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
       });
       toast.success("붙여넣기 완료 (이동)");
       setClipboard(null);
-    } catch (err) {
-      alert({
-        variant: "error",
-        title: "잘라넣기 실패",
-        description: err instanceof Error ? err.message : "잘라넣기에 실패했습니다.",
-      });
+    } catch {
+      toast.error("잘라넣기에 실패했습니다.");
     }
   }, [clipboard, getPasteTargetFolderId, batchMoveFiles, alert]);
 
@@ -593,7 +571,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     (
       e: React.MouseEvent,
       item: FileItem | null,
-      source: "tree" | "list" | "favorite" | "parent" = "list"
+      source: "tree" | "list" | "favorite" = "list"
     ) => {
       e.preventDefault();
       if (item) {
