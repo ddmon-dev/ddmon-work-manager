@@ -60,6 +60,7 @@ import { useClickOutside } from "@/shared/hooks/use-click-outside";
 import { ContextMenuPortal } from "@/shared/ui/context-menu-portal";
 import {
   useFileBrowser,
+  PARENT_ROW_ID,
   type ContextMenuState,
 } from "@/shared/hooks/use-file-browser";
 import type { LucideIcon } from "lucide-react";
@@ -283,9 +284,15 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
                       ? breadcrumbs[breadcrumbs.length - 2].id
                       : null
                   }
-                  onClick={() =>
+                  isSelected={selectedIds.has(PARENT_ROW_ID)}
+                  onClick={() => selectItem(PARENT_ROW_ID)}
+                  onDoubleClick={() =>
                     navigateToBreadcrumb(breadcrumbs.length - 2)
                   }
+                  onContextMenu={(e) => {
+                    selectItem(PARENT_ROW_ID);
+                    openContextMenu(e, null, "parent");
+                  }}
                 />
               )}
 
@@ -672,10 +679,16 @@ function DraggableFileRow({
 
 function ParentFolderRow({
   parentFolderId,
+  isSelected,
   onClick,
+  onDoubleClick,
+  onContextMenu,
 }: {
   parentFolderId: string | null;
+  isSelected: boolean;
   onClick: () => void;
+  onDoubleClick: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: "parent-folder",
@@ -686,10 +699,15 @@ function ParentFolderRow({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex cursor-pointer items-center gap-3 px-3 py-3 text-muted-foreground hover:bg-accent/30",
-        isOver && "bg-primary/10 ring-1 ring-inset ring-primary"
+        "flex cursor-pointer items-center gap-3 px-3 py-3 text-muted-foreground",
+        isOver && "bg-primary/10 ring-1 ring-inset ring-primary",
+        isSelected
+          ? "bg-primary/8 hover:bg-primary/12 dark:bg-primary/12 dark:hover:bg-primary/16"
+          : "hover:bg-muted/50"
       )}
-      onDoubleClick={onClick}
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      onContextMenu={onContextMenu}
     >
       <CornerLeftUp className="size-4" />
       <span className="flex-1 text-sm">상위 폴더</span>
@@ -834,6 +852,23 @@ function FileContextMenu({
               shortcut="⌘⌫"
               variant="destructive"
               onClick={() => onDelete(item)}
+            />
+          </>
+        )
+      ) : contextMenu.source === "parent" ? (
+        hasClipboard && (
+          <>
+            <ContextMenuButton
+              icon={ClipboardPaste}
+              label="상위 폴더에 붙여넣기"
+              shortcut="⌘V"
+              onClick={onPaste}
+            />
+            <ContextMenuButton
+              icon={FolderInput}
+              label="상위 폴더에 잘라넣기"
+              shortcut="⌥⌘V"
+              onClick={onMovePaste}
             />
           </>
         )
