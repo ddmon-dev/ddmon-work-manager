@@ -10,7 +10,6 @@ import {
   Eye,
   Download,
   Upload,
-  MoreHorizontal,
   Pencil,
   Trash2,
   ArrowUpDown,
@@ -404,7 +403,6 @@ export function Drive() {
                       item={item}
                       renamingId={renaming?.source === "list" ? renaming.id : null}
                       renameValue={renaming?.value ?? ""}
-                      currentFolderId={currentFolderId}
                       isMoving={item.id === movingId}
                       isGroupDragging={
                         !!draggedItem &&
@@ -422,18 +420,9 @@ export function Drive() {
                       onSelect={(e) => selectItem(item.id, e)}
                       onFileClick={handleFileClick}
                       onContextMenu={openContextMenu}
-                      onRenameStart={(id, name) => startRename(id, name, "list")}
                       onRenameChange={setRenameValue}
                       onRenameSubmit={handleRename}
                       onRenameCancel={cancelRename}
-                      onToggleFavorite={(id, isFavorited) =>
-                        handleToggleFavorite(id, isFavorited)
-                      }
-                      onMoveStart={(id) => {
-                        startMove(id);
-                        setSelectedMoveFolder(currentFolderId);
-                      }}
-                      onDelete={handleDelete}
                       onDropUpload={handleDropUpload}
                     />
                   ))}
@@ -602,15 +591,10 @@ function DraggableFileRow({
   item,
   renamingId,
   renameValue,
-  currentFolderId,
   onFileClick,
-  onRenameStart,
   onRenameChange,
   onRenameSubmit,
   onRenameCancel,
-  onToggleFavorite,
-  onMoveStart,
-  onDelete,
   isMoving,
   isGroupDragging,
   isSelected,
@@ -622,7 +606,6 @@ function DraggableFileRow({
   item: FileItem;
   renamingId: string | null;
   renameValue: string;
-  currentFolderId: string | null;
   isMoving: boolean;
   isGroupDragging: boolean;
   isSelected: boolean;
@@ -630,13 +613,9 @@ function DraggableFileRow({
   onSelect: (e: React.MouseEvent) => void;
   onFileClick: (file: FileItem) => void;
   onContextMenu: (e: React.MouseEvent, item: FileItem) => void;
-  onRenameStart: (id: string, name: string) => void;
   onRenameChange: (value: string) => void;
   onRenameSubmit: (id: string) => void;
   onRenameCancel: () => void;
-  onToggleFavorite: (id: string, isFavorited: boolean) => void;
-  onMoveStart: (id: string) => void;
-  onDelete: (id: string) => void;
   onDropUpload: (files: FileList, folderId: string) => void;
 }) {
   const {
@@ -758,72 +737,6 @@ function DraggableFileRow({
         {new Date(item.updatedAt).toLocaleDateString("ko-KR")}
       </span>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 opacity-0 group-hover:opacity-100"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <MoreHorizontal className="size-3.5" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              onRenameStart(item.id, item.name);
-            }}
-          >
-            <Pencil className="mr-2 size-3.5" />
-            이름 변경
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(item.id, item.isFavorited);
-            }}
-          >
-            {item.isFavorited ? (
-              <StarOff className="mr-2 size-3.5" />
-            ) : (
-              <Star className="mr-2 size-3.5" />
-            )}
-            {item.isFavorited ? "즐겨찾기 해제" : "즐겨찾기 추가"}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              onMoveStart(item.id);
-            }}
-          >
-            <FolderInput className="mr-2 size-3.5" />
-            이동
-          </DropdownMenuItem>
-          {!item.isFolder && (
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(`/api/files/${item.id}/download`, "_blank");
-              }}
-            >
-              <Download className="mr-2 size-3.5" />
-              다운로드
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(item.id);
-            }}
-            className="text-destructive"
-          >
-            <Trash2 className="mr-2 size-3.5" />
-            삭제
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
     </div>
   );
 }
@@ -853,8 +766,6 @@ function ParentFolderRow({
     >
       <CornerLeftUp className="size-5" />
       <span className="flex-1 text-sm">상위 폴더</span>
-      {/* ...버튼 자리 — 다른 행과 높이 맞춤 */}
-      <div className="size-9" />
     </div>
   );
 }
@@ -925,6 +836,23 @@ function FileContextMenu({
               label={`${multiCount}개 항목 이동`}
               onClick={() => onMove(item)}
             />
+            {hasClipboard && (
+              <>
+                <div className="my-1 h-px bg-border" />
+                <ContextMenuButton
+                  icon={ClipboardPaste}
+                  label="붙여넣기"
+                  shortcut="⌘V"
+                  onClick={onPaste}
+                />
+                <ContextMenuButton
+                  icon={FolderInput}
+                  label="잘라넣기"
+                  shortcut="⌥⌘V"
+                  onClick={onMovePaste}
+                />
+              </>
+            )}
             <div className="my-1 h-px bg-border" />
             <ContextMenuButton
               icon={Trash2}
@@ -968,6 +896,22 @@ function FileContextMenu({
               shortcut="⌘D"
               onClick={onDuplicate}
             />
+            {hasClipboard && (
+              <>
+                <ContextMenuButton
+                  icon={ClipboardPaste}
+                  label="붙여넣기"
+                  shortcut="⌘V"
+                  onClick={onPaste}
+                />
+                <ContextMenuButton
+                  icon={FolderInput}
+                  label="잘라넣기"
+                  shortcut="⌥⌘V"
+                  onClick={onMovePaste}
+                />
+              </>
+            )}
             <div className="my-1 h-px bg-border" />
             <ContextMenuButton
               icon={Pencil}
@@ -1008,13 +952,13 @@ function FileContextMenu({
               <div className="my-1 h-px bg-border" />
               <ContextMenuButton
                 icon={ClipboardPaste}
-                label="붙여넣기 (복사)"
+                label="붙여넣기"
                 shortcut="⌘V"
                 onClick={onPaste}
               />
               <ContextMenuButton
                 icon={FolderInput}
-                label="붙여넣기 (이동)"
+                label="잘라넣기"
                 shortcut="⌥⌘V"
                 onClick={onMovePaste}
               />

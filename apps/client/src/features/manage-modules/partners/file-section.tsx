@@ -10,7 +10,6 @@ import {
   Eye,
   Download,
   Upload,
-  MoreHorizontal,
   Pencil,
   Trash2,
   ArrowUpDown,
@@ -388,17 +387,9 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
                       onSelect={(e) => selectItem(item.id, e)}
                       onFileClick={handleFileClick}
                       onContextMenu={openContextMenu}
-                      onRenameStart={(id, name) =>
-                        startRename(id, name, "list")
-                      }
                       onRenameChange={setRenameValue}
                       onRenameSubmit={handleRename}
                       onRenameCancel={cancelRename}
-                      onMoveStart={(id) => {
-                        startMove(id);
-                        setSelectedMoveFolder(currentFolderId);
-                      }}
-                      onDelete={handleDelete}
                       onDropUpload={handleDropUpload}
                     />
                   ))}
@@ -575,12 +566,9 @@ function DraggableFileRow({
   onSelect,
   onFileClick,
   onContextMenu,
-  onRenameStart,
   onRenameChange,
   onRenameSubmit,
   onRenameCancel,
-  onMoveStart,
-  onDelete,
   onDropUpload,
 }: {
   item: FileItem;
@@ -593,12 +581,9 @@ function DraggableFileRow({
   onSelect: (e: React.MouseEvent) => void;
   onFileClick: (file: FileItem) => void;
   onContextMenu: (e: React.MouseEvent, item: FileItem) => void;
-  onRenameStart: (id: string, name: string) => void;
   onRenameChange: (value: string) => void;
   onRenameSubmit: (id: string) => void;
   onRenameCancel: () => void;
-  onMoveStart: (id: string) => void;
-  onDelete: (id: string) => void;
   onDropUpload: (files: FileList, folderId: string) => void;
 }) {
   const {
@@ -734,59 +719,6 @@ function DraggableFileRow({
         {new Date(item.updatedAt).toLocaleDateString("ko-KR")}
       </span>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="opacity-0 group-hover:opacity-100"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <MoreHorizontal className="size-3.5" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              onRenameStart(item.id, item.name);
-            }}
-          >
-            <Pencil className="mr-2 size-3.5" />
-            이름 변경
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              onMoveStart(item.id);
-            }}
-          >
-            <FolderInput className="mr-2 size-3.5" />
-            이동
-          </DropdownMenuItem>
-          {!item.isFolder && (
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(`/api/files/${item.id}/download`, "_blank");
-              }}
-            >
-              <Download className="mr-2 size-3.5" />
-              다운로드
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(item.id);
-            }}
-            className="text-destructive"
-          >
-            <Trash2 className="mr-2 size-3.5" />
-            삭제
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
     </div>
   );
 }
