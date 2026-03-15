@@ -386,58 +386,6 @@ app.patch("/:id", async (c) => {
   return successResponse(c, updated);
 });
 
-// PATCH /:id/move — 폴더 이동 (트랜잭션)
-app.patch("/:id/move", async (c) => {
-  const id = c.req.param("id");
-  const { folderId } = (await c.req.json()) as { folderId: string | null };
-
-  if (id === folderId) {
-    return errorResponse(c, ERRORS.VALIDATION, 400, "자기 자신으로 이동할 수 없습니다.");
-  }
-
-  const updated = await db.transaction(async (tx) => {
-    if (folderId && (await isDescendant(tx, folderId, id))) {
-      return null; // 순환 참조
-    }
-
-    // 이동 대상의 현재 이름 조회
-    const target = await tx.query.files.findFirst({
-      where: eq(files.id, id),
-      columns: { name: true },
-    });
-    if (!target) return undefined;
-
-    // 대상 폴더에서 동일 이름 중복 체크
-    const duplicate = await (tx as unknown as typeof db)
-      .select({ id: files.id })
-      .from(files)
-      .where(
-        and(
-          folderId ? eq(files.folderId, folderId) : isNull(files.folderId),
-          eq(files.name, target.name),
-          eq(files.deleted, false),
-          sql`${files.id} != ${id}`
-        )
-      )
-      .limit(1);
-
-    if (duplicate.length > 0) return "duplicate" as const;
-
-    const [result] = await tx
-      .update(files)
-      .set({ folderId, updatedAt: new Date() })
-      .where(eq(files.id, id))
-      .returning();
-
-    return result;
-  });
-
-  if (updated === null) return errorResponse(c, ERRORS.CIRCULAR_REFERENCE, 400);
-  if (updated === "duplicate") return errorResponse(c, ERRORS.VALIDATION, 400, "대상 폴더에 동일한 이름이 이미 존재합니다.");
-  if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
-  return successResponse(c, updated);
-});
-
 // DELETE /:id — 휴지통으로 이동 (트랜잭션)
 app.delete("/:id", async (c) => {
   const id = c.req.param("id");

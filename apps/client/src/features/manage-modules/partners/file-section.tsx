@@ -26,13 +26,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 import {
   Empty,
@@ -65,7 +58,6 @@ import { getFileIconComponent, type FileItem } from "@/shared/lib/file-types";
 import { MiddleTruncate } from "@/shared/ui/middle-truncate";
 import { useClickOutside } from "@/shared/hooks/use-click-outside";
 import { ContextMenuPortal } from "@/shared/ui/context-menu-portal";
-import { FolderTreePicker } from "@/shared/ui/folder-tree-picker";
 import {
   useFileBrowser,
   type ContextMenuState,
@@ -89,7 +81,6 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
     renaming,
     items,
     isLoading,
-    moveTargetIds,
     breadcrumbs,
     selectedIds,
     contextMenu,
@@ -97,7 +88,6 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
     setNewFolderName,
     setShowNewFolder,
     setRenameValue,
-    setMoveTargetIds,
     handleNavigate,
     navigateToBreadcrumb,
     handleCreateFolder,
@@ -105,7 +95,6 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
     handleRename,
     handleFileClick,
     toggleSort,
-    handleMove,
     handleDragDrop,
     handleCopy,
     handlePaste,
@@ -115,7 +104,6 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
     closeContextMenu,
     selectItem,
     clearSelection,
-    startMove,
     startRename,
     cancelRename,
     isMultiSelection,
@@ -125,9 +113,6 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
     wasDragSelectingRef,
   } = useFileBrowser({ owner, deleteMode: "permanent", rootLabel: partnerName });
 
-  const [selectedMoveFolder, setSelectedMoveFolder] = useState<string | null>(
-    null
-  );
   const [draggedItem, setDraggedItem] = useState<FileItem | null>(null);
   const [dragRowWidth, setDragRowWidth] = useState<number | null>(null);
   const [movingId, setMovingId] = useState<string | null>(null);
@@ -478,11 +463,6 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
               startRename(item.id, item.name, "list");
               closeContextMenu();
             }}
-            onMove={(item) => {
-              startMove(item.id);
-              setSelectedMoveFolder(currentFolderId);
-              closeContextMenu();
-            }}
             onDelete={(item) => {
               handleDelete(item.id);
               closeContextMenu();
@@ -514,43 +494,6 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
           />
         )}
       </DndContext>
-
-      {/* 이동 Dialog */}
-      <Dialog
-        open={moveTargetIds.length > 0}
-        onOpenChange={(open) => !open && setMoveTargetIds([])}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {moveTargetIds.length > 1
-                ? `${moveTargetIds.length}개 항목 이동`
-                : "이동할 폴더 선택"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="max-h-60 overflow-y-auto">
-            <FolderTreePicker
-              owner={owner}
-              selectedFolderId={selectedMoveFolder}
-              onSelect={setSelectedMoveFolder}
-              excludeIds={moveTargetIds}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMoveTargetIds([])}>
-              취소
-            </Button>
-            <Button
-              onClick={() => {
-                handleMove(selectedMoveFolder);
-                setSelectedMoveFolder(null);
-              }}
-            >
-              이동
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -765,7 +708,6 @@ function FileContextMenu({
   onOpen,
   onDownload,
   onRename,
-  onMove,
   onDelete,
   onCopy,
   onPaste,
@@ -782,7 +724,6 @@ function FileContextMenu({
   onOpen: (item: FileItem) => void;
   onDownload: (item: FileItem) => void;
   onRename: (item: FileItem) => void;
-  onMove: (item: FileItem) => void;
   onDelete: (item: FileItem) => void;
   onCopy: () => void;
   onPaste: () => void;
@@ -808,11 +749,6 @@ function FileContextMenu({
               label={`${multiCount}개 항목 복사`}
               shortcut="⌘C"
               onClick={onCopy}
-            />
-            <ContextMenuButton
-              icon={FolderInput}
-              label={`${multiCount}개 항목 이동`}
-              onClick={() => onMove(item)}
             />
             {hasClipboard && (
               <>
@@ -890,11 +826,6 @@ function FileContextMenu({
               label="이름 변경"
               shortcut="⏎"
               onClick={() => onRename(item)}
-            />
-            <ContextMenuButton
-              icon={FolderInput}
-              label="이동"
-              onClick={() => onMove(item)}
             />
             <div className="my-1 h-px bg-border" />
             <ContextMenuButton

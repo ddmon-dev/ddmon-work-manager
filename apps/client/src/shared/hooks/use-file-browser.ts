@@ -14,7 +14,6 @@ import {
   useCreateFolder,
   useDeleteFile,
   useRenameFile,
-  useMoveFile,
   useBatchDeleteFiles,
   useBatchMoveFiles,
   useOpenFile,
@@ -283,7 +282,6 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
   const renaming = useFileRenaming();
   const folder = useNewFolder(nav.currentFolderId, owner);
 
-  const [moveTargetIds, setMoveTargetIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(
     null
@@ -328,7 +326,6 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
   const deleteFile = useDeleteFile();
   const permanentDeleteFile = usePermanentDeleteFile();
   const batchDeleteFiles = useBatchDeleteFiles();
-  const moveFile = useMoveFile();
   const batchMoveFiles = useBatchMoveFiles();
   const openFileMutation = useOpenFile();
   const duplicateFileMutation = useDuplicateFile();
@@ -445,75 +442,26 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     [nav.handleNavigate, clearSelection, openFileMutation]
   );
 
-  const handleMove = async (targetFolderId: string | null) => {
-    if (moveTargetIds.length === 0) return;
-    try {
-      if (moveTargetIds.length === 1) {
-        await moveFile.mutateAsync({
-          id: moveTargetIds[0],
-          folderId: targetFolderId,
-        });
-        toast.success("이동했습니다.");
-      } else {
-        await batchMoveFiles.mutateAsync({
-          ids: moveTargetIds,
-          folderId: targetFolderId,
-        });
-        toast.success(`${moveTargetIds.length}개 항목을 이동했습니다.`);
-      }
-    } catch (err) {
-      alert({
-        variant: "error",
-        title: "이동 실패",
-        description:
-          err instanceof Error ? err.message : "이동에 실패했습니다.",
-      });
-    }
-    setMoveTargetIds([]);
-    clearSelection();
-  };
-
-  const startMove = useCallback(
-    (id: string) => {
-      const multi = isMultiSelection(id);
-      if (multi) {
-        setMoveTargetIds(Array.from(selectedIds));
-      } else {
-        setMoveTargetIds([id]);
-      }
-    },
-    [selectedIds, isMultiSelection]
-  );
-
   const handleDragDrop = async (
     itemId: string,
     targetFolderId: string | null
   ) => {
     if (itemId === targetFolderId) return;
 
-    if (selectedIds.has(itemId) && selectedIds.size > 1) {
-      const ids = Array.from(selectedIds).filter(
-        (id) => id !== targetFolderId
-      );
-      if (ids.length === 0) return;
-      try {
-        await batchMoveFiles.mutateAsync({ ids, folderId: targetFolderId });
-        toast.success(`${ids.length}개 항목을 이동했습니다.`);
-        clearSelection();
-      } catch (err) {
-        alert({
-          variant: "error",
-          title: "이동 실패",
-          description:
-            err instanceof Error ? err.message : "이동에 실패했습니다.",
-        });
-      }
-      return;
-    }
+    const ids =
+      selectedIds.has(itemId) && selectedIds.size > 1
+        ? Array.from(selectedIds).filter((id) => id !== targetFolderId)
+        : [itemId];
+    if (ids.length === 0) return;
 
     try {
-      await moveFile.mutateAsync({ id: itemId, folderId: targetFolderId });
-      toast.success("이동했습니다.");
+      await batchMoveFiles.mutateAsync({ ids, folderId: targetFolderId });
+      toast.success(
+        ids.length > 1
+          ? `${ids.length}개 항목을 이동했습니다.`
+          : "이동했습니다."
+      );
+      clearSelection();
     } catch (err) {
       alert({
         variant: "error",
@@ -748,7 +696,6 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     renaming: renaming.renaming,
     items,
     isLoading,
-    moveTargetIds,
     breadcrumbs: nav.breadcrumbs,
     selectedIds,
     contextMenu,
@@ -756,7 +703,6 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     setNewFolderName: folder.setNewFolderName,
     setShowNewFolder: folder.setShowNewFolder,
     setRenameValue: renaming.setRenameValue,
-    setMoveTargetIds,
     // 핸들러
     handleNavigate: nav.handleNavigate,
     navigateToBreadcrumb: nav.navigateToBreadcrumb,
@@ -765,7 +711,6 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     handleRename: renaming.handleRename,
     handleFileClick,
     toggleSort: sorting.toggleSort,
-    handleMove,
     handleDragDrop,
     handleCopy,
     handlePaste,
@@ -775,7 +720,6 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     closeContextMenu,
     selectItem,
     clearSelection,
-    startMove,
     startRename: renaming.startRename,
     cancelRename: renaming.cancelRename,
     isMultiSelection,

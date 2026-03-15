@@ -134,15 +134,6 @@ export function useOpenFile() {
   });
 }
 
-export function useMoveFile() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, folderId }: { id: string; folderId: string | null }) =>
-      api.patch(`/files/${id}/move`, { folderId }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.files.all }),
-  });
-}
-
 export function useBatchDeleteFiles() {
   const qc = useQueryClient();
   return useMutation({

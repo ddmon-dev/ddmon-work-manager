@@ -30,13 +30,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 import {
   Empty,
@@ -83,13 +76,11 @@ export function Drive() {
     renaming,
     items,
     isLoading,
-    moveTargetIds,
     breadcrumbs,
     setNewFolderName,
     setShowNewFolder,
     setRenameValue,
     setShowTrash,
-    setMoveTargetIds,
     handleNavigate,
     navigateToBreadcrumb,
     handleCreateFolder,
@@ -97,7 +88,6 @@ export function Drive() {
     handleRename,
     handleFileClick,
     toggleSort,
-    handleMove,
     handleDragDrop,
     handleDragToTrash,
     handleToggleFavorite,
@@ -112,7 +102,6 @@ export function Drive() {
     clipboard,
     selectItem,
     clearSelection,
-    startMove,
     startRename,
     cancelRename,
     isMultiSelection,
@@ -122,9 +111,6 @@ export function Drive() {
     wasDragSelectingRef,
   } = useDrive();
 
-  const [selectedMoveFolder, setSelectedMoveFolder] = useState<string | null>(
-    null
-  );
   const [showTree, setShowTree] = useState(true);
   const treePanelRef = useRef<PanelImperativeHandle>(null);
   const [draggedItem, setDraggedItem] = useState<FileItem | null>(null);
@@ -449,41 +435,6 @@ export function Drive() {
       )}
       </ResizablePanel>
 
-      {/* 이동 Dialog */}
-      <Dialog
-        open={moveTargetIds.length > 0}
-        onOpenChange={(open) => !open && setMoveTargetIds([])}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {moveTargetIds.length > 1
-                ? `${moveTargetIds.length}개 항목 이동`
-                : "이동할 폴더 선택"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="max-h-60 overflow-y-auto">
-            <FolderTree
-              currentFolderId={selectedMoveFolder}
-              onNavigate={setSelectedMoveFolder}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMoveTargetIds([])}>
-              취소
-            </Button>
-            <Button
-              onClick={() => {
-                handleMove(selectedMoveFolder);
-                setSelectedMoveFolder(null);
-              }}
-            >
-              이동
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
         {draggedItem && (
           <div
@@ -545,11 +496,6 @@ export function Drive() {
           onRename={(item) => {
             const source = contextMenu?.source ?? "list";
             startRename(item.id, item.name, source);
-            closeContextMenu();
-          }}
-          onMove={(item) => {
-            startMove(item.id);
-            setSelectedMoveFolder(currentFolderId);
             closeContextMenu();
           }}
           onDelete={(item) => {
@@ -792,7 +738,6 @@ function FileContextMenu({
   onDownload,
   onToggleFavorite,
   onRename,
-  onMove,
   onDelete,
   onCopy,
   onPaste,
@@ -810,7 +755,6 @@ function FileContextMenu({
   onDownload: (item: FileItem) => void;
   onToggleFavorite: (item: FileItem) => void;
   onRename: (item: FileItem) => void;
-  onMove: (item: FileItem) => void;
   onDelete: (item: FileItem) => void;
   onCopy: () => void;
   onPaste: () => void;
@@ -832,11 +776,6 @@ function FileContextMenu({
               label={`${multiCount}개 항목 복사`}
               shortcut="⌘C"
               onClick={onCopy}
-            />
-            <ContextMenuButton
-              icon={FolderInput}
-              label={`${multiCount}개 항목 이동`}
-              onClick={() => onMove(item)}
             />
             {hasClipboard && (
               <>
@@ -965,11 +904,6 @@ function FileContextMenu({
                   label="이름 변경"
                   shortcut="⏎"
                   onClick={() => onRename(item)}
-                />
-                <ContextMenuButton
-                  icon={FolderInput}
-                  label="이동"
-                  onClick={() => onMove(item)}
                 />
                 <div className="my-1 h-px bg-border" />
                 <ContextMenuButton
