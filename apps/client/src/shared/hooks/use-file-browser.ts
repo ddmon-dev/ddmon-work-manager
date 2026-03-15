@@ -151,7 +151,7 @@ function useFileRenaming() {
     try {
       await renameFile.mutateAsync({ id, name: renaming.value.trim() });
     } catch (err) {
-      alert({
+      await alert({
         variant: "error",
         title: "이름 변경 실패",
         description:
@@ -326,6 +326,33 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
 
   const dragSelection = useDragSelection(selectedIds, setSelectedIds);
 
+  // 폴더 이동 후 컨테이너 자동 포커스
+  useEffect(() => {
+    dragSelection.containerRef.current?.focus();
+  }, [nav.currentFolderId]);
+
+  // 포커스 유실 시 컨테이너 재포커스 (rename 종료 후 등)
+  const restoreFocus = useCallback(() => {
+    requestAnimationFrame(() => {
+      if (!document.activeElement || document.activeElement === document.body) {
+        dragSelection.containerRef.current?.focus();
+      }
+    });
+  }, []);
+
+  const handleRenameWithFocus = useCallback(
+    async (id: string) => {
+      await renaming.handleRename(id);
+      restoreFocus();
+    },
+    [renaming.handleRename, restoreFocus]
+  );
+
+  const cancelRenameWithFocus = useCallback(() => {
+    renaming.cancelRename();
+    restoreFocus();
+  }, [renaming.cancelRename, restoreFocus]);
+
   const { confirm, alert } = useDialog();
   const deleteFile = useDeleteFile();
   const permanentDeleteFile = usePermanentDeleteFile();
@@ -371,6 +398,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
         lastSelectedIdRef.current = id;
         return new Set([id]);
       });
+      dragSelection.containerRef.current?.focus();
     },
     [items]
   );
@@ -604,16 +632,15 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     return () => window.removeEventListener("mousedown", handler);
   }, [clearSelection]);
 
-  // 키보드 단축키
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
+  // 키보드 단축키 (컨테이너 스코핑)
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||
         target.tagName === "TEXTAREA" ||
         target.isContentEditable ||
-        renaming.renaming ||
-        target.closest('[role="dialog"], [role="alertdialog"]')
+        renaming.renaming
       ) {
         return;
       }
@@ -695,26 +722,24 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
           break;
         }
       }
-    };
-
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [
-    selectedIds,
-    renaming.renaming,
-    renaming.startRename,
-    items,
-    handleDelete,
-    handleFileClick,
-    closeContextMenu,
-    clearSelection,
-    folder.setShowNewFolder,
-    handleCopy,
-    handlePaste,
-    handleMovePaste,
-    handleDuplicate,
-    clipboard,
-  ]);
+    },
+    [
+      selectedIds,
+      renaming.renaming,
+      renaming.startRename,
+      items,
+      handleDelete,
+      handleFileClick,
+      closeContextMenu,
+      clearSelection,
+      folder.setShowNewFolder,
+      handleCopy,
+      handlePaste,
+      handleMovePaste,
+      handleDuplicate,
+      clipboard,
+    ]
+  );
 
   return {
     // 상태
@@ -738,7 +763,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     navigateToBreadcrumb: nav.navigateToBreadcrumb,
     handleCreateFolder: folder.handleCreateFolder,
     handleDelete,
-    handleRename: renaming.handleRename,
+    handleRename: handleRenameWithFocus,
     handleFileClick,
     toggleSort: sorting.toggleSort,
     handleDragDrop,
@@ -751,7 +776,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     selectItem,
     clearSelection,
     startRename: renaming.startRename,
-    cancelRename: renaming.cancelRename,
+    cancelRename: cancelRenameWithFocus,
     isMultiSelection,
     clipboard,
     // 드래그 선택
@@ -759,5 +784,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     dragContainerRef: dragSelection.containerRef,
     handleDragSelectStart: dragSelection.handleDragSelectStart,
     wasDragSelectingRef: dragSelection.wasDragSelectingRef,
+    // 키보드
+    handleKeyDown,
   };
 }

@@ -109,6 +109,7 @@ export function Drive() {
     dragContainerRef,
     handleDragSelectStart,
     wasDragSelectingRef,
+    handleKeyDown,
   } = useDrive();
 
   const [showTree, setShowTree] = useState(true);
@@ -292,7 +293,9 @@ export function Drive() {
             {/* 파일 목록 */}
             <div
               ref={dragContainerRef}
-              className="relative flex-1 overflow-y-auto hide-scrollbar"
+              tabIndex={-1}
+              onKeyDown={handleKeyDown}
+              className="relative flex-1 overflow-y-auto outline-none hide-scrollbar"
               onMouseDown={handleDragSelectStart}
               onClick={(e) => {
                 if (wasDragSelectingRef.current) {

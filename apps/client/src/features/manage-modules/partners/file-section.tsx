@@ -112,6 +112,7 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
     dragContainerRef,
     handleDragSelectStart,
     wasDragSelectingRef,
+    handleKeyDown,
   } = useFileBrowser({ owner, deleteMode: "permanent", rootLabel: partnerName });
 
   const [draggedItem, setDraggedItem] = useState<FileItem | null>(null);
@@ -236,7 +237,9 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
             {/* 파일 목록 */}
             <div
               ref={dragContainerRef}
-              className="relative mt-2 divide-y rounded-md border"
+              tabIndex={-1}
+              onKeyDown={handleKeyDown}
+              className="relative mt-2 divide-y rounded-md border outline-none"
               onMouseDown={handleDragSelectStart}
               onClick={(e) => {
                 if (wasDragSelectingRef.current) {
