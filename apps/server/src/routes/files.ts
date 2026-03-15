@@ -588,6 +588,21 @@ app.post("/copy", async (c) => {
   });
   if (originals.length === 0) return errorResponse(c, ERRORS.NOT_FOUND, 404);
 
+  // 순환 참조 방어: 폴더를 자기 자신 또는 자손 폴더에 복사 방지
+  if (folderId) {
+    for (const original of originals) {
+      if (original.isFolder) {
+        if (original.id === folderId) {
+          return errorResponse(c, ERRORS.VALIDATION, 400, "폴더를 자기 자신 내부에 복사할 수 없습니다.");
+        }
+        const descendant = await isDescendant(db as unknown as DbTransaction, folderId, original.id);
+        if (descendant) {
+          return errorResponse(c, ERRORS.VALIDATION, 400, "폴더를 자신의 하위 폴더에 복사할 수 없습니다.");
+        }
+      }
+    }
+  }
+
   const copiedS3Keys: string[] = [];
 
   try {

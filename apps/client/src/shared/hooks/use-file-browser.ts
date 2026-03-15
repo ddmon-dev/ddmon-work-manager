@@ -493,6 +493,10 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
   const handlePaste = useCallback(async () => {
     if (!clipboard) return;
     const targetFolderId = getPasteTargetFolderId();
+    if (targetFolderId && clipboard.ids.includes(targetFolderId)) {
+      alert({ variant: "error", title: "붙여넣기 불가", description: "항목을 자기 자신 내부에 붙여넣을 수 없습니다." });
+      return;
+    }
     try {
       await copyFilesMutation.mutateAsync({
         ids: clipboard.ids,
@@ -503,11 +507,15 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     } catch {
       toast.error("붙여넣기에 실패했습니다.");
     }
-  }, [clipboard, getPasteTargetFolderId, copyFilesMutation]);
+  }, [clipboard, getPasteTargetFolderId, copyFilesMutation, alert]);
 
   const handleMovePaste = useCallback(async () => {
     if (!clipboard) return;
     const targetFolderId = getPasteTargetFolderId();
+    if (targetFolderId && clipboard.ids.includes(targetFolderId)) {
+      alert({ variant: "error", title: "붙여넣기 불가", description: "항목을 자기 자신 내부에 붙여넣을 수 없습니다." });
+      return;
+    }
     try {
       await batchMoveFiles.mutateAsync({
         ids: clipboard.ids,
@@ -518,7 +526,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     } catch {
       toast.error("이동 붙여넣기에 실패했습니다.");
     }
-  }, [clipboard, getPasteTargetFolderId, batchMoveFiles]);
+  }, [clipboard, getPasteTargetFolderId, batchMoveFiles, alert]);
 
   const handleDuplicate = useCallback(async () => {
     if (selectedIds.size !== 1) return;
