@@ -649,7 +649,7 @@ function DraggableFileRow({
       data-item-id={item.id}
       {...nativeDragHandlers}
       className={cn(
-        "group flex cursor-grab items-center gap-3 px-3 py-1.5 outline-none active:cursor-grabbing",
+        "group flex cursor-grab items-center gap-3 px-3 py-3 outline-none active:cursor-grabbing",
         (isDragging || isMoving || isGroupDragging) && "opacity-30",
         (isOver || nativeDragOver) &&
           !isDropDisabled &&
@@ -741,7 +741,7 @@ function ParentFolderRow({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex cursor-pointer items-center gap-3 px-3 py-1.5 text-muted-foreground hover:bg-accent/30",
+        "flex cursor-pointer items-center gap-3 px-3 py-3 text-muted-foreground hover:bg-accent/30",
         isOver && "bg-primary/10 ring-1 ring-inset ring-primary"
       )}
       onDoubleClick={onClick}
