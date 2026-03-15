@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { Upload } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
 import { Spinner } from "@/shared/ui/spinner";
-import { useUploadFile } from "./api";
+import { useUploadFile, type FileOwner } from "@/shared/lib/file-api";
 import { toast } from "sonner";
 
 /** 파일 배열을 순차 업로드하는 공유 함수 */
@@ -28,12 +28,13 @@ export async function uploadFiles(
   return { successCount, failCount };
 }
 
-interface FileUploadProps {
+interface FileUploadZoneProps {
   folderId: string | null;
+  owner?: FileOwner;
   children: React.ReactNode;
 }
 
-export function FileUpload({ folderId, children }: FileUploadProps) {
+export function FileUploadZone({ folderId, owner, children }: FileUploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{
     current: number;
@@ -41,7 +42,7 @@ export function FileUpload({ folderId, children }: FileUploadProps) {
     loaded: number;
     fileTotal: number;
   } | null>(null);
-  const uploadFile = useUploadFile((loaded, total) => {
+  const uploadFile = useUploadFile(owner, (loaded, total) => {
     setUploadProgress((prev) =>
       prev ? { ...prev, loaded, fileTotal: total } : null
     );
@@ -145,11 +146,12 @@ export function FileUpload({ folderId, children }: FileUploadProps) {
 
 interface UploadButtonProps {
   folderId: string | null;
+  owner?: FileOwner;
 }
 
-export function UploadButton({ folderId }: UploadButtonProps) {
+export function UploadButton({ folderId, owner }: UploadButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const uploadFile = useUploadFile();
+  const uploadFile = useUploadFile(owner);
   const [isUploading, setIsUploading] = useState(false);
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

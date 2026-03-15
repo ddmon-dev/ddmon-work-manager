@@ -76,6 +76,8 @@ export const queryKeys = {
   files: {
     all: ["files"] as const,
     list: (folderId: string | null) => ["files", "list", folderId] as const,
+    listByOwner: (ownerType: string, ownerId: string, folderId: string | null) =>
+      ["files", "list", ownerType, ownerId, folderId] as const,
     path: (id: string) => ["files", "path", id] as const,
     favorites: ["files", "favorites"] as const,
   },

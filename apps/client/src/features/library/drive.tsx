@@ -60,7 +60,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { FileUpload, UploadButton, uploadFiles } from "./file-upload";
+import { FileUploadZone as FileUpload, UploadButton, uploadFiles } from "@/shared/ui/file-upload-zone";
 import { FolderTree } from "./folder-tree";
 import { TrashView } from "./trash";
 import { useDrive, type ContextMenuState } from "./use-drive";

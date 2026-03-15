@@ -30,8 +30,9 @@ async function resolveUniqueName(
   executor: typeof db | DbTransaction,
   name: string,
   folderId: string | null,
-  excludeId?: string
+  options?: { excludeId?: string; ownerType?: string; ownerId?: string | null }
 ): Promise<string> {
+  const { excludeId, ownerType = "drive", ownerId } = options ?? {};
   const existing = await (executor as typeof db)
     .select({ name: files.name })
     .from(files)
@@ -39,6 +40,8 @@ async function resolveUniqueName(
       and(
         folderId ? eq(files.folderId, folderId) : isNull(files.folderId),
         eq(files.deleted, false),
+        eq(files.ownerType, ownerType),
+        ownerId ? eq(files.ownerId, ownerId) : isNull(files.ownerId),
         ...(excludeId ? [sql`${files.id} != ${excludeId}`] : [])
       )
     );
@@ -127,11 +130,15 @@ app.get("/", async (c) => {
   }
 
   const folderId = c.req.query("folderId") || null;
+  const ownerType = c.req.query("ownerType") || "drive";
+  const ownerId = c.req.query("ownerId") || null;
 
   const items = await db.query.files.findMany({
     where: and(
       folderId ? eq(files.folderId, folderId) : isNull(files.folderId),
-      eq(files.deleted, false)
+      eq(files.deleted, false),
+      eq(files.ownerType, ownerType),
+      ownerId ? eq(files.ownerId, ownerId) : isNull(files.ownerId)
     ),
     orderBy: [desc(files.isFolder), asc(files.name)],
   });
@@ -145,6 +152,8 @@ app.post("/upload", async (c) => {
   const body = await c.req.parseBody();
   const file = body["file"];
   const folderId = (body["folderId"] as string) || null;
+  const ownerType = (body["ownerType"] as string) || "drive";
+  const ownerId = (body["ownerId"] as string) || null;
 
   if (!file || !(file instanceof File)) {
     return errorResponse(c, ERRORS.VALIDATION, 400);
@@ -171,7 +180,7 @@ app.post("/upload", async (c) => {
   const uuid = randomUUID();
   const s3Key = `files/${uuid}${ext ? `.${ext}` : ""}`;
 
-  const uniqueName = await resolveUniqueName(db, file.name, folderId);
+  const uniqueName = await resolveUniqueName(db, file.name, folderId, { ownerType, ownerId });
 
   await uploadFile(s3Key, buffer, file.type);
 
@@ -186,6 +195,8 @@ app.post("/upload", async (c) => {
         size: file.size,
         folderId,
         author: user.name ?? undefined,
+        ownerType,
+        ownerId,
       })
       .returning();
   } catch (err) {
@@ -203,6 +214,8 @@ app.post("/folder", async (c) => {
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
   const targetFolderId = parsed.data.folderId ?? null;
+  const ownerType = parsed.data.ownerType ?? "drive";
+  const ownerId = parsed.data.ownerId ?? null;
 
   // 삭제된 폴더 안에 생성 방지
   if (targetFolderId) {
@@ -215,7 +228,7 @@ app.post("/folder", async (c) => {
     }
   }
 
-  const uniqueName = await resolveUniqueName(db, parsed.data.name, targetFolderId);
+  const uniqueName = await resolveUniqueName(db, parsed.data.name, targetFolderId, { ownerType, ownerId });
 
   const [created] = await db
     .insert(files)
@@ -224,6 +237,8 @@ app.post("/folder", async (c) => {
       folderId: targetFolderId,
       isFolder: true,
       author: user.name ?? undefined,
+      ownerType,
+      ownerId,
     })
     .returning();
 
@@ -677,7 +692,10 @@ async function copyItem(
   author: string | null,
   copiedS3Keys: string[]
 ): Promise<typeof files.$inferSelect> {
-  const uniqueName = await resolveUniqueName(tx as unknown as typeof db, original.name, targetFolderId);
+  const uniqueName = await resolveUniqueName(tx as unknown as typeof db, original.name, targetFolderId, {
+    ownerType: original.ownerType,
+    ownerId: original.ownerId,
+  });
 
   if (!original.isFolder) {
     // 파일 복사

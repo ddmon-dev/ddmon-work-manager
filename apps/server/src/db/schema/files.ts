@@ -5,7 +5,9 @@ import {
   integer,
   boolean,
   timestamp,
+  index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const files = pgTable("files", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -28,4 +30,8 @@ export const files = pgTable("files", {
   favoriteOrder: integer("favorite_order"),
   deleted: boolean("deleted").notNull().default(false),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
-});
+  ownerType: text("owner_type").notNull().default("drive"),
+  ownerId: uuid("owner_id"),
+}, (table) => [
+  index("idx_files_owner").on(table.ownerType, table.ownerId).where(sql`deleted = false`),
+]);

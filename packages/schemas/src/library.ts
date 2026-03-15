@@ -35,6 +35,8 @@ export type FileFavoriteInput = z.infer<typeof fileFavoriteSchema>;
 export const folderCreateSchema = z.object({
   name: z.string().min(1, "폴더 이름을 입력해주세요."),
   folderId: z.string().uuid().nullable().optional(),
+  ownerType: z.string().optional(),
+  ownerId: z.string().uuid().optional(),
 });
 
 export type FolderCreateInput = z.infer<typeof folderCreateSchema>;
