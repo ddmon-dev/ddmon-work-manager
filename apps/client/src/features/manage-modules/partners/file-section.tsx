@@ -260,7 +260,9 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
                 if (e.target === e.currentTarget) clearSelection();
               }}
               onContextMenu={(e) => {
-                if (e.target === e.currentTarget) openContextMenu(e, null);
+                if (!(e.target as HTMLElement).closest("[data-item-id]")) {
+                  openContextMenu(e, null);
+                }
               }}
             >
               {/* 브레드크럼 */}
