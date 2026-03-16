@@ -255,7 +255,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
                 ref={dragContainerRef}
                 tabIndex={-1}
                 onKeyDown={handleKeyDown}
-                className="relative flex-1 divide-y overflow-y-auto outline-none"
+                className="relative flex flex-1 flex-col divide-y overflow-y-auto outline-none"
                 onMouseDown={handleDragSelectStart}
                 onClick={(e) => {
                   if (wasDragSelectingRef.current) {
