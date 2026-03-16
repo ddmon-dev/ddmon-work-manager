@@ -374,6 +374,16 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     restoreFocus();
   }, [renaming.cancelRename, restoreFocus]);
 
+  const handleCreateFolderWithFocus = useCallback(async () => {
+    await folder.handleCreateFolder();
+    restoreFocus();
+  }, [folder.handleCreateFolder, restoreFocus]);
+
+  const cancelNewFolder = useCallback(() => {
+    folder.setShowNewFolder(false);
+    restoreFocus();
+  }, [folder.setShowNewFolder, restoreFocus]);
+
   const { confirm, alert } = useDialog();
   const deleteFile = useDeleteFile();
   const permanentDeleteFile = usePermanentDeleteFile();
@@ -596,6 +606,10 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
           setSelectedIds(new Set([item.id]));
           lastSelectedIdRef.current = item.id;
         }
+      } else {
+        // 빈 영역 우클릭: 선택 해제 → 붙여넣기 대상이 currentFolderId로 결정됨
+        setSelectedIds(new Set());
+        lastSelectedIdRef.current = null;
       }
       setContextMenu({ x: e.clientX, y: e.clientY, item, source });
     },
@@ -832,7 +846,8 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     // 핸들러
     handleNavigate: nav.handleNavigate,
     navigateToBreadcrumb: nav.navigateToBreadcrumb,
-    handleCreateFolder: folder.handleCreateFolder,
+    handleCreateFolder: handleCreateFolderWithFocus,
+    cancelNewFolder,
     handleDelete,
     handleRename: handleRenameWithFocus,
     handleFileClick,

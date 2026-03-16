@@ -178,6 +178,14 @@ shared/ui/file-browser/
 - **컨텍스트 메뉴 닫기**: `FileContextMenu`가 action 클릭 시 자동으로 `onClose()` 호출. 개별 콜백에서 닫기 처리 불필요
 - **owner 타입**: `FileOwnerType = "drive" | "partner"` 리터럴 유니온 (`shared/lib/file-api.ts`)
 
+#### 포커스 관리
+
+파일 브라우저 컨테이너(`dragContainerRef`)가 키보드 단축키의 스코프이므로, 인라인 UI(입력 필드 등)가 닫힌 후 반드시 컨테이너로 포커스를 복귀해야 한다.
+
+- **`restoreFocus()`**: `rAF` 후 `document.activeElement`가 `body`이면 컨테이너에 포커스. 모든 포커스 복귀의 단일 진입점
+- **패턴 A (직접 호출)**: 트리거가 명확한 사용자 액션 완료 시. rename 확인/취소, 새 폴더 생성/취소에서 사용
+- **패턴 B (useEffect)**: 하나의 상태 변화를 다수 경로가 트리거할 때. 폴더 이동(`currentFolderId` 변경)에서 사용
+
 ### 데이터 페칭 패턴
 
 #### api-client.ts

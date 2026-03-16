@@ -87,6 +87,7 @@ export function Drive() {
     clearSelection,
     startRename,
     cancelRename,
+    cancelNewFolder,
     isMultiSelection,
     dragRect,
     dragContainerRef,
@@ -101,7 +102,7 @@ export function Drive() {
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const newFolderRef = useRef<HTMLDivElement>(null);
 
-  useClickOutside(newFolderRef, () => setShowNewFolder(false), showNewFolder);
+  useClickOutside(newFolderRef, cancelNewFolder, showNewFolder);
 
   const dnd = useFileDnd({
     items,
@@ -352,7 +353,7 @@ export function Drive() {
                   value={newFolderName}
                   onChange={setNewFolderName}
                   onCreate={handleCreateFolder}
-                  onCancel={() => setShowNewFolder(false)}
+                  onCancel={cancelNewFolder}
                 />
               )}
 

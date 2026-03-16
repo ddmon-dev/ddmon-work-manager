@@ -86,6 +86,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
     clearSelection,
     startRename,
     cancelRename,
+    cancelNewFolder,
     isMultiSelection,
     dragRect,
     dragContainerRef,
@@ -98,7 +99,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const newFolderRef = useRef<HTMLDivElement>(null);
 
-  useClickOutside(newFolderRef, () => setShowNewFolder(false), showNewFolder);
+  useClickOutside(newFolderRef, cancelNewFolder, showNewFolder);
 
   const dnd = useFileDnd({
     items,
@@ -270,7 +271,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
                   value={newFolderName}
                   onChange={setNewFolderName}
                   onCreate={handleCreateFolder}
-                  onCancel={() => setShowNewFolder(false)}
+                  onCancel={cancelNewFolder}
                   compact
                 />
               )}
