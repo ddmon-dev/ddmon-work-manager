@@ -287,6 +287,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     null
   );
   const [clipboard, setClipboard] = useState<ClipboardState | null>(null);
+  const [parentFolderFocused, setParentFolderFocused] = useState(false);
   const lastSelectedIdRef = useRef<string | null>(null);
 
   const { data: rawItems, isLoading } = useFilesQuery(
@@ -322,8 +323,9 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
 
   const dragSelection = useDragSelection(selectedIds, setSelectedIds);
 
-  // 폴더 이동 후 컨테이너 자동 포커스
+  // 폴더 이동 후 컨테이너 자동 포커스 + parentFolderFocused 리셋
   useEffect(() => {
+    setParentFolderFocused(false);
     dragSelection.containerRef.current?.focus({ preventScroll: true });
   }, [nav.currentFolderId]);
 
@@ -364,6 +366,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
       id: string,
       e?: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean }
     ) => {
+      setParentFolderFocused(false);
       setSelectedIds((prev) => {
         if (e?.shiftKey && lastSelectedIdRef.current && items) {
           const lastIndex = items.findIndex(
@@ -402,6 +405,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
     lastSelectedIdRef.current = null;
+    setParentFolderFocused(false);
   }, []);
 
   const isMultiSelection = useCallback(
@@ -639,22 +643,22 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
           break;
         }
         case "Enter": {
+          if (parentFolderFocused) {
+            e.preventDefault();
+            nav.navigateToBreadcrumb(nav.breadcrumbs.length - 2);
+            break;
+          }
           if (selectedIds.size === 1) {
             e.preventDefault();
             const id = Array.from(selectedIds)[0];
             const item = items?.find((i) => i.id === id);
             if (item) {
-              renaming.startRename(item.id, item.name);
+              if (e.shiftKey) {
+                renaming.startRename(item.id, item.name);
+              } else {
+                handleFileClick(item);
+              }
             }
-          }
-          break;
-        }
-        case "KeyO": {
-          if (e.metaKey && selectedIds.size === 1) {
-            e.preventDefault();
-            const id = Array.from(selectedIds)[0];
-            const item = items?.find((i) => i.id === id);
-            if (item) handleFileClick(item);
           }
           break;
         }
@@ -703,6 +707,75 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
           }
           break;
         }
+        case "ArrowDown": {
+          e.preventDefault();
+          if (parentFolderFocused) {
+            if (items && items.length > 0) {
+              selectItem(items[0].id, {});
+              dragSelection.containerRef.current
+                ?.querySelector(`[data-item-id="${items[0].id}"]`)
+                ?.scrollIntoView({ block: "nearest" });
+            }
+            break;
+          }
+          if (!items || items.length === 0) {
+            if (nav.currentFolderId && !parentFolderFocused) {
+              setParentFolderFocused(true);
+              dragSelection.containerRef.current
+                ?.querySelector("[data-parent-folder-row]")
+                ?.scrollIntoView({ block: "nearest" });
+            }
+            break;
+          }
+          const currentIndex = lastSelectedIdRef.current
+            ? items.findIndex((i) => i.id === lastSelectedIdRef.current)
+            : -1;
+          const nextIndex =
+            currentIndex < items.length - 1 ? currentIndex + 1 : currentIndex;
+          if (nextIndex === currentIndex && currentIndex !== -1) break;
+          const nextId = items[nextIndex === -1 ? 0 : nextIndex].id;
+          selectItem(nextId, { shiftKey: e.shiftKey });
+          dragSelection.containerRef.current
+            ?.querySelector(`[data-item-id="${nextId}"]`)
+            ?.scrollIntoView({ block: "nearest" });
+          break;
+        }
+        case "ArrowUp": {
+          e.preventDefault();
+          if (parentFolderFocused) break;
+          // 빈 폴더에서도 상위 폴더 행 접근 가능
+          if (!items || items.length === 0) {
+            if (nav.currentFolderId) {
+              setParentFolderFocused(true);
+              dragSelection.containerRef.current
+                ?.querySelector("[data-parent-folder-row]")
+                ?.scrollIntoView({ block: "nearest" });
+            }
+            break;
+          }
+          const currentIndex = lastSelectedIdRef.current
+            ? items.findIndex((i) => i.id === lastSelectedIdRef.current)
+            : items.length;
+          const prevIndex = currentIndex > 0 ? currentIndex - 1 : 0;
+          if (prevIndex === currentIndex) {
+            // 첫 번째 항목에서 위로 → 상위 폴더 행으로 이동
+            if (nav.currentFolderId && !e.shiftKey) {
+              setParentFolderFocused(true);
+              setSelectedIds(new Set());
+              lastSelectedIdRef.current = null;
+              dragSelection.containerRef.current
+                ?.querySelector("[data-parent-folder-row]")
+                ?.scrollIntoView({ block: "nearest" });
+            }
+            break;
+          }
+          const prevId = items[prevIndex].id;
+          selectItem(prevId, { shiftKey: e.shiftKey });
+          dragSelection.containerRef.current
+            ?.querySelector(`[data-item-id="${prevId}"]`)
+            ?.scrollIntoView({ block: "nearest" });
+          break;
+        }
       }
     },
     [
@@ -720,6 +793,11 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
       handleMovePaste,
       handleDuplicate,
       clipboard,
+      selectItem,
+      parentFolderFocused,
+      nav.currentFolderId,
+      nav.navigateToBreadcrumb,
+      nav.breadcrumbs,
     ]
   );
 
@@ -736,6 +814,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     breadcrumbs: nav.breadcrumbs,
     selectedIds,
     contextMenu,
+    parentFolderFocused,
     // 세터
     setNewFolderName: folder.setNewFolderName,
     setShowNewFolder: folder.setShowNewFolder,

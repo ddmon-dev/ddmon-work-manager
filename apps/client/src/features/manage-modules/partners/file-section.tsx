@@ -84,6 +84,7 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
     breadcrumbs,
     selectedIds,
     contextMenu,
+    parentFolderFocused,
     clipboard,
     setNewFolderName,
     setShowNewFolder,
@@ -288,6 +289,7 @@ export function FileSection({ partnerId, partnerName }: FileSectionProps) {
                       ? breadcrumbs[breadcrumbs.length - 2].id
                       : null
                   }
+                  focused={parentFolderFocused}
                   onClick={() =>
                     navigateToBreadcrumb(breadcrumbs.length - 2)
                   }
@@ -677,9 +679,11 @@ function DraggableFileRow({
 
 function ParentFolderRow({
   parentFolderId,
+  focused,
   onClick,
 }: {
   parentFolderId: string | null;
+  focused?: boolean;
   onClick: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -690,9 +694,11 @@ function ParentFolderRow({
   return (
     <div
       ref={setNodeRef}
+      data-parent-folder-row
       className={cn(
         "flex cursor-pointer items-center gap-3 px-3 py-3 text-muted-foreground hover:bg-accent/30",
         isOver && "bg-primary/10 ring-1 ring-inset ring-primary",
+        focused && "bg-primary/8 dark:bg-primary/12",
       )}
       onDoubleClick={onClick}
     >
