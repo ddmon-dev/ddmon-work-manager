@@ -443,9 +443,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
             const start = Math.min(lastIndex, currentIndex);
             const end = Math.max(lastIndex, currentIndex);
             const rangeIds = items.slice(start, end + 1).map((i) => i.id);
-            const next = new Set(prev);
-            for (const rid of rangeIds) next.add(rid);
-            return next;
+            return new Set(rangeIds);
           }
         }
 
@@ -800,7 +798,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
             break;
           }
           // 아무것도 선택되지 않은 상태에서 상위 행이 있으면 상위 행 먼저
-          if (!lastSelectedIdRef.current && nav.currentFolderId) {
+          if (!activeItemId && nav.currentFolderId) {
             setParentFolderFocused(true);
             scrollToElement("[data-parent-folder-row]");
             requestAnimationFrame(() => {
@@ -811,8 +809,8 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
             break;
           }
           if (!items || items.length === 0) break;
-          const currentIndex = lastSelectedIdRef.current
-            ? items.findIndex((i) => i.id === lastSelectedIdRef.current)
+          const currentIndex = activeItemId
+            ? items.findIndex((i) => i.id === activeItemId)
             : -1;
           const nextIndex =
             currentIndex < items.length - 1 ? currentIndex + 1 : currentIndex;
@@ -843,8 +841,8 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
             }
             break;
           }
-          const currentIndex = lastSelectedIdRef.current
-            ? items.findIndex((i) => i.id === lastSelectedIdRef.current)
+          const currentIndex = activeItemId
+            ? items.findIndex((i) => i.id === activeItemId)
             : items.length;
           const prevIndex = currentIndex > 0 ? currentIndex - 1 : 0;
           if (prevIndex === currentIndex) {
@@ -890,6 +888,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
       handleDuplicate,
       clipboard,
       selectItem,
+      activeItemId,
       parentFolderFocused,
       nav.currentFolderId,
       nav.navigateToBreadcrumb,
