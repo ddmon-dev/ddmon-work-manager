@@ -87,6 +87,7 @@ export function Drive() {
     clipboard,
     selectItem,
     focusSelectItem,
+    focusSelectParent,
     clearSelection,
     startRename,
     cancelRename,
@@ -366,6 +367,7 @@ export function Drive() {
                     onClick={() =>
                       navigateToBreadcrumb(breadcrumbs.length - 2)
                     }
+                    onFocusSelect={focusSelectParent}
                   />
                 )}
 

@@ -86,6 +86,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
     closeContextMenu,
     selectItem,
     focusSelectItem,
+    focusSelectParent,
     clearSelection,
     startRename,
     cancelRename,
@@ -283,6 +284,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
                     onClick={() =>
                       navigateToBreadcrumb(breadcrumbs.length - 2)
                     }
+                    onFocusSelect={focusSelectParent}
                     compact
                   />
                 )}

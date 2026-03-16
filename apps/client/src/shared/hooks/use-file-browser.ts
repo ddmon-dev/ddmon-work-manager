@@ -441,6 +441,12 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     []
   );
 
+  const focusSelectParent = useCallback(() => {
+    setParentFolderFocused(true);
+    setSelectedIds(new Set());
+    lastSelectedIdRef.current = null;
+  }, []);
+
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
     lastSelectedIdRef.current = null;
@@ -870,6 +876,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     closeContextMenu,
     selectItem,
     focusSelectItem,
+    focusSelectParent,
     clearSelection,
     startRename: renaming.startRename,
     cancelRename: renaming.cancelRename,
