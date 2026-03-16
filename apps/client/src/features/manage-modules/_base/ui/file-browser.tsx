@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo } from "react";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import FocusTrap from "focus-trap-react";
+import { cn } from "@/shared/utils/classnames";
 import {
   File as FileIcon,
   FolderPlus,
@@ -85,9 +86,10 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
     openContextMenu,
     closeContextMenu,
     selectItem,
-    focusSelectItem,
     focusSelectParent,
     clearSelection,
+    handleContainerBlur,
+    activeItemId,
     startRename,
     cancelRename,
     cancelNewFolder,
@@ -105,6 +107,8 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
   } = useFileBrowser({ owner, deleteMode, rootLabel: ownerName });
 
   const [trapActive, setTrapActive] = useState(false);
+  const [showFocusIndicator, setShowFocusIndicator] = useState(false);
+  const pointerDownRef = useRef(false);
   const uploadFile = useUploadFile(owner);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const newFolderRef = useRef<HTMLDivElement>(null);
@@ -245,11 +249,25 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
 
               {/* 파일 목록 */}
               <div
+                className={cn(
+                  "relative mt-2 rounded-md after:pointer-events-none after:absolute after:inset-0 after:z-10 after:hidden after:rounded-[inherit] after:border-4 after:border-ring/100",
+                  showFocusIndicator && "after:block",
+                )}
+                onPointerDown={() => { pointerDownRef.current = true; }}
+                onFocus={(e) => {
+                  if (pointerDownRef.current) { pointerDownRef.current = false; return; }
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    setShowFocusIndicator(true);
+                  }
+                }}
+              >
+              <div
                 ref={dragContainerRef}
                 tabIndex={-1}
-                onKeyDown={handleKeyDown}
-                className="relative mt-2 flex h-60 flex-col divide-y overflow-y-auto rounded-md border outline-none"
-                onMouseDown={handleDragSelectStart}
+                onKeyDown={(e) => { setShowFocusIndicator(false); handleKeyDown(e); }}
+                onBlur={handleContainerBlur}
+                className="flex h-60 flex-col divide-y overflow-y-auto rounded-[inherit] border outline-none"
+                onMouseDown={(e) => { setShowFocusIndicator(false); handleDragSelectStart(e); }}
                 onClick={(e) => {
                   if (wasDragSelectingRef.current) {
                     wasDragSelectingRef.current = false;
@@ -280,11 +298,10 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
                         ? breadcrumbs[breadcrumbs.length - 2].id
                         : null
                     }
-                    focused={parentFolderFocused}
+                    isFocused={parentFolderFocused}
                     onClick={() =>
                       navigateToBreadcrumb(breadcrumbs.length - 2)
                     }
-                    onFocusSelect={focusSelectParent}
                     compact
                   />
                 )}
@@ -336,8 +353,8 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
                         }
                         isSelected={selectedIds.has(item.id)}
                         isDropDisabled={dnd.isDropDisabled(item)}
+                        isFocused={(activeItemId ?? items?.[0]?.id) === item.id}
                         onSelect={(e) => selectItem(item.id, e)}
-                        onFocusSelect={() => focusSelectItem(item.id)}
                         onFileClick={handleFileClick}
                         onContextMenu={openContextMenu}
                         onRenameChange={setRenameValue}
@@ -362,6 +379,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
                     }}
                   />
                 )}
+              </div>
               </div>
 
               {/* Portal 영역 (overflow 밖, 트랩 안) */}

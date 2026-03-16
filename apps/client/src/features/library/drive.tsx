@@ -86,9 +86,10 @@ export function Drive() {
     parentFolderFocused,
     clipboard,
     selectItem,
-    focusSelectItem,
     focusSelectParent,
     clearSelection,
+    handleContainerBlur,
+    activeItemId,
     startRename,
     cancelRename,
     cancelNewFolder,
@@ -107,6 +108,8 @@ export function Drive() {
 
   const [showTree, setShowTree] = useState(true);
   const [trapActive, setTrapActive] = useState(false);
+  const [showFocusIndicator, setShowFocusIndicator] = useState(false);
+  const pointerDownRef = useRef(false);
   const treePanelRef = useRef<PanelImperativeHandle>(null);
   const uploadFile = useUploadFile();
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -335,11 +338,25 @@ export function Drive() {
 
               {/* 파일 목록 */}
               <div
+                className={cn(
+                  "relative flex-1 after:pointer-events-none after:absolute after:inset-0 after:z-10 after:hidden after:border-4 after:border-ring/100",
+                  showFocusIndicator && "after:block",
+                )}
+                onPointerDown={() => { pointerDownRef.current = true; }}
+                onFocus={(e) => {
+                  if (pointerDownRef.current) { pointerDownRef.current = false; return; }
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    setShowFocusIndicator(true);
+                  }
+                }}
+              >
+              <div
                 ref={dragContainerRef}
                 tabIndex={-1}
-                onKeyDown={handleKeyDown}
-                className="relative flex-1 overflow-y-auto outline-none hide-scrollbar"
-                onMouseDown={handleDragSelectStart}
+                onKeyDown={(e) => { setShowFocusIndicator(false); handleKeyDown(e); }}
+                onBlur={handleContainerBlur}
+                className="h-full overflow-y-auto outline-none hide-scrollbar"
+                onMouseDown={(e) => { setShowFocusIndicator(false); handleDragSelectStart(e); }}
                 onClick={(e) => {
                   if (wasDragSelectingRef.current) {
                     wasDragSelectingRef.current = false;
@@ -363,11 +380,10 @@ export function Drive() {
                         ? breadcrumbs[breadcrumbs.length - 2].id
                         : null
                     }
-                    focused={parentFolderFocused}
+                    isFocused={parentFolderFocused}
                     onClick={() =>
                       navigateToBreadcrumb(breadcrumbs.length - 2)
                     }
-                    onFocusSelect={focusSelectParent}
                   />
                 )}
 
@@ -421,8 +437,8 @@ export function Drive() {
                         }
                         isSelected={selectedIds.has(item.id)}
                         isDropDisabled={dnd.isDropDisabled(item)}
+                        isFocused={(activeItemId ?? items?.[0]?.id) === item.id}
                         onSelect={(e) => selectItem(item.id, e)}
-                        onFocusSelect={() => focusSelectItem(item.id)}
                         onFileClick={handleFileClick}
                         onContextMenu={openContextMenu}
                         onRenameChange={setRenameValue}
@@ -446,6 +462,7 @@ export function Drive() {
                     }}
                   />
                 )}
+              </div>
               </div>
 
               {/* Portal 영역 (overflow 밖, 트랩 안) */}

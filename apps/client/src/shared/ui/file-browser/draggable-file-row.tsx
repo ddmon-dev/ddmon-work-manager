@@ -14,13 +14,13 @@ interface DraggableFileRowProps {
   isGroupDragging: boolean;
   isSelected: boolean;
   isDropDisabled: boolean;
+  isFocused: boolean;
   onSelect: (e: React.MouseEvent) => void;
   onFileClick: (file: FileItem) => void;
   onContextMenu: (e: React.MouseEvent, item: FileItem) => void;
   onRenameChange: (value: string) => void;
   onRenameSubmit: (id: string) => void;
   onRenameCancel: () => void;
-  onFocusSelect?: () => void;
   onDropUpload: (files: FileList, folderId: string) => void;
   compact?: boolean;
 }
@@ -33,13 +33,13 @@ export function DraggableFileRow({
   isGroupDragging,
   isSelected,
   isDropDisabled,
+  isFocused,
   onSelect,
   onFileClick,
   onContextMenu,
   onRenameChange,
   onRenameSubmit,
   onRenameCancel,
-  onFocusSelect,
   onDropUpload,
   compact,
 }: DraggableFileRowProps) {
@@ -105,6 +105,7 @@ export function DraggableFileRow({
       {...listeners}
       role="option"
       aria-selected={isSelected}
+      tabIndex={isFocused ? 0 : -1}
       data-item-id={item.id}
       {...nativeDragHandlers}
       className={cn(
@@ -118,9 +119,6 @@ export function DraggableFileRow({
           ? "bg-primary/8 hover:bg-primary/12 dark:bg-primary/12 dark:hover:bg-primary/16"
           : "hover:bg-muted/50"
       )}
-      onFocus={() => {
-        if (!isSelected && onFocusSelect) onFocusSelect();
-      }}
       onClick={(e) => {
         if (!isDragging) onSelect(e);
       }}

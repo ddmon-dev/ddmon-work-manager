@@ -313,6 +313,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
   );
   const [clipboard, setClipboard] = useState<ClipboardState | null>(null);
   const [parentFolderFocused, setParentFolderFocused] = useState(false);
+  const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const lastSelectedIdRef = useRef<string | null>(null);
 
   const { data: rawItems, isLoading } = useFilesQuery(
@@ -348,9 +349,18 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
 
   const dragSelection = useDragSelection(selectedIds, setSelectedIds);
 
-  // 폴더 이동 후 parentFolderFocused 리셋
+  // 폴더 이동 후 상태 리셋 + 컨테이너 포커스 복구
+  const isFirstRenderRef = useRef(true);
   useEffect(() => {
     setParentFolderFocused(false);
+    setActiveItemId(null);
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      return;
+    }
+    requestAnimationFrame(() => {
+      dragSelection.containerRef.current?.focus({ preventScroll: true });
+    });
   }, [nav.currentFolderId]);
 
   // rename / 새 폴더 종료 후 컨테이너 포커스 복구
@@ -359,21 +369,31 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
   useEffect(() => {
     if (prevRenamingRef.current && !renaming.renaming) {
       requestAnimationFrame(() => {
-        dragSelection.containerRef.current?.focus({ preventScroll: true });
+        const container = dragSelection.containerRef.current;
+        if (!container) return;
+        const target = activeItemId
+          ? container.querySelector<HTMLElement>(`[data-item-id="${activeItemId}"]`)
+          : null;
+        (target ?? container).focus({ preventScroll: true });
       });
     }
     prevRenamingRef.current = renaming.renaming;
-  }, [renaming.renaming]);
+  }, [renaming.renaming, activeItemId]);
 
   const prevShowNewFolderRef = useRef(folder.showNewFolder);
   useEffect(() => {
     if (prevShowNewFolderRef.current && !folder.showNewFolder) {
       requestAnimationFrame(() => {
-        dragSelection.containerRef.current?.focus({ preventScroll: true });
+        const container = dragSelection.containerRef.current;
+        if (!container) return;
+        const target = activeItemId
+          ? container.querySelector<HTMLElement>(`[data-item-id="${activeItemId}"]`)
+          : null;
+        (target ?? container).focus({ preventScroll: true });
       });
     }
     prevShowNewFolderRef.current = folder.showNewFolder;
-  }, [folder.showNewFolder]);
+  }, [folder.showNewFolder, activeItemId]);
 
   const cancelNewFolder = useCallback(() => {
     folder.setShowNewFolder(false);
@@ -396,6 +416,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
       e?: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean }
     ) => {
       setParentFolderFocused(false);
+      setActiveItemId(id);
       setSelectedIds((prev) => {
         if (e?.shiftKey && lastSelectedIdRef.current && items) {
           const lastIndex = items.findIndex(
@@ -426,25 +447,25 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
         lastSelectedIdRef.current = id;
         return new Set([id]);
       });
-      dragSelection.containerRef.current?.focus({ preventScroll: true });
     },
     [items]
-  );
-
-  // Tab 포커스 시 선택 (컨테이너로 포커스 이동하지 않음)
-  const focusSelectItem = useCallback(
-    (id: string) => {
-      setParentFolderFocused(false);
-      setSelectedIds(new Set([id]));
-      lastSelectedIdRef.current = id;
-    },
-    []
   );
 
   const focusSelectParent = useCallback(() => {
     setParentFolderFocused(true);
     setSelectedIds(new Set());
     lastSelectedIdRef.current = null;
+  }, []);
+
+  // 컨테이너에서 포커스가 완전히 벗어나면 선택 해제
+  const handleContainerBlur = useCallback((e: React.FocusEvent) => {
+    const container = dragSelection.containerRef.current;
+    if (!container || !e.relatedTarget) return;
+    if (!container.contains(e.relatedTarget as Node)) {
+      setSelectedIds(new Set());
+      lastSelectedIdRef.current = null;
+      setParentFolderFocused(false);
+    }
   }, []);
 
   const clearSelection = useCallback(() => {
@@ -764,6 +785,11 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
             if (items && items.length > 0) {
               selectItem(items[0].id, {});
               scrollToElement(`[data-item-id="${items[0].id}"]`);
+              requestAnimationFrame(() => {
+                dragSelection.containerRef.current
+                  ?.querySelector<HTMLElement>(`[data-item-id="${items[0].id}"]`)
+                  ?.focus({ preventScroll: true });
+              });
             }
             break;
           }
@@ -771,6 +797,11 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
             if (nav.currentFolderId) {
               setParentFolderFocused(true);
               scrollToElement("[data-parent-folder-row]");
+              requestAnimationFrame(() => {
+                dragSelection.containerRef.current
+                  ?.querySelector<HTMLElement>("[data-parent-folder-row]")
+                  ?.focus({ preventScroll: true });
+              });
             }
             break;
           }
@@ -783,6 +814,11 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
           const nextId = items[nextIndex === -1 ? 0 : nextIndex].id;
           selectItem(nextId, { shiftKey: e.shiftKey });
           scrollToElement(`[data-item-id="${nextId}"]`);
+          requestAnimationFrame(() => {
+            dragSelection.containerRef.current
+              ?.querySelector<HTMLElement>(`[data-item-id="${nextId}"]`)
+              ?.focus({ preventScroll: true });
+          });
           break;
         }
         case "ArrowUp": {
@@ -793,6 +829,11 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
             if (nav.currentFolderId) {
               setParentFolderFocused(true);
               scrollToElement("[data-parent-folder-row]");
+              requestAnimationFrame(() => {
+                dragSelection.containerRef.current
+                  ?.querySelector<HTMLElement>("[data-parent-folder-row]")
+                  ?.focus({ preventScroll: true });
+              });
             }
             break;
           }
@@ -807,12 +848,22 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
               setSelectedIds(new Set());
               lastSelectedIdRef.current = null;
               scrollToElement("[data-parent-folder-row]");
+              requestAnimationFrame(() => {
+                dragSelection.containerRef.current
+                  ?.querySelector<HTMLElement>("[data-parent-folder-row]")
+                  ?.focus({ preventScroll: true });
+              });
             }
             break;
           }
           const prevId = items[prevIndex].id;
           selectItem(prevId, { shiftKey: e.shiftKey });
           scrollToElement(`[data-item-id="${prevId}"]`);
+          requestAnimationFrame(() => {
+            dragSelection.containerRef.current
+              ?.querySelector<HTMLElement>(`[data-item-id="${prevId}"]`)
+              ?.focus({ preventScroll: true });
+          });
           break;
         }
       }
@@ -875,9 +926,10 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     openContextMenu,
     closeContextMenu,
     selectItem,
-    focusSelectItem,
     focusSelectParent,
     clearSelection,
+    handleContainerBlur,
+    activeItemId,
     startRename: renaming.startRename,
     cancelRename: renaming.cancelRename,
     isMultiSelection,
