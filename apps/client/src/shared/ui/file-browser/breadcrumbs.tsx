@@ -92,7 +92,7 @@ export function Breadcrumbs({
               title={crumb.name}
               onClick={() => onNavigate(getOriginalIndex(i))}
             >
-              {crumb.name}
+              {compact && crumb.id === null ? "/" : crumb.name}
             </button>
           )}
         </Fragment>

@@ -56,7 +56,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
 
   return (
     <>
-      <SheetBody className="lg:grid-cols-[2.5fr_3fr_3fr]">
+      <SheetBody className="lg:grid-cols-[2fr_2.5fr_2.5fr]">
         {/* 좌측 */}
         <SheetScrollColumn className="flex flex-col">
           <SheetContainer>

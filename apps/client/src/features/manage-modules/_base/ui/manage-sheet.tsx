@@ -183,7 +183,7 @@ interface ManageSheetProps<T> {
   formComponent?: React.ComponentType<{ id?: string; prevValues: T | null }>;
   viewComponent?: React.ComponentType<{ data: T; refetch: () => void }>;
   viewHeader?: React.ComponentType;
-  size?: SizeKey | Partial<Record<ManageSheetMode, SizeKey>>;
+  size?: SizeKey | string | Partial<Record<ManageSheetMode, SizeKey | string>>;
   moduleName?: string;
 }
 
@@ -263,7 +263,7 @@ export function ManageSheet<T>({
     >
       <SheetContent
         className={cn(
-          SIZES[sizeKey],
+          SIZES[sizeKey as SizeKey] ?? sizeKey,
           "w-[440px] max-w-full md:w-full",
           "md:transition-[max-width] md:duration-300 md:ease-in-out"
         )}
