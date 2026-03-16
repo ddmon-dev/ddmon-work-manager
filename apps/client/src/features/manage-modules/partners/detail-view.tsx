@@ -13,7 +13,7 @@ import {
   useUpdatePartnerMemo,
   useDeletePartnerMemo,
 } from "./api";
-import { FileSection } from "./file-section";
+import { FileSection } from "../_base/ui/file-section";
 import type { PartnerWithMemos } from "./types";
 
 const partnerMemoHooks = {
@@ -76,7 +76,10 @@ export function DetailView({ data }: DetailViewProps) {
         </SheetContainer>
 
         <SheetContainer>
-          <FileSection partnerId={data.id} partnerName={data.name} />
+          <FileSection
+            owner={{ ownerType: "partner", ownerId: data.id }}
+            ownerName={data.name}
+          />
         </SheetContainer>
       </SheetBody>
 

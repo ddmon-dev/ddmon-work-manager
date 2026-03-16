@@ -618,6 +618,15 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     return () => window.removeEventListener("mousedown", handler);
   }, [clearSelection]);
 
+  const scrollToElement = useCallback(
+    (selector: string) => {
+      dragSelection.containerRef.current
+        ?.querySelector(selector)
+        ?.scrollIntoView({ block: "nearest" });
+    },
+    []
+  );
+
   // 키보드 단축키 (컨테이너 스코핑)
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -712,18 +721,14 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
           if (parentFolderFocused) {
             if (items && items.length > 0) {
               selectItem(items[0].id, {});
-              dragSelection.containerRef.current
-                ?.querySelector(`[data-item-id="${items[0].id}"]`)
-                ?.scrollIntoView({ block: "nearest" });
+              scrollToElement(`[data-item-id="${items[0].id}"]`);
             }
             break;
           }
           if (!items || items.length === 0) {
-            if (nav.currentFolderId && !parentFolderFocused) {
+            if (nav.currentFolderId) {
               setParentFolderFocused(true);
-              dragSelection.containerRef.current
-                ?.querySelector("[data-parent-folder-row]")
-                ?.scrollIntoView({ block: "nearest" });
+              scrollToElement("[data-parent-folder-row]");
             }
             break;
           }
@@ -735,9 +740,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
           if (nextIndex === currentIndex && currentIndex !== -1) break;
           const nextId = items[nextIndex === -1 ? 0 : nextIndex].id;
           selectItem(nextId, { shiftKey: e.shiftKey });
-          dragSelection.containerRef.current
-            ?.querySelector(`[data-item-id="${nextId}"]`)
-            ?.scrollIntoView({ block: "nearest" });
+          scrollToElement(`[data-item-id="${nextId}"]`);
           break;
         }
         case "ArrowUp": {
@@ -747,9 +750,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
           if (!items || items.length === 0) {
             if (nav.currentFolderId) {
               setParentFolderFocused(true);
-              dragSelection.containerRef.current
-                ?.querySelector("[data-parent-folder-row]")
-                ?.scrollIntoView({ block: "nearest" });
+              scrollToElement("[data-parent-folder-row]");
             }
             break;
           }
@@ -763,17 +764,13 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
               setParentFolderFocused(true);
               setSelectedIds(new Set());
               lastSelectedIdRef.current = null;
-              dragSelection.containerRef.current
-                ?.querySelector("[data-parent-folder-row]")
-                ?.scrollIntoView({ block: "nearest" });
+              scrollToElement("[data-parent-folder-row]");
             }
             break;
           }
           const prevId = items[prevIndex].id;
           selectItem(prevId, { shiftKey: e.shiftKey });
-          dragSelection.containerRef.current
-            ?.querySelector(`[data-item-id="${prevId}"]`)
-            ?.scrollIntoView({ block: "nearest" });
+          scrollToElement(`[data-item-id="${prevId}"]`);
           break;
         }
       }
@@ -798,6 +795,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
       nav.currentFolderId,
       nav.navigateToBreadcrumb,
       nav.breadcrumbs,
+      scrollToElement,
     ]
   );
 

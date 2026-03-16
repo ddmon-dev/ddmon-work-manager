@@ -1,12 +1,10 @@
-import { Fragment, useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import {
   File as FileIcon,
-  Files,
   FolderPlus,
   Folder,
   FolderOpen,
-  CornerLeftUp,
   Eye,
   Download,
   Upload,
@@ -14,7 +12,6 @@ import {
   Trash2,
   ArrowUpDown,
   FolderInput,
-  ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
   Star,
@@ -39,15 +36,12 @@ import {
   EmptyDescription,
 } from "@/shared/ui/empty";
 import { cn } from "@/shared/utils/classnames";
-import { formatFileSize } from "@/shared/utils/format";
 import {
   DndContext,
   DragOverlay,
   PointerSensor,
   useSensor,
   useSensors,
-  useDraggable,
-  useDroppable,
   pointerWithin,
   type DragEndEvent,
   type DragStartEvent,
@@ -55,15 +49,22 @@ import {
 import { FileUploadZone as FileUpload, UploadButton, uploadFiles } from "@/shared/ui/file-upload-zone";
 import { FolderTree } from "./folder-tree";
 import { TrashView } from "./trash";
-import { useDrive, type ContextMenuState } from "./use-drive";
+import { useDrive } from "./use-drive";
 import { useUploadFile } from "./api";
-import { getFileIconComponent, type FileItem } from "./types";
-import { MiddleTruncate } from "@/shared/ui/middle-truncate";
+import type { FileItem } from "./types";
 import { useClickOutside } from "@/shared/hooks/use-click-outside";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/shared/ui/resizable";
 import type { PanelImperativeHandle } from "react-resizable-panels";
-import { ContextMenuPortal } from "@/shared/ui/context-menu-portal";
-import type { LucideIcon } from "lucide-react";
+import {
+  Breadcrumbs,
+  ParentFolderRow,
+  DraggableFileRow,
+  DragOverlayContent,
+  FileContextMenu,
+  menuAction,
+  menuSeparator,
+  type MenuItem,
+} from "@/shared/ui/file-browser";
 
 export function Drive() {
   const {
@@ -124,7 +125,6 @@ export function Drive() {
 
   useClickOutside(newFolderRef, () => setShowNewFolder(false), showNewFolder);
 
-  // 드래그 시 선택된 항목 수 (draggedItem이 selectedIds에 포함되면 전체, 아니면 1)
   const dragCount =
     draggedItem && selectedIds.has(draggedItem.id) ? selectedIds.size : 1;
 
@@ -172,7 +172,6 @@ export function Drive() {
         | null
         | undefined;
       if (targetFolderId === undefined) return;
-      // 자기 자신 또는 선택 그룹에 포함된 폴더에 드롭 차단
       if (targetFolderId === active.id) return;
       if (selectedIds.has(active.id as string) && targetFolderId && selectedIds.has(targetFolderId)) return;
       setMovingId(active.id as string);
@@ -182,6 +181,80 @@ export function Drive() {
     },
     [handleDragDrop, handleDragToTrash, selectedIds]
   );
+
+  // ─── 컨텍스트 메뉴 아이템 ───
+
+  const menuItems: MenuItem[] = useMemo(() => {
+    if (!contextMenu) return [];
+    const { item, source } = contextMenu;
+    const isMulti = isMultiSelection(item?.id);
+    const hasClipboard = !!clipboard;
+
+    // 빈 영역 우클릭
+    if (!item) {
+      return [
+        menuAction(FolderPlus, "새 폴더", () => { setShowNewFolder(true); closeContextMenu(); }, { shortcut: "⇧N" }),
+        menuAction(Upload, "파일 업로드", () => { uploadInputRef.current?.click(); closeContextMenu(); }),
+        ...(hasClipboard ? [
+          menuSeparator(),
+          menuAction(ClipboardPaste, "붙여넣기", () => { handlePaste(); closeContextMenu(); }, { shortcut: "⌘V" }),
+          menuAction(FolderInput, "잘라넣기", () => { handleMovePaste(); closeContextMenu(); }, { shortcut: "⌥⌘V" }),
+        ] : []),
+      ];
+    }
+
+    // 다중 선택
+    if (isMulti) {
+      return [
+        menuAction(Copy, `${selectedIds.size}개 항목 복사`, () => { handleCopy(); closeContextMenu(); }, { shortcut: "⌘C" }),
+        ...(hasClipboard ? [
+          menuSeparator(),
+          menuAction(ClipboardPaste, "붙여넣기", () => { handlePaste(); closeContextMenu(); }, { shortcut: "⌘V" }),
+          menuAction(FolderInput, "잘라넣기", () => { handleMovePaste(); closeContextMenu(); }, { shortcut: "⌥⌘V" }),
+        ] : []),
+        menuSeparator(),
+        menuAction(Trash2, `${selectedIds.size}개 항목 삭제`, () => { handleDelete(item.id); closeContextMenu(); }, { shortcut: "⌘⌫", variant: "destructive" }),
+      ];
+    }
+
+    // 트리 소스
+    if (source === "tree") {
+      return [
+        menuAction(Pencil, "이름 변경", () => { startRename(item.id, item.name, "tree"); closeContextMenu(); }, { shortcut: "⏎" }),
+        menuAction(item.isFavorited ? StarOff : Star, item.isFavorited ? "즐겨찾기 해제" : "즐겨찾기 추가", () => { handleToggleFavorite(item.id, item.isFavorited); closeContextMenu(); }),
+        menuSeparator(),
+        menuAction(Trash2, "삭제", () => { handleDelete(item.id); closeContextMenu(); }, { shortcut: "⌘⌫", variant: "destructive" }),
+      ];
+    }
+
+    // 즐겨찾기 소스
+    if (source === "favorite") {
+      return [
+        menuAction(item.isFolder ? FolderOpen : Eye, "열기", () => { handleFileClick(item); closeContextMenu(); }, { shortcut: "⌘O" }),
+        menuAction(StarOff, "즐겨찾기 해제", () => { handleToggleFavorite(item.id, item.isFavorited); closeContextMenu(); }),
+        menuSeparator(),
+        menuAction(Pencil, "이름 변경", () => { startRename(item.id, item.name, "favorite"); closeContextMenu(); }, { shortcut: "⏎" }),
+      ];
+    }
+
+    // 리스트 소스 (기본)
+    return [
+      menuAction(item.isFolder ? FolderOpen : Eye, "열기", () => { handleFileClick(item); closeContextMenu(); }, { shortcut: "⌘O" }),
+      ...(!item.isFolder ? [menuAction(Download, "다운로드", () => { window.open(`/api/files/${item.id}/download`, "_blank"); closeContextMenu(); })] : []),
+      menuAction(item.isFavorited ? StarOff : Star, item.isFavorited ? "즐겨찾기 해제" : "즐겨찾기 추가", () => { handleToggleFavorite(item.id, item.isFavorited); closeContextMenu(); }),
+      menuSeparator(),
+      menuAction(Copy, "복사", () => { handleCopy(); closeContextMenu(); }, { shortcut: "⌘C" }),
+      menuAction(CopyPlus, "복제", () => { handleDuplicate(); closeContextMenu(); }, { shortcut: "⌘D" }),
+      ...(hasClipboard ? [
+        menuAction(ClipboardPaste, "붙여넣기", () => { handlePaste(); closeContextMenu(); }, { shortcut: "⌘V" }),
+        menuAction(FolderInput, "잘라넣기", () => { handleMovePaste(); closeContextMenu(); }, { shortcut: "⌥⌘V" }),
+      ] : []),
+      menuSeparator(),
+      menuAction(Pencil, "이름 변경", () => { startRename(item.id, item.name, source ?? "list"); closeContextMenu(); }, { shortcut: "⏎" }),
+      menuSeparator(),
+      menuAction(Trash2, "삭제", () => { handleDelete(item.id); closeContextMenu(); }, { shortcut: "⌘⌫", variant: "destructive" }),
+    ];
+  }, [contextMenu, selectedIds, clipboard, isMultiSelection, closeContextMenu, setShowNewFolder, handlePaste, handleMovePaste, handleCopy, handleDelete, handleFileClick, handleDuplicate, handleToggleFavorite, startRename]);
 
 
   return (
@@ -234,19 +307,30 @@ export function Drive() {
       ) : (
         <FileUpload folderId={currentFolderId}>
           <div className="flex h-full select-none flex-col">
-            {/* 브레드크럼 */}
-            <Breadcrumbs
-              breadcrumbs={breadcrumbs}
-              showTree={showTree}
-              onToggleTree={() => {
-                if (showTree) {
-                  treePanelRef.current?.collapse();
-                } else {
-                  treePanelRef.current?.expand();
-                }
-              }}
-              onNavigate={navigateToBreadcrumb}
-            />
+            {/* 브레드크럼 + 트리 토글 */}
+            <div className="flex min-w-0 items-center gap-1 border-b bg-muted/30 px-2 py-2 text-sm">
+              <button
+                className="-my-1 shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                onClick={() => {
+                  if (showTree) {
+                    treePanelRef.current?.collapse();
+                  } else {
+                    treePanelRef.current?.expand();
+                  }
+                }}
+              >
+                {showTree ? (
+                  <PanelLeftClose className="size-4" />
+                ) : (
+                  <PanelLeftOpen className="size-4" />
+                )}
+              </button>
+              <Breadcrumbs
+                breadcrumbs={breadcrumbs}
+                onNavigate={navigateToBreadcrumb}
+                className="border-0 bg-transparent px-0 py-0"
+              />
+            </div>
 
             {/* 상단 툴바 */}
             <div className="flex items-center gap-2 border-b px-4 py-2">
@@ -444,26 +528,11 @@ export function Drive() {
 
       <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
         {draggedItem && (
-          <div
-            className="animate-drag-pill-morph flex cursor-grabbing items-center gap-2.5 border bg-background"
-            style={
-              dragRowWidth
-                ? ({ "--drag-row-width": `${dragRowWidth}px` } as React.CSSProperties)
-                : undefined
-            }
-          >
-            <DragOverlayIcon item={draggedItem} isMulti={dragCount > 1} />
-            <span className="truncate text-sm font-medium">
-              {dragCount > 1
-                ? `${dragCount}개 항목`
-                : draggedItem.name}
-            </span>
-            {dragCount > 1 && (
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
-                {dragCount}
-              </span>
-            )}
-          </div>
+          <DragOverlayContent
+            draggedItem={draggedItem}
+            dragCount={dragCount}
+            dragRowWidth={dragRowWidth}
+          />
         )}
       </DragOverlay>
 
@@ -483,609 +552,13 @@ export function Drive() {
 
       {contextMenu && (
         <FileContextMenu
-          contextMenu={contextMenu}
-          isMulti={isMultiSelection(contextMenu.item?.id)}
-          multiCount={selectedIds.size}
-          hasClipboard={!!clipboard}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={menuItems}
           onClose={closeContextMenu}
-          onOpen={(item) => {
-            handleFileClick(item);
-            closeContextMenu();
-          }}
-          onDownload={(item) => {
-            window.open(`/api/files/${item.id}/download`, "_blank");
-            closeContextMenu();
-          }}
-          onToggleFavorite={(item) => {
-            handleToggleFavorite(item.id, item.isFavorited);
-            closeContextMenu();
-          }}
-          onRename={(item) => {
-            startRename(item.id, item.name, contextMenu?.source ?? "list");
-            closeContextMenu();
-          }}
-          onDelete={(item) => {
-            handleDelete(item.id);
-            closeContextMenu();
-          }}
-          onCopy={() => {
-            handleCopy();
-            closeContextMenu();
-          }}
-          onPaste={() => {
-            handlePaste();
-            closeContextMenu();
-          }}
-          onMovePaste={() => {
-            handleMovePaste();
-            closeContextMenu();
-          }}
-          onDuplicate={() => {
-            handleDuplicate();
-            closeContextMenu();
-          }}
-          onNewFolder={() => {
-            setShowNewFolder(true);
-            closeContextMenu();
-          }}
-          onUpload={() => {
-            uploadInputRef.current?.click();
-            closeContextMenu();
-          }}
         />
       )}
     </ResizablePanelGroup>
     </DndContext>
-  );
-}
-
-// ─── DraggableFileRow ───
-
-function DraggableFileRow({
-  item,
-  renamingId,
-  renameValue,
-  onFileClick,
-  onRenameChange,
-  onRenameSubmit,
-  onRenameCancel,
-  isMoving,
-  isGroupDragging,
-  isSelected,
-  isDropDisabled,
-  onSelect,
-  onContextMenu,
-  onDropUpload,
-}: {
-  item: FileItem;
-  renamingId: string | null;
-  renameValue: string;
-  isMoving: boolean;
-  isGroupDragging: boolean;
-  isSelected: boolean;
-  isDropDisabled: boolean;
-  onSelect: (e: React.MouseEvent) => void;
-  onFileClick: (file: FileItem) => void;
-  onContextMenu: (e: React.MouseEvent, item: FileItem) => void;
-  onRenameChange: (value: string) => void;
-  onRenameSubmit: (id: string) => void;
-  onRenameCancel: () => void;
-  onDropUpload: (files: FileList, folderId: string) => void;
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef: setDragRef,
-    isDragging,
-  } = useDraggable({ id: item.id, disabled: renamingId === item.id });
-
-  const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: `list-${item.id}`,
-    data: { folderId: item.id },
-    disabled: isDropDisabled,
-  });
-
-  const ref = useCallback(
-    (node: HTMLElement | null) => {
-      setDragRef(node);
-      if (item.isFolder) setDropRef(node);
-    },
-    [setDragRef, setDropRef, item.isFolder]
-  );
-
-  // 네이티브 파일 드롭 (OS에서 파일을 폴더 위에 드롭)
-  const [nativeDragOver, setNativeDragOver] = useState(false);
-  const dragCounter = useRef(0);
-
-  const nativeDragHandlers = item.isFolder
-    ? {
-        onDragEnter: (e: React.DragEvent) => {
-          if (!e.dataTransfer.types.includes("Files")) return;
-          e.preventDefault();
-          dragCounter.current++;
-          setNativeDragOver(true);
-        },
-        onDragOver: (e: React.DragEvent) => {
-          if (!e.dataTransfer.types.includes("Files")) return;
-          e.preventDefault();
-        },
-        onDragLeave: () => {
-          dragCounter.current--;
-          if (dragCounter.current === 0) setNativeDragOver(false);
-        },
-        onDrop: (e: React.DragEvent) => {
-          e.preventDefault();
-          e.stopPropagation();
-          dragCounter.current = 0;
-          setNativeDragOver(false);
-          if (e.dataTransfer.files.length > 0) {
-            onDropUpload(e.dataTransfer.files, item.id);
-          }
-        },
-      }
-    : {};
-
-  return (
-    <div
-      ref={ref}
-      {...attributes}
-      {...listeners}
-      role="option"
-      aria-selected={isSelected}
-      data-item-id={item.id}
-      {...nativeDragHandlers}
-      className={cn(
-        "group flex cursor-grab items-center gap-3 border-b px-4 py-3 outline-none active:cursor-grabbing",
-        (isDragging || isMoving || isGroupDragging) && "opacity-30",
-        (isOver || nativeDragOver) &&
-          !isDropDisabled &&
-          "bg-primary/10 ring-1 ring-inset ring-primary",
-        isSelected
-          ? "bg-primary/8 hover:bg-primary/12 dark:bg-primary/12 dark:hover:bg-primary/16"
-          : "hover:bg-muted/50"
-      )}
-      onClick={(e) => {
-        if (!isDragging) onSelect(e);
-      }}
-      onDoubleClick={() => {
-        if (!isDragging) onFileClick(item);
-      }}
-      onContextMenu={(e) => onContextMenu(e, item)}
-    >
-      <span className="shrink-0">{getFileIconComponent(item, "size-5")}</span>
-
-      <div className={cn("min-w-0 flex-1", renamingId === item.id ? "overflow-visible" : "overflow-hidden")}>
-        {renamingId === item.id ? (
-          <Input
-            value={renameValue}
-            onChange={(e) => onRenameChange(e.target.value)}
-            className="h-auto! select-text rounded-sm border-0 px-1 py-0.5 text-sm shadow-none ring-1 ring-ring"
-            autoFocus
-            onFocus={(e) => {
-              const input = e.currentTarget;
-              if (item.isFolder) {
-                input.select();
-              } else {
-                const dotIndex = input.value.lastIndexOf(".");
-                input.setSelectionRange(0, dotIndex > 0 ? dotIndex : input.value.length);
-              }
-            }}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.nativeEvent.isComposing) return;
-              if (e.key === "Enter") onRenameSubmit(item.id);
-              if (e.key === "Escape") onRenameCancel();
-            }}
-            onBlur={() => onRenameSubmit(item.id)}
-          />
-        ) : (
-          <MiddleTruncate className="text-sm">{item.name}</MiddleTruncate>
-        )}
-      </div>
-
-      <span className="w-24 shrink-0 text-right text-sm text-muted-foreground">
-        {item.isFolder ? "-" : item.size != null ? formatFileSize(item.size) : "-"}
-      </span>
-
-      <span className="w-28 shrink-0 text-right text-sm text-muted-foreground">
-        {new Date(item.updatedAt).toLocaleDateString("ko-KR")}
-      </span>
-
-    </div>
-  );
-}
-
-// ─── ParentFolderRow (../) ───
-
-function ParentFolderRow({
-  parentFolderId,
-  focused,
-  onClick,
-}: {
-  parentFolderId: string | null;
-  focused?: boolean;
-  onClick: () => void;
-}) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: "parent-folder",
-    data: { folderId: parentFolderId },
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      data-parent-folder-row
-      className={cn(
-        "flex cursor-pointer items-center gap-3 border-b px-4 py-3 text-muted-foreground hover:bg-accent/30",
-        isOver && "bg-primary/10 ring-1 ring-inset ring-primary",
-        focused && "bg-primary/8 dark:bg-primary/12",
-      )}
-      onDoubleClick={onClick}
-    >
-      <CornerLeftUp className="size-5" />
-      <span className="flex-1 text-sm">상위 폴더</span>
-    </div>
-  );
-}
-
-// ─── DragOverlayIcon ───
-
-function DragOverlayIcon({ item, isMulti }: { item: FileItem; isMulti?: boolean }) {
-  const className = "size-5 shrink-0";
-  if (isMulti) return <Files className={cn(className, "text-muted-foreground")} />;
-  return <>{getFileIconComponent(item, className)}</>;
-}
-
-// ─── FileContextMenu (ContextMenuPortal 사용) ───
-
-function FileContextMenu({
-  contextMenu,
-  isMulti,
-  multiCount,
-  hasClipboard,
-  onClose,
-  onOpen,
-  onDownload,
-  onToggleFavorite,
-  onRename,
-  onDelete,
-  onCopy,
-  onPaste,
-  onMovePaste,
-  onDuplicate,
-  onNewFolder,
-  onUpload,
-}: {
-  contextMenu: ContextMenuState;
-  isMulti: boolean;
-  multiCount: number;
-  hasClipboard: boolean;
-  onClose: () => void;
-  onOpen: (item: FileItem) => void;
-  onDownload: (item: FileItem) => void;
-  onToggleFavorite: (item: FileItem) => void;
-  onRename: (item: FileItem) => void;
-  onDelete: (item: FileItem) => void;
-  onCopy: () => void;
-  onPaste: () => void;
-  onMovePaste: () => void;
-  onDuplicate: () => void;
-  onNewFolder: () => void;
-  onUpload: () => void;
-}) {
-  const { item } = contextMenu;
-
-  return (
-    <ContextMenuPortal x={contextMenu.x} y={contextMenu.y} onClose={onClose} minWidth={180}>
-      {item ? (
-        isMulti ? (
-          // 다중 선택 컨텍스트 메뉴
-          <>
-            <ContextMenuButton
-              icon={Copy}
-              label={`${multiCount}개 항목 복사`}
-              shortcut="⌘C"
-              onClick={onCopy}
-            />
-            {hasClipboard && (
-              <>
-                <div className="my-1 h-px bg-border" />
-                <ContextMenuButton
-                  icon={ClipboardPaste}
-                  label="붙여넣기"
-                  shortcut="⌘V"
-                  onClick={onPaste}
-                />
-                <ContextMenuButton
-                  icon={FolderInput}
-                  label="잘라넣기"
-                  shortcut="⌥⌘V"
-                  onClick={onMovePaste}
-                />
-              </>
-            )}
-            <div className="my-1 h-px bg-border" />
-            <ContextMenuButton
-              icon={Trash2}
-              label={`${multiCount}개 항목 삭제`}
-              shortcut="⌘⌫"
-              variant="destructive"
-              onClick={() => onDelete(item)}
-            />
-          </>
-        ) : (
-          // 단건 컨텍스트 메뉴 (source별 분기)
-          <>
-            {contextMenu.source === "tree" ? (
-              <>
-                <ContextMenuButton
-                  icon={Pencil}
-                  label="이름 변경"
-                  shortcut="⏎"
-                  onClick={() => onRename(item)}
-                />
-                <ContextMenuButton
-                  icon={item.isFavorited ? StarOff : Star}
-                  label={item.isFavorited ? "즐겨찾기 해제" : "즐겨찾기 추가"}
-                  onClick={() => onToggleFavorite(item)}
-                />
-                <div className="my-1 h-px bg-border" />
-                <ContextMenuButton
-                  icon={Trash2}
-                  label="삭제"
-                  shortcut="⌘⌫"
-                  variant="destructive"
-                  onClick={() => onDelete(item)}
-                />
-              </>
-            ) : contextMenu.source === "favorite" ? (
-              <>
-                <ContextMenuButton
-                  icon={item.isFolder ? FolderOpen : Eye}
-                  label="열기"
-                  shortcut="⌘O"
-                  onClick={() => onOpen(item)}
-                />
-                <ContextMenuButton
-                  icon={StarOff}
-                  label="즐겨찾기 해제"
-                  onClick={() => onToggleFavorite(item)}
-                />
-                <div className="my-1 h-px bg-border" />
-                <ContextMenuButton
-                  icon={Pencil}
-                  label="이름 변경"
-                  shortcut="⏎"
-                  onClick={() => onRename(item)}
-                />
-              </>
-            ) : (
-              <>
-                <ContextMenuButton
-                  icon={item.isFolder ? FolderOpen : Eye}
-                  label="열기"
-                  shortcut="⌘O"
-                  onClick={() => onOpen(item)}
-                />
-                {!item.isFolder && (
-                  <ContextMenuButton
-                    icon={Download}
-                    label="다운로드"
-                    onClick={() => onDownload(item)}
-                  />
-                )}
-                <ContextMenuButton
-                  icon={item.isFavorited ? StarOff : Star}
-                  label={item.isFavorited ? "즐겨찾기 해제" : "즐겨찾기 추가"}
-                  onClick={() => onToggleFavorite(item)}
-                />
-                <div className="my-1 h-px bg-border" />
-                <ContextMenuButton
-                  icon={Copy}
-                  label="복사"
-                  shortcut="⌘C"
-                  onClick={onCopy}
-                />
-                <ContextMenuButton
-                  icon={CopyPlus}
-                  label="복제"
-                  shortcut="⌘D"
-                  onClick={onDuplicate}
-                />
-                {hasClipboard && (
-                  <>
-                    <ContextMenuButton
-                      icon={ClipboardPaste}
-                      label="붙여넣기"
-                      shortcut="⌘V"
-                      onClick={onPaste}
-                    />
-                    <ContextMenuButton
-                      icon={FolderInput}
-                      label="잘라넣기"
-                      shortcut="⌥⌘V"
-                      onClick={onMovePaste}
-                    />
-                  </>
-                )}
-                <div className="my-1 h-px bg-border" />
-                <ContextMenuButton
-                  icon={Pencil}
-                  label="이름 변경"
-                  shortcut="⏎"
-                  onClick={() => onRename(item)}
-                />
-                <div className="my-1 h-px bg-border" />
-                <ContextMenuButton
-                  icon={Trash2}
-                  label="삭제"
-                  shortcut="⌘⌫"
-                  variant="destructive"
-                  onClick={() => onDelete(item)}
-                />
-              </>
-            )}
-          </>
-        )
-      ) : (
-        <>
-          <ContextMenuButton
-            icon={FolderPlus}
-            label="새 폴더"
-            shortcut="⇧N"
-            onClick={onNewFolder}
-          />
-          <ContextMenuButton
-            icon={Upload}
-            label="파일 업로드"
-            onClick={onUpload}
-          />
-          {hasClipboard && (
-            <>
-              <div className="my-1 h-px bg-border" />
-              <ContextMenuButton
-                icon={ClipboardPaste}
-                label="붙여넣기"
-                shortcut="⌘V"
-                onClick={onPaste}
-              />
-              <ContextMenuButton
-                icon={FolderInput}
-                label="잘라넣기"
-                shortcut="⌥⌘V"
-                onClick={onMovePaste}
-              />
-            </>
-          )}
-        </>
-      )}
-    </ContextMenuPortal>
-  );
-}
-
-// ─── Breadcrumbs ───
-
-/** 깊이가 깊어지면 중간 경로를 "..."으로 축약. root + 마지막 2개는 항상 표시 */
-function collapseBreadcrumbs(
-  breadcrumbs: { id: string | null; name: string }[]
-) {
-  if (breadcrumbs.length <= 5) return breadcrumbs;
-
-  // root + ... + 마지막 2개
-  return [
-    breadcrumbs[0],
-    { id: "__ellipsis__", name: "..." },
-    breadcrumbs[breadcrumbs.length - 2],
-    breadcrumbs[breadcrumbs.length - 1],
-  ];
-}
-
-function Breadcrumbs({
-  breadcrumbs,
-  showTree,
-  onToggleTree,
-  onNavigate,
-}: {
-  breadcrumbs: { id: string | null; name: string }[];
-  showTree: boolean;
-  onToggleTree: () => void;
-  onNavigate: (index: number) => void;
-}) {
-  const collapsed = collapseBreadcrumbs(breadcrumbs);
-
-  // collapsed → original index 매핑
-  const getOriginalIndex = (collapsedIndex: number) => {
-    if (breadcrumbs.length <= 5) return collapsedIndex;
-    if (collapsedIndex === 0) return 0;
-    if (collapsedIndex === 1) return -1; // ellipsis
-    // 마지막 2개: collapsed[2] → breadcrumbs[-2], collapsed[3] → breadcrumbs[-1]
-    return breadcrumbs.length - (collapsed.length - collapsedIndex);
-  };
-
-  return (
-    <div className="flex min-w-0 items-center gap-1 border-b bg-muted/30 px-2 py-2 text-sm">
-      <button
-        className="-my-1 shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-        onClick={onToggleTree}
-      >
-        {showTree ? (
-          <PanelLeftClose className="size-4" />
-        ) : (
-          <PanelLeftOpen className="size-4" />
-        )}
-      </button>
-      {collapsed.map((crumb, i) => (
-        <Fragment key={crumb.id ?? "root"}>
-          {i > 0 && (
-            <ChevronRight className="size-3 shrink-0 text-muted-foreground" />
-          )}
-          {crumb.id === "__ellipsis__" ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="shrink-0 text-muted-foreground hover:underline">
-                  ...
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="max-w-[240px]">
-                {breadcrumbs.slice(1, -1).map((mid, midIdx) => (
-                  <DropdownMenuItem
-                    key={mid.id}
-                    title={mid.name}
-                    onClick={() => onNavigate(midIdx + 1)}
-                  >
-                    <span className="truncate">{mid.name}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <button
-              className={cn(
-                "max-w-[200px] shrink truncate hover:underline",
-                i === collapsed.length - 1
-                  ? "font-medium"
-                  : "text-muted-foreground"
-              )}
-              title={crumb.name}
-              onClick={() => onNavigate(getOriginalIndex(i))}
-            >
-              {crumb.name}
-            </button>
-          )}
-        </Fragment>
-      ))}
-    </div>
-  );
-}
-
-// ─── ContextMenuButton ───
-
-function ContextMenuButton({
-  icon: Icon,
-  label,
-  shortcut,
-  variant,
-  onClick,
-}: {
-  icon: LucideIcon;
-  label: string;
-  shortcut?: string;
-  variant?: "destructive";
-  onClick: () => void;
-}) {
-  return (
-    <button
-      className={cn(
-        "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
-        variant === "destructive" && "text-destructive hover:text-destructive"
-      )}
-      onClick={onClick}
-    >
-      <Icon className="size-3.5" />
-      <span className="flex-1 text-left">{label}</span>
-      {shortcut && (
-        <span className="ml-auto text-xs text-muted-foreground">{shortcut}</span>
-      )}
-    </button>
   );
 }
