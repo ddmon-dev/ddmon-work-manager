@@ -36,6 +36,6 @@ export interface FileItem {
   author: string | null;
   createdAt: string;
   updatedAt: string;
-  ownerType: string;
+  ownerType: "drive" | "partner";
   ownerId: string | null;
 }

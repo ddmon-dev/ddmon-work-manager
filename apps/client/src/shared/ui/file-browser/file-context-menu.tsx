@@ -52,7 +52,7 @@ export function FileContextMenu({
             label={item.label}
             shortcut={item.shortcut}
             variant={item.variant}
-            onClick={item.onClick}
+            onClick={() => { item.onClick(); onClose(); }}
           />
         )
       )}

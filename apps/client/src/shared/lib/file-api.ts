@@ -8,8 +8,10 @@ import { api } from "./api-client";
 import { queryKeys } from "./query-keys";
 import type { FileItem } from "./file-types";
 
+export type FileOwnerType = "drive" | "partner";
+
 export interface FileOwner {
-  ownerType: string;
+  ownerType: FileOwnerType;
   ownerId: string;
 }
 

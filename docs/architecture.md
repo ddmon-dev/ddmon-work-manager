@@ -166,7 +166,7 @@ shared/ui/file-browser/
 ├── parent-folder-row.tsx            # 상위 폴더 행 (드롭 대상)
 ├── draggable-file-row.tsx           # 파일/폴더 행 (DnD + 네이티브 파일 드롭)
 ├── drag-overlay-content.tsx         # 드래그 중 오버레이
-├── file-context-menu.tsx            # 컨텍스트 메뉴 렌더러 (menuAction/menuSeparator 헬퍼)
+├── file-context-menu.tsx            # 컨텍스트 메뉴 렌더러 (menuAction/menuSeparator 헬퍼, action 클릭 시 자동 닫기)
 └── context-menu-button.tsx          # 메뉴 버튼 단일 항목
 ```
 
@@ -175,6 +175,8 @@ shared/ui/file-browser/
 - **드라이브**: `useDrive()` (useFileBrowser 래핑 + 즐겨찾기/휴지통) → `useFileDnd({ onTrashDrop })` → 트리/즐겨찾기/리스트 소스별 메뉴 분기
 - **모듈 파일 브라우저**: `useFileBrowser({ owner, deleteMode })` → `useFileDnd()` → 단순화된 메뉴 (즐겨찾기/트리 없음)
 - **menuItems**: 각 소비자가 `FILE_ACTIONS` 상수 + `menuAction` 헬퍼로 조합. 소스 분기 차이로 공통화하지 않음
+- **컨텍스트 메뉴 닫기**: `FileContextMenu`가 action 클릭 시 자동으로 `onClose()` 호출. 개별 콜백에서 닫기 처리 불필요
+- **owner 타입**: `FileOwnerType = "drive" | "partner"` 리터럴 유니온 (`shared/lib/file-api.ts`)
 
 ### 데이터 페칭 패턴
 

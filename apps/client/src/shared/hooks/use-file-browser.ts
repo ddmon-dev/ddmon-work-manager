@@ -434,9 +434,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
         variant: "destructive",
         onConfirm: async () => {
           if (isPermanent) {
-            for (const itemId of ids) {
-              await permanentDeleteFile.mutateAsync(itemId);
-            }
+            await Promise.all(ids.map((id) => permanentDeleteFile.mutateAsync(id)));
           } else {
             if (ids.length === 1) {
               await deleteFile.mutateAsync(ids[0]);
@@ -523,7 +521,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     return nav.currentFolderId;
   }, [selectedIds, items, nav.currentFolderId]);
 
-  const handlePaste = useCallback(async () => {
+  const performPaste = useCallback(async (mode: "copy" | "move") => {
     if (!clipboard) return;
     const targetFolderId = getPasteTargetFolderId();
     if (targetFolderId && clipboard.ids.includes(targetFolderId)) {
@@ -531,35 +529,21 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
       return;
     }
     try {
-      await copyFilesMutation.mutateAsync({
-        ids: clipboard.ids,
-        folderId: targetFolderId,
-      });
-      toast.success(FILE_MESSAGES.PASTED_COPY);
+      if (mode === "copy") {
+        await copyFilesMutation.mutateAsync({ ids: clipboard.ids, folderId: targetFolderId });
+        toast.success(FILE_MESSAGES.PASTED_COPY);
+      } else {
+        await batchMoveFiles.mutateAsync({ ids: clipboard.ids, folderId: targetFolderId });
+        toast.success(FILE_MESSAGES.PASTED_MOVE);
+      }
       setClipboard(null);
     } catch {
-      toast.error(FILE_MESSAGES.PASTE_FAILED);
+      toast.error(mode === "copy" ? FILE_MESSAGES.PASTE_FAILED : FILE_MESSAGES.MOVE_PASTE_FAILED);
     }
-  }, [clipboard, getPasteTargetFolderId, copyFilesMutation, alert]);
+  }, [clipboard, getPasteTargetFolderId, copyFilesMutation, batchMoveFiles, alert]);
 
-  const handleMovePaste = useCallback(async () => {
-    if (!clipboard) return;
-    const targetFolderId = getPasteTargetFolderId();
-    if (targetFolderId && clipboard.ids.includes(targetFolderId)) {
-      alert({ variant: "error", title: FILE_MESSAGES.PASTE_BLOCKED_TITLE, description: FILE_MESSAGES.PASTE_BLOCKED_DESC });
-      return;
-    }
-    try {
-      await batchMoveFiles.mutateAsync({
-        ids: clipboard.ids,
-        folderId: targetFolderId,
-      });
-      toast.success(FILE_MESSAGES.PASTED_MOVE);
-      setClipboard(null);
-    } catch {
-      toast.error(FILE_MESSAGES.MOVE_PASTE_FAILED);
-    }
-  }, [clipboard, getPasteTargetFolderId, batchMoveFiles, alert]);
+  const handlePaste = useCallback(() => performPaste("copy"), [performPaste]);
+  const handleMovePaste = useCallback(() => performPaste("move"), [performPaste]);
 
   const handleDuplicate = useCallback(async () => {
     if (selectedIds.size !== 1) return;

@@ -120,12 +120,12 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
     // 빈 영역 우클릭
     if (!item) {
       return [
-        menuAction(a.NEW_FOLDER.icon, a.NEW_FOLDER.label, () => { setShowNewFolder(true); closeContextMenu(); }, { shortcut: a.NEW_FOLDER.shortcut }),
-        menuAction(a.UPLOAD.icon, a.UPLOAD.label, () => { uploadInputRef.current?.click(); closeContextMenu(); }),
+        menuAction(a.NEW_FOLDER.icon, a.NEW_FOLDER.label, () => setShowNewFolder(true), { shortcut: a.NEW_FOLDER.shortcut }),
+        menuAction(a.UPLOAD.icon, a.UPLOAD.label, () => uploadInputRef.current?.click()),
         ...(hasClipboard ? [
           menuSeparator(),
-          menuAction(a.PASTE.icon, a.PASTE.label, () => { handlePaste(); closeContextMenu(); }, { shortcut: a.PASTE.shortcut }),
-          menuAction(a.MOVE_PASTE.icon, a.MOVE_PASTE.label, () => { handleMovePaste(); closeContextMenu(); }, { shortcut: a.MOVE_PASTE.shortcut }),
+          menuAction(a.PASTE.icon, a.PASTE.label, () => handlePaste(), { shortcut: a.PASTE.shortcut }),
+          menuAction(a.MOVE_PASTE.icon, a.MOVE_PASTE.label, () => handleMovePaste(), { shortcut: a.MOVE_PASTE.shortcut }),
         ] : []),
       ];
     }
@@ -133,34 +133,34 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
     // 다중 선택
     if (isMulti) {
       return [
-        menuAction(a.COPY.icon, multiLabel(a.COPY.label, selectedIds.size), () => { handleCopy(); closeContextMenu(); }, { shortcut: a.COPY.shortcut }),
+        menuAction(a.COPY.icon, multiLabel(a.COPY.label, selectedIds.size), () => handleCopy(), { shortcut: a.COPY.shortcut }),
         ...(hasClipboard ? [
           menuSeparator(),
-          menuAction(a.PASTE.icon, a.PASTE.label, () => { handlePaste(); closeContextMenu(); }, { shortcut: a.PASTE.shortcut }),
-          menuAction(a.MOVE_PASTE.icon, a.MOVE_PASTE.label, () => { handleMovePaste(); closeContextMenu(); }, { shortcut: a.MOVE_PASTE.shortcut }),
+          menuAction(a.PASTE.icon, a.PASTE.label, () => handlePaste(), { shortcut: a.PASTE.shortcut }),
+          menuAction(a.MOVE_PASTE.icon, a.MOVE_PASTE.label, () => handleMovePaste(), { shortcut: a.MOVE_PASTE.shortcut }),
         ] : []),
         menuSeparator(),
-        menuAction(a.DELETE.icon, multiLabel(a.DELETE.label, selectedIds.size), () => { handleDelete(item.id); closeContextMenu(); }, { shortcut: a.DELETE.shortcut, variant: "destructive" }),
+        menuAction(a.DELETE.icon, multiLabel(a.DELETE.label, selectedIds.size), () => handleDelete(item.id), { shortcut: a.DELETE.shortcut, variant: "destructive" }),
       ];
     }
 
     // 단건
     return [
-      menuAction(item.isFolder ? a.OPEN_FOLDER.icon : a.OPEN_FILE.icon, a.OPEN_FILE.label, () => { handleFileClick(item); closeContextMenu(); }, { shortcut: a.OPEN_FILE.shortcut }),
-      ...(!item.isFolder ? [menuAction(a.DOWNLOAD.icon, a.DOWNLOAD.label, () => { window.open(`/api/files/${item.id}/download`, "_blank"); closeContextMenu(); })] : []),
+      menuAction(item.isFolder ? a.OPEN_FOLDER.icon : a.OPEN_FILE.icon, a.OPEN_FILE.label, () => handleFileClick(item), { shortcut: a.OPEN_FILE.shortcut }),
+      ...(!item.isFolder ? [menuAction(a.DOWNLOAD.icon, a.DOWNLOAD.label, () => window.open(`/api/files/${item.id}/download`, "_blank"))] : []),
       menuSeparator(),
-      menuAction(a.COPY.icon, a.COPY.label, () => { handleCopy(); closeContextMenu(); }, { shortcut: a.COPY.shortcut }),
-      menuAction(a.DUPLICATE.icon, a.DUPLICATE.label, () => { handleDuplicate(); closeContextMenu(); }, { shortcut: a.DUPLICATE.shortcut }),
+      menuAction(a.COPY.icon, a.COPY.label, () => handleCopy(), { shortcut: a.COPY.shortcut }),
+      menuAction(a.DUPLICATE.icon, a.DUPLICATE.label, () => handleDuplicate(), { shortcut: a.DUPLICATE.shortcut }),
       ...(hasClipboard ? [
-        menuAction(a.PASTE.icon, a.PASTE.label, () => { handlePaste(); closeContextMenu(); }, { shortcut: a.PASTE.shortcut }),
-        menuAction(a.MOVE_PASTE.icon, a.MOVE_PASTE.label, () => { handleMovePaste(); closeContextMenu(); }, { shortcut: a.MOVE_PASTE.shortcut }),
+        menuAction(a.PASTE.icon, a.PASTE.label, () => handlePaste(), { shortcut: a.PASTE.shortcut }),
+        menuAction(a.MOVE_PASTE.icon, a.MOVE_PASTE.label, () => handleMovePaste(), { shortcut: a.MOVE_PASTE.shortcut }),
       ] : []),
       menuSeparator(),
-      menuAction(a.RENAME.icon, a.RENAME.label, () => { startRename(item.id, item.name, "list"); closeContextMenu(); }, { shortcut: a.RENAME.shortcut }),
+      menuAction(a.RENAME.icon, a.RENAME.label, () => startRename(item.id, item.name, "list"), { shortcut: a.RENAME.shortcut }),
       menuSeparator(),
-      menuAction(a.DELETE.icon, a.DELETE.label, () => { handleDelete(item.id); closeContextMenu(); }, { shortcut: a.DELETE.shortcut, variant: "destructive" }),
+      menuAction(a.DELETE.icon, a.DELETE.label, () => handleDelete(item.id), { shortcut: a.DELETE.shortcut, variant: "destructive" }),
     ];
-  }, [contextMenu, selectedIds, clipboard, isMultiSelection, closeContextMenu, setShowNewFolder, handlePaste, handleMovePaste, handleCopy, handleDelete, handleFileClick, handleDuplicate, startRename]);
+  }, [contextMenu, selectedIds, clipboard, isMultiSelection, setShowNewFolder, handlePaste, handleMovePaste, handleCopy, handleDelete, handleFileClick, handleDuplicate, startRename]);
 
   return (
     <div className="space-y-3">
