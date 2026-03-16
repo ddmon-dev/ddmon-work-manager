@@ -7,13 +7,13 @@ import {
   ManageSheetClose,
   ManageSheetModeChange,
   MemoSection,
+  FileSection,
 } from "../_base/ui";
 import {
   useCreatePartnerMemo,
   useUpdatePartnerMemo,
   useDeletePartnerMemo,
 } from "./api";
-import { FileSection } from "../_base/ui/file-section";
 import type { PartnerWithMemos } from "./types";
 
 const partnerMemoHooks = {
