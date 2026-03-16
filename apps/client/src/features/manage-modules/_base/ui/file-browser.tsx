@@ -1,5 +1,6 @@
-import { useRef, useMemo } from "react";
+import { useState, useRef, useMemo } from "react";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
+import FocusTrap from "focus-trap-react";
 import {
   File as FileIcon,
   FolderPlus,
@@ -35,6 +36,7 @@ import {
   DraggableFileRow,
   DragOverlayContent,
   FileContextMenu,
+  ScopedDialogRenderer,
   menuAction,
   menuSeparator,
   type MenuItem,
@@ -93,8 +95,14 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
     handleDragSelectStart,
     wasDragSelectingRef,
     handleKeyDown,
+    dialogState,
+    onDialogConfirm,
+    onDialogCancel,
+    onDialogAlertClose,
+    portalRef,
   } = useFileBrowser({ owner, deleteMode, rootLabel: ownerName });
 
+  const [trapActive, setTrapActive] = useState(false);
   const uploadFile = useUploadFile(owner);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const newFolderRef = useRef<HTMLDivElement>(null);
@@ -172,172 +180,206 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
         onDragEnd={dnd.handleDragEnd}
       >
         <FileUploadZone folderId={currentFolderId} owner={owner}>
-          <div className="flex select-none flex-col">
-            {/* 헤더 */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold">파일</h3>
-                {selectedIds.size > 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    {selectedIds.size}개 선택
-                  </span>
+          <FocusTrap
+            active={trapActive}
+            focusTrapOptions={{
+              clickOutsideDeactivates: true,
+              escapeDeactivates: false,
+              initialFocus: false,
+              setReturnFocus: false,
+              fallbackFocus: () => dragContainerRef.current!,
+              onDeactivate: () => setTrapActive(false),
+            }}
+          >
+            <div
+              className="flex select-none flex-col"
+              onMouseDown={() => !trapActive && setTrapActive(true)}
+            >
+              {/* 헤더 */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold">파일</h3>
+                  {selectedIds.size > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {selectedIds.size}개 선택
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="xs">
+                        <ArrowUpDown className="size-3" />
+                        정렬
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" container={portalRef.current}>
+                      <DropdownMenuItem onClick={() => toggleSort("name")}>
+                        이름순{" "}
+                        {sort === "name" && (order === "asc" ? "↑" : "↓")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toggleSort("date")}>
+                        날짜순{" "}
+                        {sort === "date" && (order === "asc" ? "↑" : "↓")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toggleSort("size")}>
+                        크기순{" "}
+                        {sort === "size" && (order === "asc" ? "↑" : "↓")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    onClick={() => setShowNewFolder(true)}
+                  >
+                    <FolderPlus className="size-3" />
+                    새 폴더
+                  </Button>
+                  <UploadButton folderId={currentFolderId} owner={owner} size="xs" />
+                </div>
+              </div>
+
+              {/* 파일 목록 */}
+              <div
+                ref={dragContainerRef}
+                tabIndex={-1}
+                onKeyDown={handleKeyDown}
+                className="relative mt-2 flex h-60 flex-col divide-y overflow-y-auto rounded-md border outline-none"
+                onMouseDown={handleDragSelectStart}
+                onClick={(e) => {
+                  if (wasDragSelectingRef.current) {
+                    wasDragSelectingRef.current = false;
+                    return;
+                  }
+                  if (e.target === e.currentTarget) {
+                    clearSelection();
+                  }
+                }}
+                onContextMenu={(e) => {
+                  if (!(e.target as HTMLElement).closest("[data-item-id]")) {
+                    openContextMenu(e, null);
+                  }
+                }}
+              >
+                {/* 브레드크럼 */}
+                <Breadcrumbs
+                  breadcrumbs={breadcrumbs}
+                  onNavigate={navigateToBreadcrumb}
+                  compact
+                />
+
+                {/* 상위 폴더 */}
+                {!isLoading && currentFolderId && (
+                  <ParentFolderRow
+                    parentFolderId={
+                      breadcrumbs.length >= 2
+                        ? breadcrumbs[breadcrumbs.length - 2].id
+                        : null
+                    }
+                    focused={parentFolderFocused}
+                    onClick={() =>
+                      navigateToBreadcrumb(breadcrumbs.length - 2)
+                    }
+                    compact
+                  />
+                )}
+
+                {/* 새 폴더 입력 */}
+                {showNewFolder && (
+                  <NewFolderInput
+                    ref={newFolderRef}
+                    value={newFolderName}
+                    onChange={setNewFolderName}
+                    onCreate={handleCreateFolder}
+                    onCancel={cancelNewFolder}
+                    compact
+                  />
+                )}
+
+                {!isLoading && items?.length === 0 && !showNewFolder ? (
+                  <Empty className="flex-1 border-0 py-4!">
+                    <EmptyHeader className="gap-1">
+                      <EmptyMedia variant="icon" className="mb-2 size-8">
+                        <FileIcon className="size-5" />
+                      </EmptyMedia>
+                      <EmptyTitle className="text-xs">파일이 없습니다</EmptyTitle>
+                      <EmptyDescription className="text-[11px]">
+                        파일을 업로드하거나 폴더를 생성하세요
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                ) : (
+                  <div
+                    role="listbox"
+                    aria-multiselectable
+                    aria-label="파일 목록"
+                    className="divide-y"
+                  >
+                    {items?.map((item) => (
+                      <DraggableFileRow
+                        key={item.id}
+                        item={item}
+                        renamingId={
+                          renaming?.source === "list" ? renaming.id : null
+                        }
+                        renameValue={renaming?.value ?? ""}
+                        isMoving={item.id === dnd.movingId}
+                        isGroupDragging={
+                          !!dnd.draggedItem &&
+                          selectedIds.has(dnd.draggedItem.id) &&
+                          selectedIds.has(item.id)
+                        }
+                        isSelected={selectedIds.has(item.id)}
+                        isDropDisabled={dnd.isDropDisabled(item)}
+                        onSelect={(e) => selectItem(item.id, e)}
+                        onFileClick={handleFileClick}
+                        onContextMenu={openContextMenu}
+                        onRenameChange={setRenameValue}
+                        onRenameSubmit={handleRename}
+                        onRenameCancel={cancelRename}
+                        onDropUpload={dnd.handleDropUpload}
+                        compact
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* 드래그 선택 사각형 */}
+                {dragRect && (
+                  <div
+                    className="pointer-events-none fixed z-10 border border-primary/50 bg-primary/10"
+                    style={{
+                      left: dragRect.x,
+                      top: dragRect.y,
+                      width: dragRect.width,
+                      height: dragRect.height,
+                    }}
+                  />
                 )}
               </div>
-              <div className="flex items-center gap-1">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="xs">
-                      <ArrowUpDown className="size-3" />
-                      정렬
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => toggleSort("name")}>
-                      이름순{" "}
-                      {sort === "name" && (order === "asc" ? "↑" : "↓")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toggleSort("date")}>
-                      날짜순{" "}
-                      {sort === "date" && (order === "asc" ? "↑" : "↓")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toggleSort("size")}>
-                      크기순{" "}
-                      {sort === "size" && (order === "asc" ? "↑" : "↓")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
 
-                <Button
-                  variant="outline"
-                  size="xs"
-                  onClick={() => setShowNewFolder(true)}
-                >
-                  <FolderPlus className="size-3" />
-                  새 폴더
-                </Button>
-                <UploadButton folderId={currentFolderId} owner={owner} size="xs" />
-              </div>
-            </div>
-
-            {/* 파일 목록 */}
-            <div
-              ref={dragContainerRef}
-              tabIndex={-1}
-              onKeyDown={handleKeyDown}
-              className="relative mt-2 flex h-60 flex-col divide-y overflow-y-auto rounded-md border outline-none"
-              onMouseDown={handleDragSelectStart}
-              onClick={(e) => {
-                if (wasDragSelectingRef.current) {
-                  wasDragSelectingRef.current = false;
-                  return;
-                }
-                if (e.target === e.currentTarget) {
-                  clearSelection();
-                }
-              }}
-              onContextMenu={(e) => {
-                if (!(e.target as HTMLElement).closest("[data-item-id]")) {
-                  openContextMenu(e, null);
-                }
-              }}
-            >
-              {/* 브레드크럼 */}
-              <Breadcrumbs
-                breadcrumbs={breadcrumbs}
-                onNavigate={navigateToBreadcrumb}
-                compact
+              {/* Portal 영역 (overflow 밖, 트랩 안) */}
+              <ScopedDialogRenderer
+                dialogState={dialogState}
+                onConfirm={onDialogConfirm}
+                onCancel={onDialogCancel}
+                onAlertClose={onDialogAlertClose}
+                container={portalRef.current}
               />
-
-              {/* 상위 폴더 */}
-              {!isLoading && currentFolderId && (
-                <ParentFolderRow
-                  parentFolderId={
-                    breadcrumbs.length >= 2
-                      ? breadcrumbs[breadcrumbs.length - 2].id
-                      : null
-                  }
-                  focused={parentFolderFocused}
-                  onClick={() =>
-                    navigateToBreadcrumb(breadcrumbs.length - 2)
-                  }
-                  compact
+              {contextMenu && (
+                <FileContextMenu
+                  x={contextMenu.x}
+                  y={contextMenu.y}
+                  items={menuItems}
+                  onClose={closeContextMenu}
+                  container={portalRef.current}
                 />
               )}
-
-              {/* 새 폴더 입력 */}
-              {showNewFolder && (
-                <NewFolderInput
-                  ref={newFolderRef}
-                  value={newFolderName}
-                  onChange={setNewFolderName}
-                  onCreate={handleCreateFolder}
-                  onCancel={cancelNewFolder}
-                  compact
-                />
-              )}
-
-              {!isLoading && items?.length === 0 && !showNewFolder ? (
-                <Empty className="flex-1 border-0 py-4!">
-                  <EmptyHeader className="gap-1">
-                    <EmptyMedia variant="icon" className="mb-2 size-8">
-                      <FileIcon className="size-5" />
-                    </EmptyMedia>
-                    <EmptyTitle className="text-xs">파일이 없습니다</EmptyTitle>
-                    <EmptyDescription className="text-[11px]">
-                      파일을 업로드하거나 폴더를 생성하세요
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              ) : (
-                <div
-                  role="listbox"
-                  aria-multiselectable
-                  aria-label="파일 목록"
-                  className="divide-y"
-                >
-                  {items?.map((item) => (
-                    <DraggableFileRow
-                      key={item.id}
-                      item={item}
-                      renamingId={
-                        renaming?.source === "list" ? renaming.id : null
-                      }
-                      renameValue={renaming?.value ?? ""}
-                      isMoving={item.id === dnd.movingId}
-                      isGroupDragging={
-                        !!dnd.draggedItem &&
-                        selectedIds.has(dnd.draggedItem.id) &&
-                        selectedIds.has(item.id)
-                      }
-                      isSelected={selectedIds.has(item.id)}
-                      isDropDisabled={dnd.isDropDisabled(item)}
-                      onSelect={(e) => selectItem(item.id, e)}
-                      onFileClick={handleFileClick}
-                      onContextMenu={openContextMenu}
-                      onRenameChange={setRenameValue}
-                      onRenameSubmit={handleRename}
-                      onRenameCancel={cancelRename}
-                      onDropUpload={dnd.handleDropUpload}
-                      compact
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* 드래그 선택 사각형 */}
-              {dragRect && (
-                <div
-                  className="pointer-events-none fixed z-10 border border-primary/50 bg-primary/10"
-                  style={{
-                    left: dragRect.x,
-                    top: dragRect.y,
-                    width: dragRect.width,
-                    height: dragRect.height,
-                  }}
-                />
-              )}
+              <div ref={portalRef} />
             </div>
-          </div>
+          </FocusTrap>
         </FileUploadZone>
 
         <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
@@ -357,15 +399,6 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
           folderId={currentFolderId}
           uploadFile={uploadFile}
         />
-
-        {contextMenu && (
-          <FileContextMenu
-            x={contextMenu.x}
-            y={contextMenu.y}
-            items={menuItems}
-            onClose={closeContextMenu}
-          />
-        )}
       </DndContext>
     </div>
   );

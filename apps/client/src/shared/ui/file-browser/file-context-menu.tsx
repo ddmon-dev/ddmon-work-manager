@@ -31,6 +31,7 @@ interface FileContextMenuProps {
   items: MenuItem[];
   onClose: () => void;
   minWidth?: number;
+  container?: HTMLElement | null;
 }
 
 export function FileContextMenu({
@@ -39,9 +40,10 @@ export function FileContextMenu({
   items,
   onClose,
   minWidth = 180,
+  container,
 }: FileContextMenuProps) {
   return (
-    <ContextMenuPortal x={x} y={y} onClose={onClose} minWidth={minWidth}>
+    <ContextMenuPortal x={x} y={y} onClose={onClose} minWidth={minWidth} container={container}>
       {items.map((item, i) =>
         item.type === "separator" ? (
           <div key={i} className="my-1 h-px bg-border" />

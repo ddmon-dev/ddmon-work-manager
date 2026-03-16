@@ -180,11 +180,14 @@ shared/ui/file-browser/
 
 #### 포커스 관리
 
-파일 브라우저 컨테이너(`dragContainerRef`)가 키보드 단축키의 스코프이므로, 인라인 UI(입력 필드 등)가 닫힌 후 반드시 컨테이너로 포커스를 복귀해야 한다.
+`focus-trap-react` 기반. 파일 브라우저 영역 클릭 시 트랩 활성화, 영역 밖 클릭 시 비활성화.
 
-- **`restoreFocus()`**: `rAF` 후 `document.activeElement`가 `body`이면 컨테이너에 포커스. 모든 포커스 복귀의 단일 진입점
-- **패턴 A (직접 호출)**: 트리거가 명확한 사용자 액션 완료 시. rename 확인/취소, 새 폴더 생성/취소에서 사용
-- **패턴 B (useEffect)**: 하나의 상태 변화를 다수 경로가 트리거할 때. 폴더 이동(`currentFolderId` 변경)에서 사용
+- **활성화**: `onMouseDown` → `setTrapActive(true)` (마운트 아닌 클릭 기반, Sheet 내부 호환)
+- **비활성화**: `clickOutsideDeactivates: true`
+- **fallbackFocus**: `dragContainerRef.current` (인라인 입력 제거 시 자동 포커스 복귀)
+- **Portal 처리**: ContextMenu, Dialog, DropdownMenu 모두 트랩 경계 내 `portalRef`에 렌더링
+- **스코프드 다이얼로그**: `useFileBrowserDialog()` 훅. `ScopedDialogRenderer`가 트랩 안에서 렌더링
+- **selectItem → containerRef.focus()**: 유지 (의도적 포커스 이동)
 
 ### 데이터 페칭 패턴
 

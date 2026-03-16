@@ -8,3 +8,4 @@ export { FILE_ACTIONS, FILE_MESSAGES, multiLabel } from "./constants";
 export { useFileDnd } from "./use-file-dnd";
 export { HiddenUploadInput } from "./hidden-upload-input";
 export { NewFolderInput } from "./new-folder-input";
+export { ScopedDialogRenderer } from "./scoped-dialog-renderer";

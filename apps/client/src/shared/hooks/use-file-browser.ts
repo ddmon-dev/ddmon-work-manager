@@ -23,7 +23,8 @@ import {
   useBatchPermanentDeleteFiles,
   type FileOwner,
 } from "@/shared/lib/file-api";
-import { useDialog } from "@/shared/ui/app-dialog";
+import { useFileBrowserDialog } from "@/shared/hooks/use-file-browser-dialog";
+import type { AlertDialogData } from "@/shared/ui/app-dialog/types";
 import type { FileItem } from "@/shared/lib/file-types";
 import { FILE_MESSAGES } from "@/shared/ui/file-browser";
 
@@ -121,10 +122,9 @@ function useSorting() {
   return { sort, order, toggleSort };
 }
 
-function useFileRenaming() {
+function useFileRenaming(alert: (data: AlertDialogData) => Promise<void>) {
   const [renaming, setRenaming] = useState<RenameState | null>(null);
   const renameFile = useRenameFile();
-  const { alert } = useDialog();
 
   const startRename = useCallback(
     (id: string, name: string, source: RenameSource = "list") => {
@@ -297,10 +297,12 @@ function useDragSelection(
 export function useFileBrowser(options: UseFileBrowserOptions) {
   const { owner, deleteMode, rootLabel = "파일" } = options;
 
+  const dialog = useFileBrowserDialog();
   const nav = useNavigation(rootLabel);
   const sorting = useSorting();
-  const renaming = useFileRenaming();
+  const renaming = useFileRenaming(dialog.alert);
   const folder = useNewFolder(nav.currentFolderId, owner);
+  const portalRef = useRef<HTMLDivElement>(null);
 
   const breadcrumbsRef = useRef(nav.breadcrumbs);
   breadcrumbsRef.current = nav.breadcrumbs;
@@ -346,45 +348,28 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
 
   const dragSelection = useDragSelection(selectedIds, setSelectedIds);
 
-  // 폴더 이동 후 컨테이너 자동 포커스 + parentFolderFocused 리셋
+  // 폴더 이동 후 parentFolderFocused 리셋
   useEffect(() => {
     setParentFolderFocused(false);
-    dragSelection.containerRef.current?.focus({ preventScroll: true });
   }, [nav.currentFolderId]);
 
-  // 포커스 유실 시 컨테이너 재포커스 (rename 종료 후 등)
-  const restoreFocus = useCallback(() => {
-    requestAnimationFrame(() => {
-      if (!document.activeElement || document.activeElement === document.body) {
+  // rename 종료 후 컨테이너 포커스 복구
+  // (Input 언마운트 시 focus-trap의 fallbackFocus가 트리거되지 않는 케이스 보완)
+  const prevRenamingRef = useRef(renaming.renaming);
+  useEffect(() => {
+    if (prevRenamingRef.current && !renaming.renaming) {
+      requestAnimationFrame(() => {
         dragSelection.containerRef.current?.focus({ preventScroll: true });
-      }
-    });
-  }, []);
-
-  const handleRenameWithFocus = useCallback(
-    async (id: string) => {
-      await renaming.handleRename(id);
-      restoreFocus();
-    },
-    [renaming.handleRename, restoreFocus]
-  );
-
-  const cancelRenameWithFocus = useCallback(() => {
-    renaming.cancelRename();
-    restoreFocus();
-  }, [renaming.cancelRename, restoreFocus]);
-
-  const handleCreateFolderWithFocus = useCallback(async () => {
-    await folder.handleCreateFolder();
-    restoreFocus();
-  }, [folder.handleCreateFolder, restoreFocus]);
+      });
+    }
+    prevRenamingRef.current = renaming.renaming;
+  }, [renaming.renaming]);
 
   const cancelNewFolder = useCallback(() => {
     folder.setShowNewFolder(false);
-    restoreFocus();
-  }, [folder.setShowNewFolder, restoreFocus]);
+  }, [folder.setShowNewFolder]);
 
-  const { confirm, alert } = useDialog();
+  const { confirm, alert } = dialog;
   const deleteFile = useDeleteFile();
   const permanentDeleteFile = usePermanentDeleteFile();
   const batchPermanentDeleteFiles = useBatchPermanentDeleteFiles();
@@ -575,8 +560,12 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
         toast.success(FILE_MESSAGES.PASTED_MOVE);
       }
       setClipboard(null);
-    } catch {
-      toast.error(mode === "copy" ? FILE_MESSAGES.PASTE_FAILED : FILE_MESSAGES.MOVE_PASTE_FAILED);
+    } catch (err) {
+      alert({
+        variant: "error",
+        title: mode === "copy" ? FILE_MESSAGES.PASTE_FAILED : FILE_MESSAGES.MOVE_PASTE_FAILED,
+        description: err instanceof Error ? err.message : undefined,
+      });
     }
   }, [clipboard, getPasteTargetFolderId, copyFilesMutation, batchMoveFiles, alert]);
 
@@ -846,10 +835,10 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     // 핸들러
     handleNavigate: nav.handleNavigate,
     navigateToBreadcrumb: nav.navigateToBreadcrumb,
-    handleCreateFolder: handleCreateFolderWithFocus,
+    handleCreateFolder: folder.handleCreateFolder,
     cancelNewFolder,
     handleDelete,
-    handleRename: handleRenameWithFocus,
+    handleRename: renaming.handleRename,
     handleFileClick,
     toggleSort: sorting.toggleSort,
     handleDragDrop,
@@ -862,7 +851,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     selectItem,
     clearSelection,
     startRename: renaming.startRename,
-    cancelRename: cancelRenameWithFocus,
+    cancelRename: renaming.cancelRename,
     isMultiSelection,
     clipboard,
     // 드래그 선택
@@ -872,5 +861,11 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     wasDragSelectingRef: dragSelection.wasDragSelectingRef,
     // 키보드
     handleKeyDown,
+    // 다이얼로그 + 포탈
+    dialogState: dialog.dialogState,
+    onDialogConfirm: dialog.handleConfirm,
+    onDialogCancel: dialog.handleCancel,
+    onDialogAlertClose: dialog.handleAlertClose,
+    portalRef,
   };
 }
