@@ -15,7 +15,7 @@ export function ItemSheet() {
       viewComponent={DetailView}
       viewHeader={ProjectDetailHeader}
       moduleName={CONFIG.moduleName}
-      size={{ view: "2xl", modify: "lg", create: "lg" }}
+      size={{ view: "full", modify: "lg", create: "lg" }}
     />
   );
 }

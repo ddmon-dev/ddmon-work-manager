@@ -1,6 +1,7 @@
 import { SheetFooter, SheetBody, SheetContainer, SheetScrollColumn } from "@/shared/ui/sheet";
 import {
   DetailSectionTitle,
+  FileBrowser,
   ManageSheetClose,
   ManageSheetModeChange,
   MemoSection,
@@ -55,7 +56,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
 
   return (
     <>
-      <SheetBody className="lg:grid-cols-[2.5fr_3fr]">
+      <SheetBody className="lg:grid-cols-[2.5fr_3fr_3fr]">
         {/* 좌측 */}
         <SheetScrollColumn className="flex flex-col">
           <SheetContainer>
@@ -100,6 +101,17 @@ export function DetailView({ data, refetch }: DetailViewProps) {
               parentId={data.id}
               memos={data.memos}
               hooks={projectMemoHooks}
+            />
+          </SheetContainer>
+        </SheetScrollColumn>
+
+        {/* 파일 브라우저 */}
+        <SheetScrollColumn className="flex flex-col">
+          <SheetContainer className="flex flex-col flex-1 min-h-0">
+            <FileBrowser
+              owner={{ ownerType: "project", ownerId: data.id }}
+              ownerName={data.name}
+              fullHeight
             />
           </SheetContainer>
         </SheetScrollColumn>

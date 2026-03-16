@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo } from "react";
+import { cn } from "@/shared/utils/classnames";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import FocusTrap from "focus-trap-react";
 import {
@@ -51,9 +52,10 @@ interface FileBrowserProps {
   owner: FileOwner;
   ownerName: string;
   deleteMode?: "soft" | "permanent";
+  fullHeight?: boolean;
 }
 
-export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: FileBrowserProps) {
+export function FileBrowser({ owner, ownerName, deleteMode = "permanent", fullHeight = false }: FileBrowserProps) {
   const {
     currentFolderId,
     sort,
@@ -173,7 +175,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
   }, [contextMenu, selectedIds, clipboard, isMultiSelection, setShowNewFolder, handlePaste, handleMovePaste, handleCopy, handleDelete, handleFileClick, handleDuplicate, startRename]);
 
   return (
-    <div className="space-y-3">
+    <div className={fullHeight ? "flex flex-col flex-1 min-h-0 gap-3" : "space-y-3"}>
       <DndContext
         sensors={dnd.sensors}
         collisionDetection={pointerWithin}
@@ -193,13 +195,13 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
             }}
           >
             <div
-              className="flex select-none flex-col"
+              className={cn("flex select-none flex-col", fullHeight && "flex-1 min-h-0")}
               onMouseDown={() => !trapActive && setTrapActive(true)}
             >
               {/* 헤더 */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold">파일</h3>
+                  <h3 className="text-sm font-semibold">드라이브</h3>
                   {selectedIds.size > 0 && (
                     <span className="text-xs text-muted-foreground">
                       {selectedIds.size}개 선택
@@ -243,7 +245,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
               </div>
 
               {/* 파일 목록 */}
-              <div className="mt-2 flex h-60 flex-col overflow-hidden rounded-md border">
+              <div className={fullHeight ? "mt-2 flex flex-1 min-h-0 flex-col overflow-hidden rounded-md border" : "mt-2 flex h-60 flex-col overflow-hidden rounded-md border"}>
                 {/* 브레드크럼 */}
                 <Breadcrumbs
                   breadcrumbs={breadcrumbs}

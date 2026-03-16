@@ -114,7 +114,7 @@ export function FileUploadZone({ folderId, owner, children }: FileUploadZoneProp
   return (
     <div
       className={cn(
-        "relative h-full min-w-0 flex-1 transition-colors",
+        "relative flex flex-col h-full min-w-0 flex-1 transition-colors",
         isDragging && "bg-primary/5 ring-2 ring-inset ring-primary/30"
       )}
       onDragEnter={handleDragEnter}
