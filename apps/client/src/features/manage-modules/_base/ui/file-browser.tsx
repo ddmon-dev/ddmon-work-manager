@@ -5,13 +5,6 @@ import {
   FolderPlus,
   ArrowUpDown,
 } from "lucide-react";
-import { Button } from "@/shared/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/shared/ui/dropdown-menu";
 import {
   Empty,
   EmptyHeader,
@@ -19,6 +12,13 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@/shared/ui/empty";
+import { Button } from "@/shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
 import {
   FileUploadZone,
@@ -223,7 +223,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
               ref={dragContainerRef}
               tabIndex={-1}
               onKeyDown={handleKeyDown}
-              className="relative mt-2 divide-y rounded-md border outline-none"
+              className="relative mt-2 flex h-60 flex-col divide-y overflow-y-auto rounded-md border outline-none"
               onMouseDown={handleDragSelectStart}
               onClick={(e) => {
                 if (wasDragSelectingRef.current) {
@@ -276,19 +276,17 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
               )}
 
               {!isLoading && items?.length === 0 && !showNewFolder ? (
-                <div className="py-8">
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyMedia variant="icon">
-                        <FileIcon />
-                      </EmptyMedia>
-                      <EmptyTitle>파일이 없습니다</EmptyTitle>
-                      <EmptyDescription>
-                        파일을 업로드하거나 폴더를 생성하세요
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </Empty>
-                </div>
+                <Empty className="flex-1 border-0 py-4!">
+                  <EmptyHeader className="gap-1">
+                    <EmptyMedia variant="icon" className="mb-2 size-8">
+                      <FileIcon className="size-5" />
+                    </EmptyMedia>
+                    <EmptyTitle className="text-xs">파일이 없습니다</EmptyTitle>
+                    <EmptyDescription className="text-[11px]">
+                      파일을 업로드하거나 폴더를 생성하세요
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               ) : (
                 <div
                   role="listbox"

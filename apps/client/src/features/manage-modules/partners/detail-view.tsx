@@ -68,17 +68,17 @@ export function DetailView({ data }: DetailViewProps) {
         </SheetContainer>
 
         <SheetContainer>
-          <MemoSection
-            parentId={data.id}
-            memos={data.memos}
-            hooks={partnerMemoHooks}
+          <FileBrowser
+            owner={{ ownerType: "partner", ownerId: data.id }}
+            ownerName={data.name}
           />
         </SheetContainer>
 
         <SheetContainer>
-          <FileBrowser
-            owner={{ ownerType: "partner", ownerId: data.id }}
-            ownerName={data.name}
+          <MemoSection
+            parentId={data.id}
+            memos={data.memos}
+            hooks={partnerMemoHooks}
           />
         </SheetContainer>
       </SheetBody>
