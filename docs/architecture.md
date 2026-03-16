@@ -155,7 +155,7 @@ useManageSheet() → { open, close, closeWithGuard, setMode, setModeWithGuard, s
 #### 구조
 
 ```
-shared/hooks/use-file-browser.ts     # 핵심 상태 관리 훅 (네비, 정렬, 선택, 이름변경, 클립보드, 키보드, 드래그선택)
+shared/hooks/use-file-browser.ts     # 핵심 상태 관리 훅 (네비, 정렬, 선택, 포커스, 이름변경, 클립보드, 키보드, 드래그선택)
 shared/ui/file-browser/
 ├── index.ts                         # barrel export
 ├── constants.ts                     # FILE_ACTIONS (아이콘+라벨+단축키), FILE_MESSAGES (토스트/대화), multiLabel
@@ -180,14 +180,13 @@ shared/ui/file-browser/
 
 #### 포커스 관리
 
-`focus-trap-react` 기반. 파일 브라우저 영역 클릭 시 트랩 활성화, 영역 밖 클릭 시 비활성화.
+`focus-trap-react` + WAI-ARIA Listbox Roving Tabindex 패턴.
 
-- **활성화**: `onMouseDown` → `setTrapActive(true)` (마운트 아닌 클릭 기반, Sheet 내부 호환)
-- **비활성화**: `clickOutsideDeactivates: true`
-- **fallbackFocus**: `dragContainerRef.current` (인라인 입력 제거 시 자동 포커스 복귀)
-- **Portal 처리**: ContextMenu, Dialog, DropdownMenu 모두 트랩 경계 내 `portalRef`에 렌더링
-- **스코프드 다이얼로그**: `useFileBrowserDialog()` 훅. `ScopedDialogRenderer`가 트랩 안에서 렌더링
-- **selectItem → containerRef.focus()**: 유지 (의도적 포커스 이동)
+- **Focus Trap**: 클릭 시 활성화(`setTrapActive(true)`), 영역 밖 클릭 시 비활성화. Portal(ContextMenu, Dialog, DropdownMenu)은 트랩 내 `portalRef`에 렌더링
+- **Roving Tabindex**: 파일 목록은 단일 탭 스톱. 활성 항목(`activeItemId`)만 `tabIndex=0`, 나머지 `-1`. Arrow 키로 내부 이동
+- **`activeItemId`**: 현재 포커스 위치(커서). `lastSelectedIdRef`는 Shift 범위 선택의 앵커(시작점). 역할이 분리되어 Shift+Arrow 연속 선택 가능
+- **포커스 복구**: rename/새 폴더/다이얼로그 종료 시 `restoreFocus()`로 `activeItemId` 행 또는 컨테이너로 복구
+- **Escape 전파 차단**: 캡처 단계 리스너(`stopImmediatePropagation`)로 Sheet/Dialog 닫힘 방지
 
 ### 데이터 페칭 패턴
 
