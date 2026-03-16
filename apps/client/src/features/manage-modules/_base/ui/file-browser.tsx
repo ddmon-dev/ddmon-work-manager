@@ -63,13 +63,13 @@ import {
   type MenuItem,
 } from "@/shared/ui/file-browser";
 
-interface FileSectionProps {
+interface FileBrowserProps {
   owner: FileOwner;
   ownerName: string;
   deleteMode?: "soft" | "permanent";
 }
 
-export function FileSection({ owner, ownerName, deleteMode = "permanent" }: FileSectionProps) {
+export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: FileBrowserProps) {
   const {
     currentFolderId,
     sort,

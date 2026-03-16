@@ -7,7 +7,7 @@ import {
   ManageSheetClose,
   ManageSheetModeChange,
   MemoSection,
-  FileSection,
+  FileBrowser,
 } from "../_base/ui";
 import {
   useCreatePartnerMemo,
@@ -76,7 +76,7 @@ export function DetailView({ data }: DetailViewProps) {
         </SheetContainer>
 
         <SheetContainer>
-          <FileSection
+          <FileBrowser
             owner={{ ownerType: "partner", ownerId: data.id }}
             ownerName={data.name}
           />
