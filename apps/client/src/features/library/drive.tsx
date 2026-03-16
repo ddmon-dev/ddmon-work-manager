@@ -86,9 +86,8 @@ export function Drive() {
     parentFolderFocused,
     clipboard,
     selectItem,
-    focusSelectParent,
     clearSelection,
-    activeItemId,
+    isItemFocused,
     startRename,
     cancelRename,
     cancelNewFolder,
@@ -420,7 +419,7 @@ export function Drive() {
                         }
                         isSelected={selectedIds.has(item.id)}
                         isDropDisabled={dnd.isDropDisabled(item)}
-                        isFocused={(activeItemId ?? items?.[0]?.id) === item.id}
+                        isFocused={isItemFocused(item.id)}
                         onSelect={(e) => selectItem(item.id, e)}
                         onFileClick={handleFileClick}
                         onContextMenu={openContextMenu}
