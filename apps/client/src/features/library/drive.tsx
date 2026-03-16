@@ -108,8 +108,6 @@ export function Drive() {
 
   const [showTree, setShowTree] = useState(true);
   const [trapActive, setTrapActive] = useState(false);
-  const [showFocusIndicator, setShowFocusIndicator] = useState(false);
-  const pointerDownRef = useRef(false);
   const treePanelRef = useRef<PanelImperativeHandle>(null);
   const uploadFile = useUploadFile();
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -338,25 +336,12 @@ export function Drive() {
 
               {/* 파일 목록 */}
               <div
-                className={cn(
-                  "relative flex-1 after:pointer-events-none after:absolute after:inset-0 after:z-10 after:hidden after:border-4 after:border-ring/100",
-                  showFocusIndicator && "after:block",
-                )}
-                onPointerDown={() => { pointerDownRef.current = true; }}
-                onFocus={(e) => {
-                  if (pointerDownRef.current) { pointerDownRef.current = false; return; }
-                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                    setShowFocusIndicator(true);
-                  }
-                }}
-              >
-              <div
                 ref={dragContainerRef}
                 tabIndex={-1}
-                onKeyDown={(e) => { setShowFocusIndicator(false); handleKeyDown(e); }}
+                onKeyDown={handleKeyDown}
                 onBlur={handleContainerBlur}
-                className="h-full overflow-y-auto outline-none hide-scrollbar"
-                onMouseDown={(e) => { setShowFocusIndicator(false); handleDragSelectStart(e); }}
+                className="relative flex-1 overflow-y-auto outline-none hide-scrollbar"
+                onMouseDown={handleDragSelectStart}
                 onClick={(e) => {
                   if (wasDragSelectingRef.current) {
                     wasDragSelectingRef.current = false;
@@ -462,7 +447,6 @@ export function Drive() {
                     }}
                   />
                 )}
-              </div>
               </div>
 
               {/* Portal 영역 (overflow 밖, 트랩 안) */}
