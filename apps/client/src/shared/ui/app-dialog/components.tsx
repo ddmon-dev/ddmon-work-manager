@@ -33,9 +33,10 @@ export interface ConfirmDialogComponentProps {
   data: ConfirmDialogData;
   onConfirm: () => void | Promise<void>;
   onCancel: () => void | Promise<void>;
+  container?: HTMLElement | null;
 }
 
-export function ConfirmDialogComponent({ data, onConfirm, onCancel }: ConfirmDialogComponentProps) {
+export function ConfirmDialogComponent({ data, onConfirm, onCancel, container }: ConfirmDialogComponentProps) {
   const {
     title,
     description,
@@ -62,6 +63,7 @@ export function ConfirmDialogComponent({ data, onConfirm, onCancel }: ConfirmDia
   return (
     <AlertDialog open onOpenChange={(open) => !open && !isLoading && handleCancel()}>
       <AlertDialogContent
+        container={container}
         className={cn(SIZE_CLASSES[size], 'gap-6', layout === 'vertical' ? 'py-10' : '')}
       >
         {layout === 'vertical' ? (
@@ -111,6 +113,7 @@ export function ConfirmDialogComponent({ data, onConfirm, onCancel }: ConfirmDia
 export interface AlertDialogComponentProps {
   data: AlertDialogData;
   onClose: () => void | Promise<void>;
+  container?: HTMLElement | null;
 }
 
 const VARIANT_CONFIG = {
@@ -140,7 +143,7 @@ const VARIANT_CONFIG = {
   },
 } as const;
 
-export function AlertDialogComponent({ data, onClose }: AlertDialogComponentProps) {
+export function AlertDialogComponent({ data, onClose, container }: AlertDialogComponentProps) {
   const {
     title,
     description,
@@ -176,6 +179,7 @@ export function AlertDialogComponent({ data, onClose }: AlertDialogComponentProp
   return (
     <Dialog open onOpenChange={(open) => !open && !isLoading && handleClose()}>
       <DialogContent
+        container={container}
         className={cn(SIZE_CLASSES[size], layout === 'vertical' ? 'py-10 gap-8' : '')}
       >
         {layout === 'vertical' ? (

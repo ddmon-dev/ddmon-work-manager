@@ -21,3 +21,4 @@ export { ManageSheetError } from "./manage-sheet-error";
 export { ModifyButton } from "./modify-button";
 export { ReorderButtons } from "./reorder-buttons";
 export { ViewButton } from "./view-button";
+export { FileBrowser } from "./file-browser";

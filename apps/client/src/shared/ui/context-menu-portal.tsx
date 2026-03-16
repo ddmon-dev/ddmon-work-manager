@@ -8,6 +8,7 @@ interface ContextMenuPortalProps {
   onClose: () => void;
   children: ReactNode;
   minWidth?: number;
+  container?: HTMLElement | null;
 }
 
 export function ContextMenuPortal({
@@ -16,6 +17,7 @@ export function ContextMenuPortal({
   onClose,
   children,
   minWidth = 160,
+  container,
 }: ContextMenuPortalProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x, y });
@@ -56,6 +58,6 @@ export function ContextMenuPortal({
     >
       {children}
     </div>,
-    document.body
+    container ?? document.body
   );
 }

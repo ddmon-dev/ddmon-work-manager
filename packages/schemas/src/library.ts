@@ -35,6 +35,8 @@ export type FileFavoriteInput = z.infer<typeof fileFavoriteSchema>;
 export const folderCreateSchema = z.object({
   name: z.string().min(1, "폴더 이름을 입력해주세요."),
   folderId: z.string().uuid().nullable().optional(),
+  ownerType: z.string().optional(),
+  ownerId: z.string().uuid().optional(),
 });
 
 export type FolderCreateInput = z.infer<typeof folderCreateSchema>;
@@ -45,6 +47,13 @@ export const batchDeleteSchema = z.object({
 });
 
 export type BatchDeleteInput = z.infer<typeof batchDeleteSchema>;
+
+// 배치 영구 삭제
+export const batchPermanentDeleteSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1, "하나 이상의 항목을 선택해주세요."),
+});
+
+export type BatchPermanentDeleteInput = z.infer<typeof batchPermanentDeleteSchema>;
 
 // 배치 이동
 export const batchMoveSchema = z.object({

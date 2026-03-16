@@ -3,7 +3,7 @@ import { and, eq, isNull, asc, desc, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { files } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
-import { fileRenameSchema, folderCreateSchema, fileFavoriteSchema, batchDeleteSchema, batchMoveSchema, favoriteReorderSchema, fileCopySchema } from "@packages/schemas";
+import { fileRenameSchema, folderCreateSchema, fileFavoriteSchema, batchDeleteSchema, batchPermanentDeleteSchema, batchMoveSchema, favoriteReorderSchema, fileCopySchema } from "@packages/schemas";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { uploadFile, deleteFile, getFile, copyStorageFile, openFileNative, STORAGE_CONFIG } from "../lib/storage";
 import type { AppVariables } from "../lib/types";
@@ -30,8 +30,9 @@ async function resolveUniqueName(
   executor: typeof db | DbTransaction,
   name: string,
   folderId: string | null,
-  excludeId?: string
+  options?: { excludeId?: string; ownerType?: string; ownerId?: string | null }
 ): Promise<string> {
+  const { excludeId, ownerType = "drive", ownerId } = options ?? {};
   const existing = await (executor as typeof db)
     .select({ name: files.name })
     .from(files)
@@ -39,6 +40,8 @@ async function resolveUniqueName(
       and(
         folderId ? eq(files.folderId, folderId) : isNull(files.folderId),
         eq(files.deleted, false),
+        eq(files.ownerType, ownerType),
+        ownerId ? eq(files.ownerId, ownerId) : isNull(files.ownerId),
         ...(excludeId ? [sql`${files.id} != ${excludeId}`] : [])
       )
     );
@@ -127,11 +130,15 @@ app.get("/", async (c) => {
   }
 
   const folderId = c.req.query("folderId") || null;
+  const ownerType = c.req.query("ownerType") || "drive";
+  const ownerId = c.req.query("ownerId") || null;
 
   const items = await db.query.files.findMany({
     where: and(
       folderId ? eq(files.folderId, folderId) : isNull(files.folderId),
-      eq(files.deleted, false)
+      eq(files.deleted, false),
+      eq(files.ownerType, ownerType),
+      ownerId ? eq(files.ownerId, ownerId) : isNull(files.ownerId)
     ),
     orderBy: [desc(files.isFolder), asc(files.name)],
   });
@@ -145,6 +152,8 @@ app.post("/upload", async (c) => {
   const body = await c.req.parseBody();
   const file = body["file"];
   const folderId = (body["folderId"] as string) || null;
+  const ownerType = (body["ownerType"] as string) || "drive";
+  const ownerId = (body["ownerId"] as string) || null;
 
   if (!file || !(file instanceof File)) {
     return errorResponse(c, ERRORS.VALIDATION, 400);
@@ -171,7 +180,7 @@ app.post("/upload", async (c) => {
   const uuid = randomUUID();
   const s3Key = `files/${uuid}${ext ? `.${ext}` : ""}`;
 
-  const uniqueName = await resolveUniqueName(db, file.name, folderId);
+  const uniqueName = await resolveUniqueName(db, file.name, folderId, { ownerType, ownerId });
 
   await uploadFile(s3Key, buffer, file.type);
 
@@ -186,6 +195,8 @@ app.post("/upload", async (c) => {
         size: file.size,
         folderId,
         author: user.name ?? undefined,
+        ownerType,
+        ownerId,
       })
       .returning();
   } catch (err) {
@@ -203,6 +214,8 @@ app.post("/folder", async (c) => {
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
   const targetFolderId = parsed.data.folderId ?? null;
+  const ownerType = parsed.data.ownerType ?? "drive";
+  const ownerId = parsed.data.ownerId ?? null;
 
   // 삭제된 폴더 안에 생성 방지
   if (targetFolderId) {
@@ -215,7 +228,7 @@ app.post("/folder", async (c) => {
     }
   }
 
-  const uniqueName = await resolveUniqueName(db, parsed.data.name, targetFolderId);
+  const uniqueName = await resolveUniqueName(db, parsed.data.name, targetFolderId, { ownerType, ownerId });
 
   const [created] = await db
     .insert(files)
@@ -224,6 +237,8 @@ app.post("/folder", async (c) => {
       folderId: targetFolderId,
       isFolder: true,
       author: user.name ?? undefined,
+      ownerType,
+      ownerId,
     })
     .returning();
 
@@ -371,58 +386,6 @@ app.patch("/:id", async (c) => {
   return successResponse(c, updated);
 });
 
-// PATCH /:id/move — 폴더 이동 (트랜잭션)
-app.patch("/:id/move", async (c) => {
-  const id = c.req.param("id");
-  const { folderId } = (await c.req.json()) as { folderId: string | null };
-
-  if (id === folderId) {
-    return errorResponse(c, ERRORS.VALIDATION, 400, "자기 자신으로 이동할 수 없습니다.");
-  }
-
-  const updated = await db.transaction(async (tx) => {
-    if (folderId && (await isDescendant(tx, folderId, id))) {
-      return null; // 순환 참조
-    }
-
-    // 이동 대상의 현재 이름 조회
-    const target = await tx.query.files.findFirst({
-      where: eq(files.id, id),
-      columns: { name: true },
-    });
-    if (!target) return undefined;
-
-    // 대상 폴더에서 동일 이름 중복 체크
-    const duplicate = await (tx as unknown as typeof db)
-      .select({ id: files.id })
-      .from(files)
-      .where(
-        and(
-          folderId ? eq(files.folderId, folderId) : isNull(files.folderId),
-          eq(files.name, target.name),
-          eq(files.deleted, false),
-          sql`${files.id} != ${id}`
-        )
-      )
-      .limit(1);
-
-    if (duplicate.length > 0) return "duplicate" as const;
-
-    const [result] = await tx
-      .update(files)
-      .set({ folderId, updatedAt: new Date() })
-      .where(eq(files.id, id))
-      .returning();
-
-    return result;
-  });
-
-  if (updated === null) return errorResponse(c, ERRORS.CIRCULAR_REFERENCE, 400);
-  if (updated === "duplicate") return errorResponse(c, ERRORS.VALIDATION, 400, "대상 폴더에 동일한 이름이 이미 존재합니다.");
-  if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
-  return successResponse(c, updated);
-});
-
 // DELETE /:id — 휴지통으로 이동 (트랜잭션)
 app.delete("/:id", async (c) => {
   const id = c.req.param("id");
@@ -541,6 +504,48 @@ app.post("/batch-delete", async (c) => {
   return successResponse(c, { ids: targets.map((t) => t.id) });
 });
 
+// POST /batch-permanent-delete — 배치 영구 삭제 (트랜잭션 + 스토리지 후처리)
+app.post("/batch-permanent-delete", async (c) => {
+  const parsed = batchPermanentDeleteSchema.safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  const { ids } = parsed.data;
+
+  const targets = await db.query.files.findMany({
+    where: inArray(files.id, ids),
+    columns: { id: true, isFolder: true, s3Key: true },
+  });
+
+  if (targets.length === 0) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  const s3KeysToDelete: string[] = [];
+
+  await db.transaction(async (tx) => {
+    for (const target of targets) {
+      if (target.isFolder) {
+        const childKeys = await permanentDeleteRecursive(tx, target.id);
+        s3KeysToDelete.push(...childKeys);
+      }
+      if (target.s3Key) {
+        s3KeysToDelete.push(target.s3Key);
+      }
+    }
+
+    await tx.delete(files).where(inArray(files.id, targets.map((t) => t.id)));
+  });
+
+  // 스토리지 삭제는 트랜잭션 밖에서 후처리
+  await Promise.allSettled(
+    s3KeysToDelete.map((key) =>
+      deleteFile(key).catch((err) =>
+        console.warn(`[Storage] Failed to delete file: ${key}`, err)
+      )
+    )
+  );
+
+  return successResponse(c, { ids: targets.map((t) => t.id) });
+});
+
 // POST /batch-move — 배치 이동 (트랜잭션, 충돌 시 전체 차단)
 app.post("/batch-move", async (c) => {
   const parsed = batchMoveSchema.safeParse(await c.req.json());
@@ -555,6 +560,22 @@ app.post("/batch-move", async (c) => {
     // 1단계: 대상 정보 조회 + 충돌 검증 (Map 캐싱)
     const targetInfoMap = new Map<string, { name: string; isFolder: boolean }>();
 
+    // folderId의 조상 경로를 1회 CTE로 조회 (순환 참조 검증용)
+    const ancestorIds = new Set<string>();
+    if (folderId) {
+      const rows = await tx.execute(sql`
+        WITH RECURSIVE ancestors AS (
+          SELECT folder_id FROM files WHERE id = ${folderId}
+          UNION ALL
+          SELECT f.folder_id FROM files f JOIN ancestors a ON f.id = a.folder_id
+        )
+        SELECT folder_id FROM ancestors WHERE folder_id IS NOT NULL
+      `);
+      for (const row of rows as unknown as { folder_id: string }[]) {
+        ancestorIds.add(row.folder_id);
+      }
+    }
+
     for (const id of ids) {
       if (id === folderId) continue;
 
@@ -564,7 +585,7 @@ app.post("/batch-move", async (c) => {
       });
       if (!target) continue;
 
-      if (target.isFolder && folderId && (await isDescendant(tx, folderId, id))) {
+      if (target.isFolder && folderId && ancestorIds.has(id)) {
         continue;
       }
 
@@ -625,6 +646,21 @@ app.post("/copy", async (c) => {
   });
   if (originals.length === 0) return errorResponse(c, ERRORS.NOT_FOUND, 404);
 
+  // 순환 참조 방어: 폴더를 자기 자신 또는 자손 폴더에 복사 방지
+  if (folderId) {
+    for (const original of originals) {
+      if (original.isFolder) {
+        if (original.id === folderId) {
+          return errorResponse(c, ERRORS.VALIDATION, 400, "폴더를 자기 자신 내부에 복사할 수 없습니다.");
+        }
+        const descendant = await isDescendant(db as unknown as DbTransaction, folderId, original.id);
+        if (descendant) {
+          return errorResponse(c, ERRORS.VALIDATION, 400, "폴더를 자신의 하위 폴더에 복사할 수 없습니다.");
+        }
+      }
+    }
+  }
+
   const copiedS3Keys: string[] = [];
 
   try {
@@ -677,7 +713,10 @@ async function copyItem(
   author: string | null,
   copiedS3Keys: string[]
 ): Promise<typeof files.$inferSelect> {
-  const uniqueName = await resolveUniqueName(tx as unknown as typeof db, original.name, targetFolderId);
+  const uniqueName = await resolveUniqueName(tx as unknown as typeof db, original.name, targetFolderId, {
+    ownerType: original.ownerType,
+    ownerId: original.ownerId,
+  });
 
   if (!original.isFolder) {
     // 파일 복사
@@ -699,6 +738,8 @@ async function copyItem(
         folderId: targetFolderId,
         isFolder: false,
         author,
+        ownerType: original.ownerType,
+        ownerId: original.ownerId,
       })
       .returning();
 
@@ -713,6 +754,8 @@ async function copyItem(
       folderId: targetFolderId,
       isFolder: true,
       author,
+      ownerType: original.ownerType,
+      ownerId: original.ownerId,
     })
     .returning();
 

@@ -7,6 +7,7 @@ import {
   ManageSheetClose,
   ManageSheetModeChange,
   MemoSection,
+  FileBrowser,
 } from "../_base/ui";
 import {
   useCreatePartnerMemo,
@@ -63,6 +64,13 @@ export function DetailView({ data }: DetailViewProps) {
           <DetailInfoRow
             label="수정일"
             value={format(new Date(data.updatedAt), "yyyy-MM-dd HH:mm")}
+          />
+        </SheetContainer>
+
+        <SheetContainer>
+          <FileBrowser
+            owner={{ ownerType: "partner", ownerId: data.id }}
+            ownerName={data.name}
           />
         </SheetContainer>
 
