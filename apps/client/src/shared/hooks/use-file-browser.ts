@@ -685,6 +685,18 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     return () => window.removeEventListener("mousedown", handler);
   }, [clearSelection]);
 
+  // 컨테이너 내부 Escape → 캡처 단계에서 차단 (Sheet/Dialog 전파 방지)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const container = dragSelection.containerRef.current;
+      if (!container || !container.contains(e.target as Node)) return;
+      e.stopImmediatePropagation();
+    };
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
+  }, []);
+
   const scrollToElement = useCallback(
     (selector: string) => {
       dragSelection.containerRef.current
