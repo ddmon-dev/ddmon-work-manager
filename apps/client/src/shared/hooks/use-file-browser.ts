@@ -353,7 +353,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     setParentFolderFocused(false);
   }, [nav.currentFolderId]);
 
-  // rename 종료 후 컨테이너 포커스 복구
+  // rename / 새 폴더 종료 후 컨테이너 포커스 복구
   // (Input 언마운트 시 focus-trap의 fallbackFocus가 트리거되지 않는 케이스 보완)
   const prevRenamingRef = useRef(renaming.renaming);
   useEffect(() => {
@@ -364,6 +364,16 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     }
     prevRenamingRef.current = renaming.renaming;
   }, [renaming.renaming]);
+
+  const prevShowNewFolderRef = useRef(folder.showNewFolder);
+  useEffect(() => {
+    if (prevShowNewFolderRef.current && !folder.showNewFolder) {
+      requestAnimationFrame(() => {
+        dragSelection.containerRef.current?.focus({ preventScroll: true });
+      });
+    }
+    prevShowNewFolderRef.current = folder.showNewFolder;
+  }, [folder.showNewFolder]);
 
   const cancelNewFolder = useCallback(() => {
     folder.setShowNewFolder(false);
