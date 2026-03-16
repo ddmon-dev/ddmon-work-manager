@@ -1,20 +1,9 @@
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useRef, useMemo } from "react";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import {
   File as FileIcon,
   FolderPlus,
-  Folder,
-  FolderOpen,
-  Eye,
-  Download,
-  Upload,
-  Pencil,
-  Trash2,
   ArrowUpDown,
-  FolderInput,
-  Copy,
-  ClipboardPaste,
-  CopyPlus,
 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import {
@@ -23,7 +12,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
-import { Input } from "@/shared/ui/input";
 import {
   Empty,
   EmptyHeader,
@@ -31,23 +19,12 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@/shared/ui/empty";
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  pointerWithin,
-  type DragEndEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
+import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
 import {
   FileUploadZone,
   UploadButton,
-  uploadFiles,
 } from "@/shared/ui/file-upload-zone";
 import { useUploadFile, type FileOwner } from "@/shared/lib/file-api";
-import type { FileItem } from "@/shared/lib/file-types";
 import { useClickOutside } from "@/shared/hooks/use-click-outside";
 import {
   useFileBrowser,
@@ -61,6 +38,11 @@ import {
   menuAction,
   menuSeparator,
   type MenuItem,
+  FILE_ACTIONS,
+  multiLabel,
+  useFileDnd,
+  HiddenUploadInput,
+  NewFolderInput,
 } from "@/shared/ui/file-browser";
 
 interface FileBrowserProps {
@@ -87,7 +69,6 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
     setNewFolderName,
     setShowNewFolder,
     setRenameValue,
-    handleNavigate,
     navigateToBreadcrumb,
     handleCreateFolder,
     handleDelete,
@@ -113,68 +94,19 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
     handleKeyDown,
   } = useFileBrowser({ owner, deleteMode, rootLabel: ownerName });
 
-  const [draggedItem, setDraggedItem] = useState<FileItem | null>(null);
-  const [dragRowWidth, setDragRowWidth] = useState<number | null>(null);
-  const [movingId, setMovingId] = useState<string | null>(null);
   const uploadFile = useUploadFile(owner);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const newFolderRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(newFolderRef, () => setShowNewFolder(false), showNewFolder);
 
-  const dragCount =
-    draggedItem && selectedIds.has(draggedItem.id) ? selectedIds.size : 1;
-
-  const handleDropUpload = useCallback(
-    async (fileList: FileList, targetFolderId: string) => {
-      await uploadFiles(Array.from(fileList), targetFolderId, uploadFile);
-    },
-    [uploadFile]
-  );
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-  );
-
-  const handleDragStart = useCallback(
-    (event: DragStartEvent) => {
-      const item = items?.find((i) => i.id === event.active.id);
-      if (item) {
-        setDraggedItem(item);
-        if (!selectedIds.has(item.id)) clearSelection();
-        const width = event.active.rect.current?.initial?.width;
-        if (width) setDragRowWidth(width);
-      }
-    },
-    [items, selectedIds, clearSelection]
-  );
-
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      setDraggedItem(null);
-      setDragRowWidth(null);
-      const { active, over } = event;
-      if (!over || active.id === over.id) return;
-
-      const targetFolderId = over.data.current?.folderId as
-        | string
-        | null
-        | undefined;
-      if (targetFolderId === undefined) return;
-      if (targetFolderId === active.id) return;
-      if (
-        selectedIds.has(active.id as string) &&
-        targetFolderId &&
-        selectedIds.has(targetFolderId)
-      )
-        return;
-      setMovingId(active.id as string);
-      handleDragDrop(active.id as string, targetFolderId).then(() =>
-        setMovingId(null)
-      );
-    },
-    [handleDragDrop, selectedIds]
-  );
+  const dnd = useFileDnd({
+    items,
+    selectedIds,
+    clearSelection,
+    handleDragDrop,
+    uploadFile,
+  });
 
   // ─── 컨텍스트 메뉴 아이템 ───
 
@@ -183,16 +115,17 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
     const { item } = contextMenu;
     const isMulti = isMultiSelection(item?.id);
     const hasClipboard = !!clipboard;
+    const a = FILE_ACTIONS;
 
     // 빈 영역 우클릭
     if (!item) {
       return [
-        menuAction(FolderPlus, "새 폴더", () => { setShowNewFolder(true); closeContextMenu(); }, { shortcut: "⇧N" }),
-        menuAction(Upload, "파일 업로드", () => { uploadInputRef.current?.click(); closeContextMenu(); }),
+        menuAction(a.NEW_FOLDER.icon, a.NEW_FOLDER.label, () => { setShowNewFolder(true); closeContextMenu(); }, { shortcut: a.NEW_FOLDER.shortcut }),
+        menuAction(a.UPLOAD.icon, a.UPLOAD.label, () => { uploadInputRef.current?.click(); closeContextMenu(); }),
         ...(hasClipboard ? [
           menuSeparator(),
-          menuAction(ClipboardPaste, "붙여넣기", () => { handlePaste(); closeContextMenu(); }, { shortcut: "⌘V" }),
-          menuAction(FolderInput, "잘라넣기", () => { handleMovePaste(); closeContextMenu(); }, { shortcut: "⌥⌘V" }),
+          menuAction(a.PASTE.icon, a.PASTE.label, () => { handlePaste(); closeContextMenu(); }, { shortcut: a.PASTE.shortcut }),
+          menuAction(a.MOVE_PASTE.icon, a.MOVE_PASTE.label, () => { handleMovePaste(); closeContextMenu(); }, { shortcut: a.MOVE_PASTE.shortcut }),
         ] : []),
       ];
     }
@@ -200,42 +133,42 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
     // 다중 선택
     if (isMulti) {
       return [
-        menuAction(Copy, `${selectedIds.size}개 항목 복사`, () => { handleCopy(); closeContextMenu(); }, { shortcut: "⌘C" }),
+        menuAction(a.COPY.icon, multiLabel(a.COPY.label, selectedIds.size), () => { handleCopy(); closeContextMenu(); }, { shortcut: a.COPY.shortcut }),
         ...(hasClipboard ? [
           menuSeparator(),
-          menuAction(ClipboardPaste, "붙여넣기", () => { handlePaste(); closeContextMenu(); }, { shortcut: "⌘V" }),
-          menuAction(FolderInput, "잘라넣기", () => { handleMovePaste(); closeContextMenu(); }, { shortcut: "⌥⌘V" }),
+          menuAction(a.PASTE.icon, a.PASTE.label, () => { handlePaste(); closeContextMenu(); }, { shortcut: a.PASTE.shortcut }),
+          menuAction(a.MOVE_PASTE.icon, a.MOVE_PASTE.label, () => { handleMovePaste(); closeContextMenu(); }, { shortcut: a.MOVE_PASTE.shortcut }),
         ] : []),
         menuSeparator(),
-        menuAction(Trash2, `${selectedIds.size}개 항목 삭제`, () => { handleDelete(item.id); closeContextMenu(); }, { shortcut: "⌘⌫", variant: "destructive" }),
+        menuAction(a.DELETE.icon, multiLabel(a.DELETE.label, selectedIds.size), () => { handleDelete(item.id); closeContextMenu(); }, { shortcut: a.DELETE.shortcut, variant: "destructive" }),
       ];
     }
 
     // 단건
     return [
-      menuAction(item.isFolder ? FolderOpen : Eye, "열기", () => { handleFileClick(item); closeContextMenu(); }, { shortcut: "⌘O" }),
-      ...(!item.isFolder ? [menuAction(Download, "다운로드", () => { window.open(`/api/files/${item.id}/download`, "_blank"); closeContextMenu(); })] : []),
+      menuAction(item.isFolder ? a.OPEN_FOLDER.icon : a.OPEN_FILE.icon, a.OPEN_FILE.label, () => { handleFileClick(item); closeContextMenu(); }, { shortcut: a.OPEN_FILE.shortcut }),
+      ...(!item.isFolder ? [menuAction(a.DOWNLOAD.icon, a.DOWNLOAD.label, () => { window.open(`/api/files/${item.id}/download`, "_blank"); closeContextMenu(); })] : []),
       menuSeparator(),
-      menuAction(Copy, "복사", () => { handleCopy(); closeContextMenu(); }, { shortcut: "⌘C" }),
-      menuAction(CopyPlus, "복제", () => { handleDuplicate(); closeContextMenu(); }, { shortcut: "⌘D" }),
+      menuAction(a.COPY.icon, a.COPY.label, () => { handleCopy(); closeContextMenu(); }, { shortcut: a.COPY.shortcut }),
+      menuAction(a.DUPLICATE.icon, a.DUPLICATE.label, () => { handleDuplicate(); closeContextMenu(); }, { shortcut: a.DUPLICATE.shortcut }),
       ...(hasClipboard ? [
-        menuAction(ClipboardPaste, "붙여넣기", () => { handlePaste(); closeContextMenu(); }, { shortcut: "⌘V" }),
-        menuAction(FolderInput, "잘라넣기", () => { handleMovePaste(); closeContextMenu(); }, { shortcut: "⌥⌘V" }),
+        menuAction(a.PASTE.icon, a.PASTE.label, () => { handlePaste(); closeContextMenu(); }, { shortcut: a.PASTE.shortcut }),
+        menuAction(a.MOVE_PASTE.icon, a.MOVE_PASTE.label, () => { handleMovePaste(); closeContextMenu(); }, { shortcut: a.MOVE_PASTE.shortcut }),
       ] : []),
       menuSeparator(),
-      menuAction(Pencil, "이름 변경", () => { startRename(item.id, item.name, "list"); closeContextMenu(); }, { shortcut: "⏎" }),
+      menuAction(a.RENAME.icon, a.RENAME.label, () => { startRename(item.id, item.name, "list"); closeContextMenu(); }, { shortcut: a.RENAME.shortcut }),
       menuSeparator(),
-      menuAction(Trash2, "삭제", () => { handleDelete(item.id); closeContextMenu(); }, { shortcut: "⌘⌫", variant: "destructive" }),
+      menuAction(a.DELETE.icon, a.DELETE.label, () => { handleDelete(item.id); closeContextMenu(); }, { shortcut: a.DELETE.shortcut, variant: "destructive" }),
     ];
   }, [contextMenu, selectedIds, clipboard, isMultiSelection, closeContextMenu, setShowNewFolder, handlePaste, handleMovePaste, handleCopy, handleDelete, handleFileClick, handleDuplicate, startRename]);
 
   return (
     <div className="space-y-3">
       <DndContext
-        sensors={sensors}
+        sensors={dnd.sensors}
         collisionDetection={pointerWithin}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
+        onDragStart={dnd.handleDragStart}
+        onDragEnd={dnd.handleDragEnd}
       >
         <FileUploadZone folderId={currentFolderId} owner={owner}>
           <div className="flex select-none flex-col">
@@ -332,41 +265,14 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
 
               {/* 새 폴더 입력 */}
               {showNewFolder && (
-                <div
+                <NewFolderInput
                   ref={newFolderRef}
-                  className="flex items-center gap-2 bg-muted/30 px-3 py-1.5"
-                >
-                  <Folder className="size-4 text-blue-500" />
-                  <Input
-                    value={newFolderName}
-                    onChange={(e) => setNewFolderName(e.target.value)}
-                    placeholder="폴더 이름"
-                    className="h-7 max-w-xs text-sm"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.nativeEvent.isComposing) return;
-                      if (e.key === "Enter") handleCreateFolder();
-                      if (e.key === "Escape") setShowNewFolder(false);
-                    }}
-                  />
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      className="h-6 text-xs"
-                      onClick={handleCreateFolder}
-                    >
-                      생성
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-xs"
-                      onClick={() => setShowNewFolder(false)}
-                    >
-                      취소
-                    </Button>
-                  </div>
-                </div>
+                  value={newFolderName}
+                  onChange={setNewFolderName}
+                  onCreate={handleCreateFolder}
+                  onCancel={() => setShowNewFolder(false)}
+                  compact
+                />
               )}
 
               {!isLoading && items?.length === 0 && !showNewFolder ? (
@@ -398,18 +304,18 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
                         renaming?.source === "list" ? renaming.id : null
                       }
                       renameValue={renaming?.value ?? ""}
-                      isMoving={item.id === movingId}
+                      isMoving={item.id === dnd.movingId}
                       isGroupDragging={
-                        !!draggedItem &&
-                        selectedIds.has(draggedItem.id) &&
+                        !!dnd.draggedItem &&
+                        selectedIds.has(dnd.draggedItem.id) &&
                         selectedIds.has(item.id)
                       }
                       isSelected={selectedIds.has(item.id)}
                       isDropDisabled={
                         !item.isFolder ||
-                        (!!draggedItem &&
-                          (item.id === draggedItem.id ||
-                            (selectedIds.has(draggedItem.id) &&
+                        (!!dnd.draggedItem &&
+                          (item.id === dnd.draggedItem.id ||
+                            (selectedIds.has(dnd.draggedItem.id) &&
                               selectedIds.has(item.id))))
                       }
                       onSelect={(e) => selectItem(item.id, e)}
@@ -418,7 +324,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
                       onRenameChange={setRenameValue}
                       onRenameSubmit={handleRename}
                       onRenameCancel={cancelRename}
-                      onDropUpload={handleDropUpload}
+                      onDropUpload={dnd.handleDropUpload}
                       compact
                     />
                   ))}
@@ -442,28 +348,21 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
         </FileUploadZone>
 
         <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
-          {draggedItem && (
+          {dnd.draggedItem && (
             <DragOverlayContent
-              draggedItem={draggedItem}
-              dragCount={dragCount}
-              dragRowWidth={dragRowWidth}
+              draggedItem={dnd.draggedItem}
+              dragCount={dnd.dragCount}
+              dragRowWidth={dnd.dragRowWidth}
               compact
             />
           )}
         </DragOverlay>
 
         {/* 컨텍스트 메뉴용 hidden input */}
-        <input
+        <HiddenUploadInput
           ref={uploadInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={async (e) => {
-            const files = e.target.files;
-            if (!files || files.length === 0) return;
-            await uploadFiles(Array.from(files), currentFolderId, uploadFile);
-            e.target.value = "";
-          }}
+          folderId={currentFolderId}
+          uploadFile={uploadFile}
         />
 
         {contextMenu && (

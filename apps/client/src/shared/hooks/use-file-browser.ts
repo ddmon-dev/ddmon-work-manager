@@ -24,6 +24,7 @@ import {
 } from "@/shared/lib/file-api";
 import { useDialog } from "@/shared/ui/app-dialog";
 import type { FileItem } from "@/shared/lib/file-types";
+import { FILE_MESSAGES } from "@/shared/ui/file-browser";
 
 // ─── 타입 ───
 
@@ -149,9 +150,9 @@ function useFileRenaming() {
     } catch (err) {
       await alert({
         variant: "error",
-        title: "이름 변경 실패",
+        title: FILE_MESSAGES.RENAME_FAILED_TITLE,
         description:
-          err instanceof Error ? err.message : "이름 변경에 실패했습니다.",
+          err instanceof Error ? err.message : FILE_MESSAGES.RENAME_FAILED_DESC,
       });
     }
     setRenaming(null);
@@ -425,10 +426,10 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
       const isPermanent = deleteMode === "permanent";
 
       await confirm({
-        title: isPermanent ? "영구 삭제" : "휴지통으로 이동",
+        title: isPermanent ? FILE_MESSAGES.DELETE_CONFIRM_PERMANENT : FILE_MESSAGES.DELETE_CONFIRM_TRASH,
         description: isPermanent
-          ? `선택한 ${count}개 항목을 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`
-          : `선택한 ${count}개 항목을 휴지통으로 이동하시겠습니까?`,
+          ? FILE_MESSAGES.DELETE_CONFIRM_PERMANENT_DESC(count)
+          : FILE_MESSAGES.DELETE_CONFIRM_TRASH_DESC(count),
         confirmText: "삭제",
         variant: "destructive",
         onConfirm: async () => {
@@ -444,7 +445,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
             }
           }
           toast.success(
-            isPermanent ? "영구 삭제했습니다." : "휴지통으로 이동했습니다."
+            isPermanent ? FILE_MESSAGES.DELETED_PERMANENT : FILE_MESSAGES.MOVED_TO_TRASH
           );
           clearSelection();
         },
@@ -490,16 +491,16 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
       await batchMoveFiles.mutateAsync({ ids, folderId: targetFolderId });
       toast.success(
         ids.length > 1
-          ? `${ids.length}개 항목을 이동했습니다.`
-          : "이동했습니다."
+          ? FILE_MESSAGES.MOVED_MULTI(ids.length)
+          : FILE_MESSAGES.MOVED
       );
       clearSelection();
     } catch (err) {
       alert({
         variant: "error",
-        title: "이동 실패",
+        title: FILE_MESSAGES.MOVE_FAILED_TITLE,
         description:
-          err instanceof Error ? err.message : "이동에 실패했습니다.",
+          err instanceof Error ? err.message : FILE_MESSAGES.MOVE_FAILED_DESC,
       });
     }
   };
@@ -510,7 +511,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
       ids: Array.from(selectedIds),
       sourceFolderId: nav.currentFolderId,
     });
-    toast.success(`${selectedIds.size}개 항목을 클립보드에 복사했습니다.`);
+    toast.success(FILE_MESSAGES.COPIED_TO_CLIPBOARD(selectedIds.size));
   }, [selectedIds, nav.currentFolderId]);
 
   const getPasteTargetFolderId = useCallback(() => {
@@ -526,7 +527,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     if (!clipboard) return;
     const targetFolderId = getPasteTargetFolderId();
     if (targetFolderId && clipboard.ids.includes(targetFolderId)) {
-      alert({ variant: "error", title: "붙여넣기 불가", description: "항목을 자기 자신 내부에 붙여넣을 수 없습니다." });
+      alert({ variant: "error", title: FILE_MESSAGES.PASTE_BLOCKED_TITLE, description: FILE_MESSAGES.PASTE_BLOCKED_DESC });
       return;
     }
     try {
@@ -534,10 +535,10 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
         ids: clipboard.ids,
         folderId: targetFolderId,
       });
-      toast.success("붙여넣기 완료 (복사)");
+      toast.success(FILE_MESSAGES.PASTED_COPY);
       setClipboard(null);
     } catch {
-      toast.error("붙여넣기에 실패했습니다.");
+      toast.error(FILE_MESSAGES.PASTE_FAILED);
     }
   }, [clipboard, getPasteTargetFolderId, copyFilesMutation, alert]);
 
@@ -545,7 +546,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     if (!clipboard) return;
     const targetFolderId = getPasteTargetFolderId();
     if (targetFolderId && clipboard.ids.includes(targetFolderId)) {
-      alert({ variant: "error", title: "붙여넣기 불가", description: "항목을 자기 자신 내부에 붙여넣을 수 없습니다." });
+      alert({ variant: "error", title: FILE_MESSAGES.PASTE_BLOCKED_TITLE, description: FILE_MESSAGES.PASTE_BLOCKED_DESC });
       return;
     }
     try {
@@ -553,10 +554,10 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
         ids: clipboard.ids,
         folderId: targetFolderId,
       });
-      toast.success("붙여넣기 완료 (이동)");
+      toast.success(FILE_MESSAGES.PASTED_MOVE);
       setClipboard(null);
     } catch {
-      toast.error("잘라넣기에 실패했습니다.");
+      toast.error(FILE_MESSAGES.MOVE_PASTE_FAILED);
     }
   }, [clipboard, getPasteTargetFolderId, batchMoveFiles, alert]);
 
@@ -565,9 +566,9 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     const id = Array.from(selectedIds)[0];
     try {
       await duplicateFileMutation.mutateAsync(id);
-      toast.success("복제했습니다.");
+      toast.success(FILE_MESSAGES.DUPLICATED);
     } catch {
-      toast.error("복제에 실패했습니다.");
+      toast.error(FILE_MESSAGES.DUPLICATE_FAILED);
     }
   }, [selectedIds, duplicateFileMutation]);
 

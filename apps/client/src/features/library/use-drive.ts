@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useToggleFavorite, useDeleteFile, useBatchDeleteFiles } from "./api";
 import { useFileBrowser } from "@/shared/hooks/use-file-browser";
+import { FILE_MESSAGES } from "@/shared/ui/file-browser";
 
 export type {
   RenameSource,
@@ -45,11 +46,11 @@ export function useDrive() {
         });
         toast.success(
           !currentState
-            ? "즐겨찾기에 추가했습니다."
-            : "즐겨찾기를 해제했습니다."
+            ? FILE_MESSAGES.FAVORITE_ADDED
+            : FILE_MESSAGES.FAVORITE_REMOVED
         );
       } catch {
-        toast.error("즐겨찾기 변경에 실패했습니다.");
+        toast.error(FILE_MESSAGES.FAVORITE_FAILED);
       }
     },
     [toggleFavoriteMutation]
@@ -70,10 +71,10 @@ export function useDrive() {
         } else {
           await batchDeleteFiles.mutateAsync(ids);
         }
-        toast.success("휴지통으로 이동했습니다.");
+        toast.success(FILE_MESSAGES.MOVED_TO_TRASH);
         fb.clearSelection();
       } catch {
-        toast.error("삭제에 실패했습니다.");
+        toast.error(FILE_MESSAGES.DELETE_FAILED);
       }
     },
     [deleteFile, batchDeleteFiles, fb.selectedIds, fb.clearSelection]

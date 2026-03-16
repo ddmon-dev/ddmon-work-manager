@@ -20,9 +20,9 @@ src/
 │   ├── settings/       # 설정
 │   └── ui/             # 글로벌 UI (app-sidebar, 미니앱: todo-widget, mindnote-widget, memo-widget, calculator-widget)
 └── shared/             # 공유 레이어
-    ├── ui/             # 기본 컴포넌트, 폼 컴포넌트, DataList
+    ├── ui/             # 기본 컴포넌트, 폼 컴포넌트, DataList, file-browser
     ├── lib/            # api-client, query-keys, query-client
-    ├── hooks/          # 커스텀 훅
+    ├── hooks/          # 커스텀 훅 (use-file-browser 포함)
     ├── utils/          # 유틸리티 (format, date, download)
     ├── constants/      # 상수
     └── types/          # 공유 타입
@@ -147,6 +147,34 @@ useManageSheet() → { open, close, closeWithGuard, setMode, setModeWithGuard, s
 
 - `useFormGuard(form)` 훅으로 RHF isDirty 감지 → 닫기/모드 변경 시 확인 다이얼로그
 - `beforeunload` 이벤트도 등록 (새로고침/탭 닫기 방지)
+
+### 파일 브라우저 시스템
+
+드라이브(`features/library/drive.tsx`)와 모듈 파일 브라우저(`features/manage-modules/_base/ui/file-browser.tsx`)가 공유하는 파일 탐색 UI.
+
+#### 구조
+
+```
+shared/hooks/use-file-browser.ts     # 핵심 상태 관리 훅 (네비, 정렬, 선택, 이름변경, 클립보드, 키보드, 드래그선택)
+shared/ui/file-browser/
+├── index.ts                         # barrel export
+├── constants.ts                     # FILE_ACTIONS (아이콘+라벨+단축키), FILE_MESSAGES (토스트/대화), multiLabel
+├── use-file-dnd.ts                  # DnD 보일러플레이트 훅 (상태+센서+핸들러, onTrashDrop 옵션)
+├── hidden-upload-input.tsx          # 컨텍스트 메뉴 파일 업로드용 hidden input
+├── new-folder-input.tsx             # 새 폴더 입력 UI (compact prop)
+├── breadcrumbs.tsx                  # 브레드크럼 네비게이션
+├── parent-folder-row.tsx            # 상위 폴더 행 (드롭 대상)
+├── draggable-file-row.tsx           # 파일/폴더 행 (DnD + 네이티브 파일 드롭)
+├── drag-overlay-content.tsx         # 드래그 중 오버레이
+├── file-context-menu.tsx            # 컨텍스트 메뉴 렌더러 (menuAction/menuSeparator 헬퍼)
+└── context-menu-button.tsx          # 메뉴 버튼 단일 항목
+```
+
+#### 소비 패턴
+
+- **드라이브**: `useDrive()` (useFileBrowser 래핑 + 즐겨찾기/휴지통) → `useFileDnd({ onTrashDrop })` → 트리/즐겨찾기/리스트 소스별 메뉴 분기
+- **모듈 파일 브라우저**: `useFileBrowser({ owner, deleteMode })` → `useFileDnd()` → 단순화된 메뉴 (즐겨찾기/트리 없음)
+- **menuItems**: 각 소비자가 `FILE_ACTIONS` 상수 + `menuAction` 헬퍼로 조합. 소스 분기 차이로 공통화하지 않음
 
 ### 데이터 페칭 패턴
 

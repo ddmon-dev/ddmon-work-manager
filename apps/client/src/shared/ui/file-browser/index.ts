@@ -4,3 +4,7 @@ export { FileContextMenu, menuAction, menuSeparator, type MenuItem } from "./fil
 export { ParentFolderRow } from "./parent-folder-row";
 export { DraggableFileRow } from "./draggable-file-row";
 export { DragOverlayContent } from "./drag-overlay-content";
+export { FILE_ACTIONS, FILE_MESSAGES, multiLabel } from "./constants";
+export { useFileDnd } from "./use-file-dnd";
+export { HiddenUploadInput } from "./hidden-upload-input";
+export { NewFolderInput } from "./new-folder-input";
