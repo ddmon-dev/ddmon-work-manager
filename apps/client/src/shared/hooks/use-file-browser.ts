@@ -686,16 +686,21 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
   }, [clearSelection]);
 
   // 컨테이너 내부 Escape → 캡처 단계에서 차단 (Sheet/Dialog 전파 방지)
+  const renamingRef = useRef(renaming.renaming);
+  renamingRef.current = renaming.renaming;
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       const container = dragSelection.containerRef.current;
       if (!container || !container.contains(e.target as Node)) return;
       e.stopImmediatePropagation();
+      if (renamingRef.current) {
+        renaming.cancelRename();
+      }
     };
     window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);
-  }, []);
+  }, [renaming.cancelRename]);
 
   const scrollToElement = useCallback(
     (selector: string) => {
