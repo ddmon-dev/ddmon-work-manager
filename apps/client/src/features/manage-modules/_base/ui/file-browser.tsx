@@ -87,7 +87,6 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
     selectItem,
     focusSelectParent,
     clearSelection,
-    handleContainerBlur,
     activeItemId,
     startRename,
     cancelRename,
@@ -249,7 +248,6 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
                 ref={dragContainerRef}
                 tabIndex={-1}
                 onKeyDown={handleKeyDown}
-                onBlur={handleContainerBlur}
                 className="relative mt-2 flex h-60 flex-col divide-y overflow-y-auto rounded-md border outline-none"
                 onMouseDown={handleDragSelectStart}
                 onClick={(e) => {

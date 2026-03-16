@@ -395,6 +395,22 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     prevShowNewFolderRef.current = folder.showNewFolder;
   }, [folder.showNewFolder, activeItemId]);
 
+  // 다이얼로그 닫힌 후 컨테이너 포커스 복구
+  const prevDialogStateRef = useRef(dialog.dialogState);
+  useEffect(() => {
+    if (prevDialogStateRef.current && !dialog.dialogState) {
+      requestAnimationFrame(() => {
+        const container = dragSelection.containerRef.current;
+        if (!container) return;
+        const target = activeItemId
+          ? container.querySelector<HTMLElement>(`[data-item-id="${activeItemId}"]`)
+          : null;
+        (target ?? container).focus({ preventScroll: true });
+      });
+    }
+    prevDialogStateRef.current = dialog.dialogState;
+  }, [dialog.dialogState, activeItemId]);
+
   const cancelNewFolder = useCallback(() => {
     folder.setShowNewFolder(false);
   }, [folder.setShowNewFolder]);
@@ -457,17 +473,6 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     lastSelectedIdRef.current = null;
   }, []);
 
-  // 컨테이너에서 포커스가 완전히 벗어나면 선택 해제
-  const handleContainerBlur = useCallback((e: React.FocusEvent) => {
-    const container = dragSelection.containerRef.current;
-    if (!container || !e.relatedTarget) return;
-    if (!container.contains(e.relatedTarget as Node)) {
-      setSelectedIds(new Set());
-      lastSelectedIdRef.current = null;
-      setParentFolderFocused(false);
-    }
-  }, []);
-
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
     lastSelectedIdRef.current = null;
@@ -515,6 +520,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
             isPermanent ? FILE_MESSAGES.DELETED_PERMANENT : FILE_MESSAGES.MOVED_TO_TRASH
           );
           clearSelection();
+          setActiveItemId(null);
         },
       });
     },
@@ -793,18 +799,18 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
             }
             break;
           }
-          if (!items || items.length === 0) {
-            if (nav.currentFolderId) {
-              setParentFolderFocused(true);
-              scrollToElement("[data-parent-folder-row]");
-              requestAnimationFrame(() => {
-                dragSelection.containerRef.current
-                  ?.querySelector<HTMLElement>("[data-parent-folder-row]")
-                  ?.focus({ preventScroll: true });
-              });
-            }
+          // 아무것도 선택되지 않은 상태에서 상위 행이 있으면 상위 행 먼저
+          if (!lastSelectedIdRef.current && nav.currentFolderId) {
+            setParentFolderFocused(true);
+            scrollToElement("[data-parent-folder-row]");
+            requestAnimationFrame(() => {
+              dragSelection.containerRef.current
+                ?.querySelector<HTMLElement>("[data-parent-folder-row]")
+                ?.focus({ preventScroll: true });
+            });
             break;
           }
+          if (!items || items.length === 0) break;
           const currentIndex = lastSelectedIdRef.current
             ? items.findIndex((i) => i.id === lastSelectedIdRef.current)
             : -1;
@@ -928,7 +934,6 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     selectItem,
     focusSelectParent,
     clearSelection,
-    handleContainerBlur,
     activeItemId,
     startRename: renaming.startRename,
     cancelRename: renaming.cancelRename,

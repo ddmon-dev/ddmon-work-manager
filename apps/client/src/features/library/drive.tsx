@@ -88,7 +88,6 @@ export function Drive() {
     selectItem,
     focusSelectParent,
     clearSelection,
-    handleContainerBlur,
     activeItemId,
     startRename,
     cancelRename,
@@ -339,7 +338,6 @@ export function Drive() {
                 ref={dragContainerRef}
                 tabIndex={-1}
                 onKeyDown={handleKeyDown}
-                onBlur={handleContainerBlur}
                 className="relative flex-1 overflow-y-auto outline-none hide-scrollbar"
                 onMouseDown={handleDragSelectStart}
                 onClick={(e) => {
