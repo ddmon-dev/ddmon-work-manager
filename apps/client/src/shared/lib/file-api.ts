@@ -130,6 +130,17 @@ export function usePermanentDeleteFile() {
   });
 }
 
+export function useBatchPermanentDeleteFiles() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => api.post("/files/batch-permanent-delete", { ids }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.files.all });
+      qc.invalidateQueries({ queryKey: queryKeys.trash.all });
+    },
+  });
+}
+
 export function useOpenFile() {
   return useMutation({
     mutationFn: (id: string) => api.post(`/files/${id}/open`),

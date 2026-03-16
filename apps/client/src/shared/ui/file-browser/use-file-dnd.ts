@@ -31,6 +31,7 @@ export interface UseFileDndReturn {
   handleDragStart: (event: DragStartEvent) => void;
   handleDragEnd: (event: DragEndEvent) => void;
   handleDropUpload: (fileList: FileList, folderId: string) => Promise<void>;
+  isDropDisabled: (item: FileItem) => boolean;
 }
 
 export function useFileDnd({
@@ -105,6 +106,15 @@ export function useFileDnd({
     [handleDragDrop, onTrashDrop, selectedIds]
   );
 
+  const isDropDisabled = useCallback(
+    (item: FileItem) =>
+      !item.isFolder ||
+      (!!draggedItem &&
+        (item.id === draggedItem.id ||
+          (selectedIds.has(draggedItem.id) && selectedIds.has(item.id)))),
+    [draggedItem, selectedIds]
+  );
+
   return {
     draggedItem,
     dragRowWidth,
@@ -114,5 +124,6 @@ export function useFileDnd({
     handleDragStart,
     handleDragEnd,
     handleDropUpload,
+    isDropDisabled,
   };
 }

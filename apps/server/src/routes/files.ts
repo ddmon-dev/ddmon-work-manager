@@ -3,7 +3,7 @@ import { and, eq, isNull, asc, desc, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { files } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
-import { fileRenameSchema, folderCreateSchema, fileFavoriteSchema, batchDeleteSchema, batchMoveSchema, favoriteReorderSchema, fileCopySchema } from "@packages/schemas";
+import { fileRenameSchema, folderCreateSchema, fileFavoriteSchema, batchDeleteSchema, batchPermanentDeleteSchema, batchMoveSchema, favoriteReorderSchema, fileCopySchema } from "@packages/schemas";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { uploadFile, deleteFile, getFile, copyStorageFile, openFileNative, STORAGE_CONFIG } from "../lib/storage";
 import type { AppVariables } from "../lib/types";
@@ -504,6 +504,48 @@ app.post("/batch-delete", async (c) => {
   return successResponse(c, { ids: targets.map((t) => t.id) });
 });
 
+// POST /batch-permanent-delete — 배치 영구 삭제 (트랜잭션 + 스토리지 후처리)
+app.post("/batch-permanent-delete", async (c) => {
+  const parsed = batchPermanentDeleteSchema.safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  const { ids } = parsed.data;
+
+  const targets = await db.query.files.findMany({
+    where: inArray(files.id, ids),
+    columns: { id: true, isFolder: true, s3Key: true },
+  });
+
+  if (targets.length === 0) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  const s3KeysToDelete: string[] = [];
+
+  await db.transaction(async (tx) => {
+    for (const target of targets) {
+      if (target.isFolder) {
+        const childKeys = await permanentDeleteRecursive(tx, target.id);
+        s3KeysToDelete.push(...childKeys);
+      }
+      if (target.s3Key) {
+        s3KeysToDelete.push(target.s3Key);
+      }
+    }
+
+    await tx.delete(files).where(inArray(files.id, targets.map((t) => t.id)));
+  });
+
+  // 스토리지 삭제는 트랜잭션 밖에서 후처리
+  await Promise.allSettled(
+    s3KeysToDelete.map((key) =>
+      deleteFile(key).catch((err) =>
+        console.warn(`[Storage] Failed to delete file: ${key}`, err)
+      )
+    )
+  );
+
+  return successResponse(c, { ids: targets.map((t) => t.id) });
+});
+
 // POST /batch-move — 배치 이동 (트랜잭션, 충돌 시 전체 차단)
 app.post("/batch-move", async (c) => {
   const parsed = batchMoveSchema.safeParse(await c.req.json());
@@ -518,6 +560,22 @@ app.post("/batch-move", async (c) => {
     // 1단계: 대상 정보 조회 + 충돌 검증 (Map 캐싱)
     const targetInfoMap = new Map<string, { name: string; isFolder: boolean }>();
 
+    // folderId의 조상 경로를 1회 CTE로 조회 (순환 참조 검증용)
+    const ancestorIds = new Set<string>();
+    if (folderId) {
+      const rows = await tx.execute(sql`
+        WITH RECURSIVE ancestors AS (
+          SELECT folder_id FROM files WHERE id = ${folderId}
+          UNION ALL
+          SELECT f.folder_id FROM files f JOIN ancestors a ON f.id = a.folder_id
+        )
+        SELECT folder_id FROM ancestors WHERE folder_id IS NOT NULL
+      `);
+      for (const row of rows as unknown as { folder_id: string }[]) {
+        ancestorIds.add(row.folder_id);
+      }
+    }
+
     for (const id of ids) {
       if (id === folderId) continue;
 
@@ -527,7 +585,7 @@ app.post("/batch-move", async (c) => {
       });
       if (!target) continue;
 
-      if (target.isFolder && folderId && (await isDescendant(tx, folderId, id))) {
+      if (target.isFolder && folderId && ancestorIds.has(id)) {
         continue;
       }
 

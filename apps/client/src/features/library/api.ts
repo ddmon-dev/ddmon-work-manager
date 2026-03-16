@@ -164,6 +164,7 @@ export {
   useRenameFile,
   useDeleteFile,
   usePermanentDeleteFile,
+  useBatchPermanentDeleteFiles,
   useOpenFile,
   useBatchDeleteFiles,
   useBatchMoveFiles,

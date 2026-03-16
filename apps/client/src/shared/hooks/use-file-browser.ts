@@ -20,6 +20,7 @@ import {
   useDuplicateFile,
   useCopyFiles,
   usePermanentDeleteFile,
+  useBatchPermanentDeleteFiles,
   type FileOwner,
 } from "@/shared/lib/file-api";
 import { useDialog } from "@/shared/ui/app-dialog";
@@ -194,6 +195,7 @@ function useDragSelection(
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const initialSelectionRef = useRef<Set<string>>(new Set());
   const wasDragSelectingRef = useRef(false);
+  const rAFRef = useRef<number | null>(null);
 
   const handleDragSelectStart = useCallback(
     (e: React.MouseEvent) => {
@@ -213,6 +215,8 @@ function useDragSelection(
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!dragStartRef.current) return;
+      if (rAFRef.current !== null) return;
+
       const container = containerRef.current;
       if (!container) return;
 
@@ -223,41 +227,52 @@ function useDragSelection(
       )
         return;
 
-      wasDragSelectingRef.current = true;
+      const clientX = e.clientX;
+      const clientY = e.clientY;
 
-      const cr = container.getBoundingClientRect();
-      const cx = Math.max(cr.left, Math.min(e.clientX, cr.right));
-      const cy = Math.max(cr.top, Math.min(e.clientY, cr.bottom));
+      rAFRef.current = requestAnimationFrame(() => {
+        rAFRef.current = null;
 
-      const newRect: DragRect = {
-        x: Math.min(startX, cx),
-        y: Math.min(startY, cy),
-        width: Math.abs(cx - startX),
-        height: Math.abs(cy - startY),
-      };
-      setDragRect(newRect);
+        wasDragSelectingRef.current = true;
 
-      const rows = container.querySelectorAll<HTMLElement>("[data-item-id]");
-      const newSelected = new Set(initialSelectionRef.current);
-      rows.forEach((row) => {
-        const rr = row.getBoundingClientRect();
-        const intersects = !(
-          newRect.x + newRect.width < rr.left ||
-          newRect.x > rr.right ||
-          newRect.y + newRect.height < rr.top ||
-          newRect.y > rr.bottom
-        );
-        if (intersects) {
-          const itemId = row.getAttribute("data-item-id");
-          if (itemId) newSelected.add(itemId);
-        }
+        const cr = container.getBoundingClientRect();
+        const cx = Math.max(cr.left, Math.min(clientX, cr.right));
+        const cy = Math.max(cr.top, Math.min(clientY, cr.bottom));
+
+        const newRect: DragRect = {
+          x: Math.min(startX, cx),
+          y: Math.min(startY, cy),
+          width: Math.abs(cx - startX),
+          height: Math.abs(cy - startY),
+        };
+        setDragRect(newRect);
+
+        const rows = container.querySelectorAll<HTMLElement>("[data-item-id]");
+        const newSelected = new Set(initialSelectionRef.current);
+        rows.forEach((row) => {
+          const rr = row.getBoundingClientRect();
+          const intersects = !(
+            newRect.x + newRect.width < rr.left ||
+            newRect.x > rr.right ||
+            newRect.y + newRect.height < rr.top ||
+            newRect.y > rr.bottom
+          );
+          if (intersects) {
+            const itemId = row.getAttribute("data-item-id");
+            if (itemId) newSelected.add(itemId);
+          }
+        });
+        setSelectedIds(newSelected);
       });
-      setSelectedIds(newSelected);
     };
 
     const handleMouseUp = () => {
       if (dragStartRef.current) {
         dragStartRef.current = null;
+        if (rAFRef.current !== null) {
+          cancelAnimationFrame(rAFRef.current);
+          rAFRef.current = null;
+        }
         setDragRect(null);
       }
     };
@@ -267,6 +282,10 @@ function useDragSelection(
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      if (rAFRef.current !== null) {
+        cancelAnimationFrame(rAFRef.current);
+        rAFRef.current = null;
+      }
     };
   }, [setSelectedIds]);
 
@@ -282,6 +301,9 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
   const sorting = useSorting();
   const renaming = useFileRenaming();
   const folder = useNewFolder(nav.currentFolderId, owner);
+
+  const breadcrumbsRef = useRef(nav.breadcrumbs);
+  breadcrumbsRef.current = nav.breadcrumbs;
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(
@@ -355,6 +377,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
   const { confirm, alert } = useDialog();
   const deleteFile = useDeleteFile();
   const permanentDeleteFile = usePermanentDeleteFile();
+  const batchPermanentDeleteFiles = useBatchPermanentDeleteFiles();
   const batchDeleteFiles = useBatchDeleteFiles();
   const batchMoveFiles = useBatchMoveFiles();
   const openFileMutation = useOpenFile();
@@ -434,7 +457,11 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
         variant: "destructive",
         onConfirm: async () => {
           if (isPermanent) {
-            await Promise.all(ids.map((id) => permanentDeleteFile.mutateAsync(id)));
+            if (ids.length === 1) {
+              await permanentDeleteFile.mutateAsync(ids[0]);
+            } else {
+              await batchPermanentDeleteFiles.mutateAsync(ids);
+            }
           } else {
             if (ids.length === 1) {
               await deleteFile.mutateAsync(ids[0]);
@@ -452,6 +479,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     [
       deleteFile,
       permanentDeleteFile,
+      batchPermanentDeleteFiles,
       batchDeleteFiles,
       confirm,
       selectedIds,
@@ -639,7 +667,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
         case "Enter": {
           if (parentFolderFocused) {
             e.preventDefault();
-            nav.navigateToBreadcrumb(nav.breadcrumbs.length - 2);
+            nav.navigateToBreadcrumb(breadcrumbsRef.current.length - 2);
             break;
           }
           if (selectedIds.size === 1) {
@@ -779,7 +807,6 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
       parentFolderFocused,
       nav.currentFolderId,
       nav.navigateToBreadcrumb,
-      nav.breadcrumbs,
       scrollToElement,
     ]
   );

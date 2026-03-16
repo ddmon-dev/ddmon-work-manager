@@ -309,13 +309,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
                         selectedIds.has(item.id)
                       }
                       isSelected={selectedIds.has(item.id)}
-                      isDropDisabled={
-                        !item.isFolder ||
-                        (!!dnd.draggedItem &&
-                          (item.id === dnd.draggedItem.id ||
-                            (selectedIds.has(dnd.draggedItem.id) &&
-                              selectedIds.has(item.id))))
-                      }
+                      isDropDisabled={dnd.isDropDisabled(item)}
                       onSelect={(e) => selectItem(item.id, e)}
                       onFileClick={handleFileClick}
                       onContextMenu={openContextMenu}
