@@ -431,6 +431,16 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     [items]
   );
 
+  // Tab 포커스 시 선택 (컨테이너로 포커스 이동하지 않음)
+  const focusSelectItem = useCallback(
+    (id: string) => {
+      setParentFolderFocused(false);
+      setSelectedIds(new Set([id]));
+      lastSelectedIdRef.current = id;
+    },
+    []
+  );
+
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
     lastSelectedIdRef.current = null;
@@ -859,6 +869,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     openContextMenu,
     closeContextMenu,
     selectItem,
+    focusSelectItem,
     clearSelection,
     startRename: renaming.startRename,
     cancelRename: renaming.cancelRename,

@@ -86,6 +86,7 @@ export function Drive() {
     parentFolderFocused,
     clipboard,
     selectItem,
+    focusSelectItem,
     clearSelection,
     startRename,
     cancelRename,
@@ -419,6 +420,7 @@ export function Drive() {
                         isSelected={selectedIds.has(item.id)}
                         isDropDisabled={dnd.isDropDisabled(item)}
                         onSelect={(e) => selectItem(item.id, e)}
+                        onFocusSelect={() => focusSelectItem(item.id)}
                         onFileClick={handleFileClick}
                         onContextMenu={openContextMenu}
                         onRenameChange={setRenameValue}

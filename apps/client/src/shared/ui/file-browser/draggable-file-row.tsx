@@ -20,6 +20,7 @@ interface DraggableFileRowProps {
   onRenameChange: (value: string) => void;
   onRenameSubmit: (id: string) => void;
   onRenameCancel: () => void;
+  onFocusSelect?: () => void;
   onDropUpload: (files: FileList, folderId: string) => void;
   compact?: boolean;
 }
@@ -38,6 +39,7 @@ export function DraggableFileRow({
   onRenameChange,
   onRenameSubmit,
   onRenameCancel,
+  onFocusSelect,
   onDropUpload,
   compact,
 }: DraggableFileRowProps) {
@@ -116,6 +118,9 @@ export function DraggableFileRow({
           ? "bg-primary/8 hover:bg-primary/12 dark:bg-primary/12 dark:hover:bg-primary/16"
           : "hover:bg-muted/50"
       )}
+      onFocus={() => {
+        if (!isSelected && onFocusSelect) onFocusSelect();
+      }}
       onClick={(e) => {
         if (!isDragging) onSelect(e);
       }}

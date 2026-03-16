@@ -85,6 +85,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
     openContextMenu,
     closeContextMenu,
     selectItem,
+    focusSelectItem,
     clearSelection,
     startRename,
     cancelRename,
@@ -334,6 +335,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
                         isSelected={selectedIds.has(item.id)}
                         isDropDisabled={dnd.isDropDisabled(item)}
                         onSelect={(e) => selectItem(item.id, e)}
+                        onFocusSelect={() => focusSelectItem(item.id)}
                         onFileClick={handleFileClick}
                         onContextMenu={openContextMenu}
                         onRenameChange={setRenameValue}
