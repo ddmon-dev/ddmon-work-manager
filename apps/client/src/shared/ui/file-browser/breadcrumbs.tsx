@@ -52,7 +52,7 @@ export function Breadcrumbs({
       className={cn(
         "flex min-w-0 items-center gap-1",
         compact
-          ? "sticky top-0 z-10 bg-background px-3 py-1.5 text-xs"
+          ? "shrink-0 border-b bg-background px-3 py-1.5 text-xs"
           : "border-b bg-muted/30 px-2 py-2 text-sm",
         className,
       )}

@@ -244,11 +244,19 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
               </div>
 
               {/* 파일 목록 */}
+              <div className="mt-2 flex h-60 flex-col overflow-hidden rounded-md border">
+                {/* 브레드크럼 */}
+                <Breadcrumbs
+                  breadcrumbs={breadcrumbs}
+                  onNavigate={navigateToBreadcrumb}
+                  compact
+                />
+
               <div
                 ref={dragContainerRef}
                 tabIndex={-1}
                 onKeyDown={handleKeyDown}
-                className="relative mt-2 flex h-60 flex-col divide-y overflow-y-auto rounded-md border outline-none"
+                className="relative flex-1 divide-y overflow-y-auto outline-none"
                 onMouseDown={handleDragSelectStart}
                 onClick={(e) => {
                   if (wasDragSelectingRef.current) {
@@ -265,13 +273,6 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
                   }
                 }}
               >
-                {/* 브레드크럼 */}
-                <Breadcrumbs
-                  breadcrumbs={breadcrumbs}
-                  onNavigate={navigateToBreadcrumb}
-                  compact
-                />
-
                 {/* 상위 폴더 */}
                 {!isLoading && currentFolderId && (
                   <ParentFolderRow
@@ -361,6 +362,7 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent" }: File
                     }}
                   />
                 )}
+              </div>
               </div>
 
               {/* Portal 영역 (overflow 밖, 트랩 안) */}
