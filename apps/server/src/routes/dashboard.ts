@@ -9,7 +9,7 @@ import {
 } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { successResponse } from "../lib/errors";
-import { softDeleteFilter } from "../lib/query-helpers";
+import { softDeleteFilter, getExpectedReceivable } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -85,22 +85,23 @@ app.get("/revenue-summary", async (c) => {
 
   const validProjectIds = new Set(allProjects.map((p) => p.id));
 
-  // 계약액(공급가액) 계산
-  let contractTotal = 0;
-  let allContractTotal = 0;
+  // 기대 수금액 계산 (VAT: 공급가액, 원천징수: 실수령액)
+  let expectedTotal = 0;
+  let allExpectedTotal = 0;
   const projectContractYearMap = new Map<string, number>();
 
   for (const p of allProjects) {
     const amount = Number(p.contractAmount ?? 0);
     if (amount === 0) continue;
 
-    allContractTotal += amount;
+    const expected = getExpectedReceivable(amount, p.taxType);
+    allExpectedTotal += expected;
 
     const contractYear = new Date(p.contractDate).getFullYear();
     projectContractYearMap.set(p.id, contractYear);
 
     if (contractYear === currentYear) {
-      contractTotal += amount;
+      expectedTotal += expected;
     }
   }
 
@@ -120,15 +121,15 @@ app.get("/revenue-summary", async (c) => {
   }
 
   const collectionRate =
-    contractTotal > 0
-      ? Math.round((paymentTotal / contractTotal) * 1000) / 10
+    expectedTotal > 0
+      ? Math.round((paymentTotal / expectedTotal) * 1000) / 10
       : 0;
 
-  const cumulativeOutstanding = allContractTotal - allPaymentTotal;
+  const cumulativeOutstanding = allExpectedTotal - allPaymentTotal;
 
   return successResponse(c, {
     currentYear,
-    contractTotal,
+    contractTotal: expectedTotal,
     paymentTotal,
     collectionRate,
     cumulativeOutstanding,

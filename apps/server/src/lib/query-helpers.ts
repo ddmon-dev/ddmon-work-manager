@@ -2,6 +2,12 @@ import { eq, ilike, or } from "drizzle-orm";
 import type { AnyColumn, SQL } from "drizzle-orm";
 import { z } from "zod";
 
+/** 세금타입별 기대 수금액 (VAT: 공급가액, 원천징수: 실수령액) */
+export function getExpectedReceivable(amount: number, taxType: string | null): number {
+  if (taxType === "withholding") return amount - Math.round(amount * 0.033);
+  return amount;
+}
+
 /** 소프트 삭제 필터 */
 export function softDeleteFilter(column: AnyColumn): SQL {
   return eq(column, false);

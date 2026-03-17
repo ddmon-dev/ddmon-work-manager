@@ -50,7 +50,7 @@ export function OutstandingTable({ projects }: OutstandingTableProps) {
               <TableHead>프로젝트명</TableHead>
               <TableHead>클라이언트</TableHead>
               <TableHead className="text-center">세금유형</TableHead>
-              <TableHead className="text-right">공급가액</TableHead>
+              <TableHead className="text-right">매출액</TableHead>
               <TableHead className="text-right">입금액</TableHead>
               <TableHead className="text-right">잔액</TableHead>
               <TableHead className="text-center">상태</TableHead>

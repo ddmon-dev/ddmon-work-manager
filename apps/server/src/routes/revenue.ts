@@ -5,7 +5,7 @@ import { db } from "../db";
 import { projects, projectPayments, clients } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { softDeleteFilter } from "../lib/query-helpers";
+import { softDeleteFilter, getExpectedReceivable } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const MONTH_LABELS = [
@@ -75,11 +75,11 @@ app.get("/", async (c) => {
   yearBuckets.set(prevYear, emptyBucket());
   yearBuckets.set(currentYear, emptyBucket());
 
-  // 전체 공급가액 + VAT (누적 미수금/미정산 계산용)
+  // 전체 기대 수금액 + VAT (누적 미수금/미정산 계산용)
   let allSupplyTotal = 0;
   let allVatTotal = 0;
 
-  // 프로젝트 → 공급가액 캐시 / 프로젝트 → 계약연도 매핑
+  // 프로젝트 → 기대 수금액 캐시 / 프로젝트 → 계약연도 매핑
   const projectSupplyMap = new Map<string, number>();
   const projectContractYearMap = new Map<string, number>();
 
@@ -87,8 +87,9 @@ app.get("/", async (c) => {
     const amount = Number(p.contractAmount ?? 0);
     if (amount === 0) continue;
 
-    projectSupplyMap.set(p.id, amount);
-    allSupplyTotal += amount;
+    const expected = getExpectedReceivable(amount, p.taxType);
+    projectSupplyMap.set(p.id, expected);
+    allSupplyTotal += expected;
 
     const vatAmount = p.taxType === "vat" ? Math.round(amount * 0.1) : 0;
     allVatTotal += vatAmount;
@@ -97,7 +98,7 @@ app.get("/", async (c) => {
     projectContractYearMap.set(p.id, contractYear);
     const bucket = yearBuckets.get(contractYear);
     if (bucket) {
-      bucket.supplyTotal += amount;
+      bucket.supplyTotal += expected;
       bucket.vatTotal += vatAmount;
     }
   }
@@ -110,13 +111,14 @@ app.get("/", async (c) => {
   const monthlySupply = new Array(12).fill(0);
   const monthlyPayment = new Array(12).fill(0);
 
-  // 프로젝트별 월별 매출액(공급가액)
+  // 프로젝트별 월별 매출액(기대 수금액)
   for (const p of allProjects) {
-    if (!projectSupplyMap.has(p.id)) continue;
+    const expected = projectSupplyMap.get(p.id);
+    if (expected === undefined) continue;
 
     const contractDate = new Date(p.contractDate);
     if (contractDate.getFullYear() === chartYear) {
-      monthlySupply[contractDate.getMonth()] += Number(p.contractAmount ?? 0);
+      monthlySupply[contractDate.getMonth()] += expected;
     }
   }
 
