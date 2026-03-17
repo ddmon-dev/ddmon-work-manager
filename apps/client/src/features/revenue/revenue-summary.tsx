@@ -27,11 +27,10 @@ export function RevenueSummary({
 
   const totalSupplyTotal = prevYear.supplyTotal + currentYear.supplyTotal;
   const totalPaymentTotal = prevYear.paymentTotal + currentYear.paymentTotal;
-  const totalBilledTotal = prevYear.billedTotal + currentYear.billedTotal;
-  const totalOutstanding = totalBilledTotal - totalPaymentTotal;
+  const totalOutstanding = totalSupplyTotal - totalPaymentTotal;
   const totalCollectionRate =
-    totalBilledTotal > 0
-      ? Math.round((totalPaymentTotal / totalBilledTotal) * 1000) / 10
+    totalSupplyTotal > 0
+      ? Math.round((totalPaymentTotal / totalSupplyTotal) * 1000) / 10
       : 0;
 
   const totalVatTotal = prevYear.vatTotal + currentYear.vatTotal;

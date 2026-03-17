@@ -9,7 +9,7 @@ export interface OutstandingProject {
   name: string;
   clientName: string;
   taxType: string | null;
-  billedAmount: number;
+  contractAmount: number;
   paidAmount: number;
   outstanding: number;
   status: string;
@@ -18,7 +18,6 @@ export interface OutstandingProject {
 export interface YearlySummary {
   year: number;
   supplyTotal: number;
-  billedTotal: number;
   paymentTotal: number;
   outstanding: number;
   collectionRate: number;

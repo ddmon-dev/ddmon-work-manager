@@ -9,7 +9,7 @@ import {
 } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { successResponse } from "../lib/errors";
-import { softDeleteFilter, getBilledAmount } from "../lib/query-helpers";
+import { softDeleteFilter } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -85,25 +85,22 @@ app.get("/revenue-summary", async (c) => {
 
   const validProjectIds = new Set(allProjects.map((p) => p.id));
 
-  // 계약액·청구액 계산
+  // 계약액(공급가액) 계산
   let contractTotal = 0;
-  let billedTotal = 0;
-  let allBilledTotal = 0;
+  let allContractTotal = 0;
   const projectContractYearMap = new Map<string, number>();
 
   for (const p of allProjects) {
     const amount = Number(p.contractAmount ?? 0);
     if (amount === 0) continue;
 
-    const billed = getBilledAmount(amount, p.taxType);
-    allBilledTotal += billed;
+    allContractTotal += amount;
 
     const contractYear = new Date(p.contractDate).getFullYear();
     projectContractYearMap.set(p.id, contractYear);
 
     if (contractYear === currentYear) {
       contractTotal += amount;
-      billedTotal += billed;
     }
   }
 
@@ -123,16 +120,15 @@ app.get("/revenue-summary", async (c) => {
   }
 
   const collectionRate =
-    billedTotal > 0
-      ? Math.round((paymentTotal / billedTotal) * 1000) / 10
+    contractTotal > 0
+      ? Math.round((paymentTotal / contractTotal) * 1000) / 10
       : 0;
 
-  const cumulativeOutstanding = allBilledTotal - allPaymentTotal;
+  const cumulativeOutstanding = allContractTotal - allPaymentTotal;
 
   return successResponse(c, {
     currentYear,
     contractTotal,
-    billedTotal,
     paymentTotal,
     collectionRate,
     cumulativeOutstanding,

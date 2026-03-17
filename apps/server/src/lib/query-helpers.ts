@@ -2,13 +2,6 @@ import { eq, ilike, or } from "drizzle-orm";
 import type { AnyColumn, SQL } from "drizzle-orm";
 import { z } from "zod";
 
-/** 세금 유형에 따른 청구 금액 계산 */
-export function getBilledAmount(amount: number, taxType: string | null): number {
-  if (taxType === "withholding") return amount - Math.round(amount * 0.033);
-  if (taxType === "vat") return amount + Math.round(amount * 0.1);
-  return amount;
-}
-
 /** 소프트 삭제 필터 */
 export function softDeleteFilter(column: AnyColumn): SQL {
   return eq(column, false);

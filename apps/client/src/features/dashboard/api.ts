@@ -12,7 +12,6 @@ export interface DashboardStats {
 export interface RevenueSummaryData {
   currentYear: number;
   contractTotal: number;
-  billedTotal: number;
   paymentTotal: number;
   collectionRate: number;
   cumulativeOutstanding: number;

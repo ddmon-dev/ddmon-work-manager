@@ -5,7 +5,7 @@ import { db } from "../db";
 import { projects, projectPayments, clients } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { softDeleteFilter, getBilledAmount } from "../lib/query-helpers";
+import { softDeleteFilter } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const MONTH_LABELS = [
@@ -61,14 +61,12 @@ app.get("/", async (c) => {
   // 연도별 버킷
   type YearBucket = {
     supplyTotal: number;
-    billedTotal: number;
     paymentTotal: number;
     vatTotal: number;
     vatCollected: number;
   };
   const emptyBucket = (): YearBucket => ({
     supplyTotal: 0,
-    billedTotal: 0,
     paymentTotal: 0,
     vatTotal: 0,
     vatCollected: 0,
@@ -77,21 +75,20 @@ app.get("/", async (c) => {
   yearBuckets.set(prevYear, emptyBucket());
   yearBuckets.set(currentYear, emptyBucket());
 
-  // 전체 billed 금액 + VAT (누적 미수금/미정산 계산용)
-  let allBilledTotal = 0;
+  // 전체 공급가액 + VAT (누적 미수금/미정산 계산용)
+  let allSupplyTotal = 0;
   let allVatTotal = 0;
 
-  // 프로젝트 → billed 캐시 / 프로젝트 → 계약연도 매핑
-  const projectBilledMap = new Map<string, number>();
+  // 프로젝트 → 공급가액 캐시 / 프로젝트 → 계약연도 매핑
+  const projectSupplyMap = new Map<string, number>();
   const projectContractYearMap = new Map<string, number>();
 
   for (const p of allProjects) {
     const amount = Number(p.contractAmount ?? 0);
     if (amount === 0) continue;
 
-    const billed = getBilledAmount(amount, p.taxType);
-    projectBilledMap.set(p.id, billed);
-    allBilledTotal += billed;
+    projectSupplyMap.set(p.id, amount);
+    allSupplyTotal += amount;
 
     const vatAmount = p.taxType === "vat" ? Math.round(amount * 0.1) : 0;
     allVatTotal += vatAmount;
@@ -101,7 +98,6 @@ app.get("/", async (c) => {
     const bucket = yearBuckets.get(contractYear);
     if (bucket) {
       bucket.supplyTotal += amount;
-      bucket.billedTotal += billed;
       bucket.vatTotal += vatAmount;
     }
   }
@@ -116,7 +112,7 @@ app.get("/", async (c) => {
 
   // 프로젝트별 월별 매출액(공급가액)
   for (const p of allProjects) {
-    if (!projectBilledMap.has(p.id)) continue;
+    if (!projectSupplyMap.has(p.id)) continue;
 
     const contractDate = new Date(p.contractDate);
     if (contractDate.getFullYear() === chartYear) {
@@ -169,16 +165,15 @@ app.get("/", async (c) => {
   // 연도별 요약
   function toYearlySummary(year: number) {
     const bucket = yearBuckets.get(year)!;
-    const outstanding = bucket.billedTotal - bucket.paymentTotal;
+    const outstanding = bucket.supplyTotal - bucket.paymentTotal;
     const collectionRate =
-      bucket.billedTotal > 0
-        ? Math.round((bucket.paymentTotal / bucket.billedTotal) * 1000) / 10
+      bucket.supplyTotal > 0
+        ? Math.round((bucket.paymentTotal / bucket.supplyTotal) * 1000) / 10
         : 0;
     const vatOutstanding = bucket.vatTotal - bucket.vatCollected;
     return {
       year,
       supplyTotal: bucket.supplyTotal,
-      billedTotal: bucket.billedTotal,
       paymentTotal: bucket.paymentTotal,
       outstanding,
       collectionRate,
@@ -196,17 +191,17 @@ app.get("/", async (c) => {
   }));
 
   // 누적 미수금 / 누적 미정산 부가세
-  const cumulativeOutstanding = allBilledTotal - allPaymentTotal;
+  const cumulativeOutstanding = allSupplyTotal - allPaymentTotal;
   const cumulativeVatOutstanding = allVatTotal - allVatCollected;
 
   // 미수금 프로젝트 목록
   const outstandingProjects = allProjects
     .map((p) => {
-      const billed = projectBilledMap.get(p.id);
-      if (!billed) return null;
+      const contractAmount = projectSupplyMap.get(p.id);
+      if (!contractAmount) return null;
 
       const paidAmount = paidByProjectId.get(p.id) ?? 0;
-      const outstanding = billed - paidAmount;
+      const outstanding = contractAmount - paidAmount;
       if (outstanding <= 0) return null;
 
       return {
@@ -214,7 +209,7 @@ app.get("/", async (c) => {
         name: p.name,
         clientName: p.clientName ?? "",
         taxType: p.taxType,
-        billedAmount: billed,
+        contractAmount,
         paidAmount,
         outstanding,
         status: p.status,
