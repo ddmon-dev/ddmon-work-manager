@@ -122,13 +122,19 @@ requireAuth → requireSuperAdmin (선택적)
 |--------|------|------|
 | GET | `/projects` | 목록 (페이지네이션, 검색: name, projectNumber, clientName) |
 | POST | `/projects` | 생성 (프로젝트 번호 자동 생성) |
-| GET | `/projects/:id` | 상세 (payments/memos/projectPartners 포함) |
+| GET | `/projects/:id` | 상세 (payments/expenses/partnerPayments/memos/projectPartners 포함) |
 | PATCH | `/projects/:id` | 수정 |
 | DELETE | `/projects/:id` | 소프트 삭제 |
 | PATCH | `/projects/:id/status` | 상태 변경 |
-| POST | `/projects/:id/payments` | 입금 내역 생성 |
-| PATCH | `/projects/payments/:id` | 입금 내역 수정 |
+| POST | `/projects/:id/payments` | 입금 내역 생성 (`paymentType` 필수) |
+| PATCH | `/projects/payments/:id` | 입금 내역 수정 (`paymentType?`, `invoiceIssued?`, `invoiceDate?` 포함) |
 | DELETE | `/projects/payments/:id` | 입금 내역 소프트 삭제 |
+| POST | `/projects/:id/expenses` | 지출 생성 (`description`, `amount`, `expenseDate`) |
+| PATCH | `/projects/expenses/:id` | 지출 수정 |
+| DELETE | `/projects/expenses/:id` | 지출 소프트 삭제 |
+| POST | `/projects/:id/partner-payments` | 파트너 지급 생성 (`partnerId`, `description`, `amount`, `paidDate`) |
+| PATCH | `/projects/partner-payments/:id` | 파트너 지급 수정 (`withholdingReported`, `withholdingReportedDate` 포함) |
+| DELETE | `/projects/partner-payments/:id` | 파트너 지급 소프트 삭제 |
 | POST | `/projects/:id/memos` | 메모 생성 |
 | PATCH | `/projects/memos/:id` | 메모 수정 |
 | DELETE | `/projects/memos/:id` | 메모 소프트 삭제 |

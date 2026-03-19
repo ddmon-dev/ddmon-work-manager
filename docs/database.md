@@ -29,6 +29,8 @@ Admins = Better Auth user 테이블 (별도 admins 테이블 없음).
 | `estimate_items` | 견적서 아이템 | uuid | CASCADE |
 | `projects` | 프로젝트 | uuid | 소프트 |
 | `project_payments` | 입금 내역 | uuid | 소프트 |
+| `project_expenses` | 프로젝트 지출 내역 | uuid | 소프트 |
+| `partner_payments` | 파트너 지급 내역 | uuid | 소프트 |
 | `project_memos` | 프로젝트 메모 | uuid | 소프트 |
 | `project_schedule_lanes` | 프로젝트 일정 레인 | uuid | **하드** (CASCADE) |
 | `project_schedules` | 프로젝트 일정 (카테고리 기반 태스크) | uuid | **하드** |
@@ -58,9 +60,12 @@ estimate_series ─── estimates (1:N)
                           └── estimate_items (1:N, CASCADE)
 
 partners ─────┬── partner_memos (1:N, CASCADE)
-              └── project_partners (1:N, RESTRICT)
+              ├── project_partners (1:N, RESTRICT)
+              └── partner_payments (1:N, RESTRICT)
 
 projects ─────┬── project_payments (1:N, CASCADE)
+              ├── project_expenses (1:N, CASCADE)
+              ├── partner_payments (1:N, CASCADE)
               ├── project_memos (1:N, CASCADE)
               ├── project_partners (1:N, CASCADE)
               ├── project_schedule_lanes (1:N, CASCADE)
@@ -83,7 +88,7 @@ files ─── files (self-ref, folderId → RESTRICT)
 | 전략 | 적용 | 이유 |
 |------|------|------|
 | **CASCADE** | 메모, 입금 내역, 아이템, 세션 | 부모 삭제 시 자식 함께 삭제 |
-| **RESTRICT** | clients → estimates, projects; partners → project_partners | 연결된 하위 엔티티 있으면 삭제 차단 |
+| **RESTRICT** | clients → estimates, projects; partners → project_partners, partner_payments | 연결된 하위 엔티티 있으면 삭제 차단 |
 | **SET NULL** | schedules → project/client, estimates → author | 참조 대상 삭제 시 null로 변환 |
 
 ## 제약조건
@@ -112,7 +117,7 @@ files ─── files (self-ref, folderId → RESTRICT)
 `deleted` boolean 컬럼 + `updated_at` 타임스탬프.
 모든 SELECT에서 `softDeleteFilter(table.deleted)` 적용 필수.
 
-대상: clients, client_memos, estimates, projects, project_payments, project_memos, partners, partner_memos, user, library_boards, library_documents, files
+대상: clients, client_memos, estimates, projects, project_payments, project_expenses, partner_payments, project_memos, partners, partner_memos, user, library_boards, library_documents, files
 
 ### 하드 삭제
 
@@ -148,6 +153,31 @@ files ─── files (self-ref, folderId → RESTRICT)
 - `resident_number`: 주민등록번호 (평문 저장, 원천세 신고용)
 - `bank_name`, `bank_account`, `account_holder`: 정산 계좌 정보
 - `specialties`: text[] — 전문분야 (PARTNER_SPECIALTIES 상수 + 기타)
+
+### 프로젝트 입금 내역 (project_payments)
+
+- `payment_type`: `"deposit"` (계약금) | `"interim"` (중도금) | `"balance"` (잔금) | `"additional"` (추가금) — 기본값 `"deposit"`
+- `invoice_issued`: boolean — 세금계산서 발행 여부 (기본 false)
+- `invoice_date`: date nullable — 세금계산서 발행일
+
+### 프로젝트 지출 내역 (project_expenses)
+
+- `project_id`: NOT NULL FK → projects(id) ON DELETE CASCADE
+- `description`: 지출 내용 (NOT NULL)
+- `amount`: 지출 금액 `numeric(15,2)` (기본 0)
+- `expense_date`: 지출일 (NOT NULL)
+- `deleted`: 소프트 삭제 플래그
+
+### 파트너 지급 내역 (partner_payments)
+
+- `project_id`: NOT NULL FK → projects(id) ON DELETE CASCADE
+- `partner_id`: NOT NULL FK → partners(id) ON DELETE RESTRICT
+- `description`: 지급 내용 (NOT NULL)
+- `amount`: 지급 금액 `numeric(15,2)` (기본 0)
+- `paid_date`: 지급일 (NOT NULL)
+- `withholding_reported`: boolean — 원천세 신고 여부 (기본 false)
+- `withholding_reported_date`: date nullable — 원천세 신고일
+- `deleted`: 소프트 삭제 플래그
 
 ### 프로젝트 파트너 (project_partners)
 
@@ -213,7 +243,7 @@ files ─── files (self-ref, folderId → RESTRICT)
 
 ## 마이그레이션 관리
 
-마이그레이션 파일: `0000_initial` ~ `0011_add_partners` (12개). 0000~0003은 초기 스키마, 0004는 프로젝트 일정, 0006은 라이브러리/드라이브 테이블 추가, 0007~0008은 파일 즐겨찾기, 0011은 파트너 관리.
+마이그레이션 파일: `0000_initial` ~ 최신 (순차 증가). 0000~0003은 초기 스키마, 0004는 프로젝트 일정, 0006은 라이브러리/드라이브 테이블 추가, 0007~0008은 파일 즐겨찾기, 0011은 파트너 관리, 이후는 프로젝트 재무 관리 (project_expenses, partner_payments 추가, project_payments 컬럼 확장).
 
 ### 스키마 변경 절차
 
