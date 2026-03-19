@@ -15,12 +15,17 @@ export function PriceSummary({ payments, expenses, partnerPayments, contractAmou
   const totalExpenses =
     expenses.reduce((sum, e) => sum + Number(e.amount), 0) +
     partnerPayments.reduce((sum, pp) => sum + Number(pp.amount), 0);
-  const netProfit = totalPaid - totalExpenses;
 
   const isWithholding = taxType === "withholding";
   const isVat = taxType === "vat";
 
   const { supplyAmount, taxAmount, taxLabel } = calculateTaxBreakdown(contractAmount, taxType ?? "");
+
+  // 순이익: 공급가액 기준 수금(부가세 제외) - 총 지출
+  // VAT: 입금액 중 공급가액 충당분만 수익으로 계산 (부가세는 세금이므로 제외)
+  // 원천징수: totalPaid가 이미 실수령액이므로 그대로 사용
+  const revenueForProfit = isVat ? Math.min(totalPaid, contractAmount) : totalPaid;
+  const netProfit = revenueForProfit - totalExpenses;
 
   // VAT: 공급가액/부가세 순차 충당 분리 표기
   if (isVat) {

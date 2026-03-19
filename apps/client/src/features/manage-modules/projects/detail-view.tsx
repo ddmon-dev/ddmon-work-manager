@@ -16,7 +16,7 @@ import { ProjectInfoSection } from "./project-info-section";
 import { PriceSummary } from "./project-price-summary";
 import { ProjectPartnerSection } from "./project-partner-section";
 import { EstimateVersions } from "./project-estimate-versions";
-import { ProjectFinancialSection } from "./project-financial-section";
+import { ProjectFinancialSection, TransactionForm } from "./project-financial-section";
 import { ProjectGantt } from "../project-schedules/gantt/project-gantt";
 import type { ProjectWithDetails } from "./types";
 
@@ -56,7 +56,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
 
   return (
     <>
-      <SheetBody className="lg:grid-cols-[2fr_2.5fr_2.5fr]">
+      <SheetBody className="lg:grid-cols-[2.5fr_2.5fr_2fr]">
         {/* 좌측 */}
         <SheetScrollColumn className="flex flex-col">
           <SheetContainer>
@@ -75,7 +75,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
             </SheetContainer>
           )}
 
-          <SheetContainer className="flex flex-col flex-1 min-h-0 border-b-0!">
+          <SheetContainer className="border-b-0!">
             <ProjectFinancialSection
               projectId={data.id}
               payments={data.payments}
@@ -84,6 +84,14 @@ export function DetailView({ data, refetch }: DetailViewProps) {
               projectPartners={data.projectPartners ?? []}
               taxType={data.taxType}
               refetch={refetch}
+            />
+          </SheetContainer>
+          <SheetContainer className="sticky bottom-0 border-t border-border-dark/50 bg-background/60 backdrop-blur-md">
+            <TransactionForm
+              projectId={data.id}
+              projectPartners={data.projectPartners ?? []}
+              taxType={data.taxType}
+              onSuccess={refetch}
             />
           </SheetContainer>
         </SheetScrollColumn>

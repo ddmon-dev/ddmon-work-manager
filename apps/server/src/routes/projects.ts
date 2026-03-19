@@ -404,7 +404,7 @@ app.patch("/:id/status", async (c) => {
 app.post("/:id/payments", async (c) => {
   const projectId = c.req.param("id");
   const parsed = z.object({
-    description: z.string().min(1, "설명을 입력해주세요."),
+    description: z.string().default(""),
     amount: z.number().positive("금액은 양수여야 합니다."),
     paidDate: z.string(),
     paymentType: z.enum(["deposit", "interim", "balance", "additional"]),
@@ -428,7 +428,7 @@ app.post("/:id/payments", async (c) => {
 app.post("/:id/expenses", async (c) => {
   const projectId = c.req.param("id");
   const parsed = z.object({
-    description: z.string().min(1, "내용을 입력해주세요."),
+    description: z.string().default(""),
     amount: z.number().positive("금액은 양수여야 합니다."),
     expenseDate: z.string(),
   }).safeParse(await c.req.json());
@@ -456,7 +456,7 @@ app.post("/:id/partner-payments", async (c) => {
   const projectId = c.req.param("id");
   const parsed = z.object({
     partnerId: z.string().uuid(),
-    description: z.string().min(1, "내용을 입력해주세요."),
+    description: z.string().default(""),
     amount: z.number().positive("금액은 양수여야 합니다."),
     paidDate: z.string(),
   }).safeParse(await c.req.json());
