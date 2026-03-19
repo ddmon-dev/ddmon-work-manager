@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { format } from "date-fns";
+import { useEffect, useState } from "react";
+import { format, parseISO } from "date-fns";
 import { PencilIcon, Trash2Icon } from "lucide-react";
 import { PAYMENT_TYPE_LABELS } from "@packages/types";
 import { formatCurrency } from "@/shared/utils/format";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/shared/ui/native-select";
+import { DatePicker } from "@/shared/ui/date-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/shared/ui/popover";
 import { LoadingButton } from "@/shared/ui/loading-button";
 import { Checkbox } from "@/shared/ui/checkbox";
@@ -86,24 +87,14 @@ export function ProjectFinancialSection({
   const transactions = buildUnifiedTransactions(payments, expenses, partnerPayments);
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div>
       <DetailSectionTitle>거래 내역</DetailSectionTitle>
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <TransactionList
-          projectId={projectId}
-          transactions={transactions}
-          taxType={taxType}
-          refetch={refetch}
-        />
-      </div>
-      <div className="sticky bottom-0 border-t border-border-dark/50 bg-background/60 backdrop-blur-md pt-3 -mx-4 px-4 -mb-4 pb-4">
-        <TransactionForm
-          projectId={projectId}
-          projectPartners={projectPartners}
-          taxType={taxType}
-          onSuccess={refetch}
-        />
-      </div>
+      <TransactionList
+        projectId={projectId}
+        transactions={transactions}
+        taxType={taxType}
+        refetch={refetch}
+      />
     </div>
   );
 }
@@ -340,8 +331,8 @@ function EditTransactionForm({
   onCancel: () => void;
 }) {
   const [description, setDescription] = useState(tx.description);
-  const [amount, setAmount] = useState(String(tx.amount));
-  const [date, setDate] = useState(tx.date);
+  const [amount, setAmount] = useState<number | undefined>(tx.amount);
+  const [date, setDate] = useState<Date>(parseISO(tx.date));
   const [paymentType, setPaymentType] = useState(tx.paymentType ?? "deposit");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -350,34 +341,34 @@ function EditTransactionForm({
   const updatePartnerPayment = useUpdatePartnerPayment();
 
   const handleSubmit = async () => {
-    const numAmount = Number(amount);
-    if (!description.trim() || !numAmount || !date) return;
+    if (!amount || !date) return;
     setIsSubmitting(true);
+    const dateStr = format(date, "yyyy-MM-dd");
     try {
       if (tx.type === "payment") {
         await updatePayment.mutateAsync({
           projectId,
           paymentId: tx.id,
-          description: description.trim(),
-          amount: numAmount,
-          paidDate: date,
+          description: description.trim() || undefined,
+          amount,
+          paidDate: dateStr,
           paymentType,
         });
       } else if (tx.type === "expense") {
         await updateExpense.mutateAsync({
           projectId,
           expenseId: tx.id,
-          description: description.trim(),
-          amount: numAmount,
-          expenseDate: date,
+          description: description.trim() || undefined,
+          amount,
+          expenseDate: dateStr,
         });
       } else {
         await updatePartnerPayment.mutateAsync({
           projectId,
           partnerPaymentId: tx.id,
-          description: description.trim(),
-          amount: numAmount,
-          paidDate: date,
+          description: description.trim() || undefined,
+          amount,
+          paidDate: dateStr,
         });
       }
       onSuccess();
@@ -400,17 +391,20 @@ function EditTransactionForm({
       <Input
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="내용"
+        placeholder="내용 (선택)"
       />
       <div className="grid grid-cols-2 gap-2">
-        <Input
-          type="number"
-          step="1"
+        <AmountInput
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={setAmount}
           placeholder={getAmountPlaceholder(tx.type, taxType)}
         />
-        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <DatePicker
+          mode="single"
+          value={date}
+          onValueChange={(d) => d && setDate(d)}
+          placeholder="날짜"
+        />
       </div>
       <div className="flex justify-end gap-1">
         <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
@@ -433,11 +427,11 @@ interface TransactionFormProps {
   onSuccess: () => void;
 }
 
-function TransactionForm({ projectId, projectPartners, taxType, onSuccess }: TransactionFormProps) {
+export function TransactionForm({ projectId, projectPartners, taxType, onSuccess }: TransactionFormProps) {
   const [activeType, setActiveType] = useState<TransactionType>("payment");
   const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [amount, setAmount] = useState<number | undefined>(undefined);
+  const [date, setDate] = useState<Date>(new Date());
   const [paymentType, setPaymentType] = useState<string>("deposit");
   const [partnerId, setPartnerId] = useState(projectPartners[0]?.partnerId ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -447,39 +441,39 @@ function TransactionForm({ projectId, projectPartners, taxType, onSuccess }: Tra
   const createPartnerPayment = useCreatePartnerPayment();
 
   const handleSubmit = async () => {
-    const numAmount = Number(amount);
-    if (!description.trim() || !numAmount || !date) return;
+    if (!amount || !date) return;
     if (activeType === "partnerPayment" && !partnerId) return;
 
     setIsSubmitting(true);
+    const dateStr = format(date, "yyyy-MM-dd");
     try {
       if (activeType === "payment") {
         await createPayment.mutateAsync({
           projectId,
           description: description.trim(),
-          amount: numAmount,
-          paidDate: date,
+          amount,
+          paidDate: dateStr,
           paymentType: paymentType as "deposit" | "interim" | "balance" | "additional",
         });
       } else if (activeType === "expense") {
         await createExpense.mutateAsync({
           projectId,
           description: description.trim(),
-          amount: numAmount,
-          expenseDate: date,
+          amount,
+          expenseDate: dateStr,
         });
       } else {
         await createPartnerPayment.mutateAsync({
           projectId,
           partnerId,
           description: description.trim(),
-          amount: numAmount,
-          paidDate: date,
+          amount,
+          paidDate: dateStr,
         });
       }
       setDescription("");
-      setAmount("");
-      setDate(format(new Date(), "yyyy-MM-dd"));
+      setAmount(undefined);
+      setDate(new Date());
       onSuccess();
     } finally {
       setIsSubmitting(false);
@@ -531,7 +525,7 @@ function TransactionForm({ projectId, projectPartners, taxType, onSuccess }: Tra
           className="flex-1"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="내용"
+          placeholder="내용 (선택)"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.nativeEvent.isComposing) {
               e.preventDefault();
@@ -539,19 +533,17 @@ function TransactionForm({ projectId, projectPartners, taxType, onSuccess }: Tra
             }
           }}
         />
-        <Input
-          className="w-28"
-          type="number"
-          step="1"
+        <AmountInput
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={setAmount}
           placeholder={getAmountPlaceholder(activeType, taxType)}
+          className="w-32"
         />
-        <Input
-          className="w-36"
-          type="date"
+        <DatePicker
+          mode="single"
           value={date}
-          onChange={(e) => setDate(e.target.value)}
+          onValueChange={(d) => d && setDate(d)}
+          placeholder="날짜"
         />
         <LoadingButton
           rounded="full"
@@ -565,13 +557,69 @@ function TransactionForm({ projectId, projectPartners, taxType, onSuccess }: Tra
   );
 }
 
+// ── 금액 입력 (FormNumberInput 패턴 재활용) ────────────────────────
+
+function toDisplay(value: number | undefined, thousandSeparator: boolean): string {
+  if (value === undefined || isNaN(value)) return "";
+  return thousandSeparator ? value.toLocaleString("ko-KR") : String(value);
+}
+
+function parseRawInput(raw: string): number {
+  const cleaned = raw.replace(/,/g, "").replace(/[^0-9.-]/g, "");
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+}
+
+function AmountInput({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  value: number | undefined;
+  onChange: (v: number | undefined) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  const [display, setDisplay] = useState(() => toDisplay(value, true));
+
+  useEffect(() => {
+    setDisplay(toDisplay(value, true));
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/[^0-9.,\-]/g, "");
+    setDisplay(raw);
+    const num = parseRawInput(raw);
+    onChange(num || undefined);
+  };
+
+  const handleBlur = () => {
+    setDisplay(toDisplay(value, true));
+  };
+
+  return (
+    <div className={`relative flex items-center ${className ?? ""}`}>
+      <Input
+        value={display}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        className="pr-8"
+      />
+      <span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">원</span>
+    </div>
+  );
+}
+
 // ── 유틸 ────────────────────────────────────────────────────────
 
 function getAmountPlaceholder(type: TransactionType, taxType: string | null): string {
   if (type === "payment") {
-    if (taxType === "vat") return "VAT 포함 입금액";
-    if (taxType === "withholding") return "실수령액 (3.3% 차감 후)";
+    if (taxType === "vat") return "VAT 포함";
+    if (taxType === "withholding") return "실수령액";
     return "금액";
   }
+  if (type === "partnerPayment") return "실지급액 (3.3% 차감 후)";
   return "금액";
 }

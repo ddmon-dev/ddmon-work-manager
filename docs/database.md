@@ -173,7 +173,7 @@ files ─── files (self-ref, folderId → RESTRICT)
 - `project_id`: NOT NULL FK → projects(id) ON DELETE CASCADE
 - `partner_id`: NOT NULL FK → partners(id) ON DELETE RESTRICT
 - `description`: 지급 내용 (NOT NULL)
-- `amount`: 지급 금액 `numeric(15,2)` (기본 0)
+- `amount`: 실지급액 `numeric(15,2)` (기본 0) — 원천징수 3.3% 차감 후 파트너에게 실제 이체하는 금액. 원천세 역산: `amount ÷ 0.967 × 0.033`
 - `paid_date`: 지급일 (NOT NULL)
 - `withholding_reported`: boolean — 원천세 신고 여부 (기본 false)
 - `withholding_reported_date`: date nullable — 원천세 신고일
