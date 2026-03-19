@@ -213,8 +213,9 @@ export function useCreatePayment() {
       description: string;
       amount: number;
       paidDate: string;
+      paymentType: "deposit" | "interim" | "balance" | "additional";
     }) => api.post<PaymentDTO>(`/projects/${projectId}/payments`, data),
-    onMutate: async ({ projectId, description, amount, paidDate }) => {
+    onMutate: async ({ projectId, description, amount, paidDate, paymentType }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
       const previous = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId));
       queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId), (old) =>
@@ -229,6 +230,9 @@ export function useCreatePayment() {
                   description,
                   amount: String(amount),
                   paidDate,
+                  paymentType,
+                  invoiceIssued: false,
+                  invoiceDate: null,
                   deleted: false,
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),

@@ -68,6 +68,7 @@ export function PaymentForm({ projectId, payment, onSuccess, onCancel }: Payment
         description: values.description.trim(),
         amount: values.amount,
         paidDate,
+        paymentType: "deposit",
       });
       form.reset({ description: "", amount: undefined, paidDate: new Date() });
     }
