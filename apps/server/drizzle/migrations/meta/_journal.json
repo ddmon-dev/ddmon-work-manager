@@ -92,6 +92,13 @@
       "when": 1773584684831,
       "tag": "0012_add_owner_to_files",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1773930947785,
+      "tag": "0013_add_project_financials",
+      "breakpoints": true
     }
   ]
 }

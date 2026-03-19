@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { clients } from "./clients";
 import { estimateSeries } from "./estimates";
+import { partners } from "./partners";
 
 export const projects = pgTable("projects", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -51,6 +52,40 @@ export const projectPayments = pgTable("project_payments", {
   description: text("description").notNull(),
   amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
   paidDate: date("paid_date").notNull().default(new Date().toISOString().split("T")[0]),
+  paymentType: text("payment_type").notNull().default("deposit"), // deposit, interim, balance, additional
+  invoiceIssued: boolean("invoice_issued").notNull().default(false),
+  invoiceDate: date("invoice_date"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deleted: boolean("deleted").notNull().default(false),
+});
+
+export const projectExpenses = pgTable("project_expenses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  description: text("description").notNull(),
+  amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
+  expenseDate: date("expense_date").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deleted: boolean("deleted").notNull().default(false),
+});
+
+export const partnerPayments = pgTable("partner_payments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  partnerId: uuid("partner_id")
+    .notNull()
+    .references(() => partners.id, { onDelete: "restrict" }),
+  description: text("description").notNull(),
+  amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
+  paidDate: date("paid_date").notNull(),
+  withholdingReported: boolean("withholding_reported").notNull().default(false),
+  withholdingReportedDate: date("withholding_reported_date"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deleted: boolean("deleted").notNull().default(false),
