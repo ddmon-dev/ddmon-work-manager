@@ -14,11 +14,13 @@ import { mindnotes } from "./mindnotes";
 import { memos } from "./memos";
 import { libraryBoards, libraryDocuments } from "./library";
 import { files } from "./files";
+import { clientEnvironments, clientEnvironmentMemos } from "./client-environments";
 
 export const clientsRelations = relations(clients, ({ many }) => ({
   memos: many(clientMemos),
   estimates: many(estimates),
   projects: many(projects),
+  environments: many(clientEnvironments),
 }));
 
 export const clientMemosRelations = relations(clientMemos, ({ one }) => ({
@@ -170,6 +172,21 @@ export const projectPartnersRelations = relations(projectPartners, ({ one }) => 
   partner: one(partners, {
     fields: [projectPartners.partnerId],
     references: [partners.id],
+  }),
+}));
+
+export const clientEnvironmentsRelations = relations(clientEnvironments, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [clientEnvironments.clientId],
+    references: [clients.id],
+  }),
+  memos: many(clientEnvironmentMemos),
+}));
+
+export const clientEnvironmentMemosRelations = relations(clientEnvironmentMemos, ({ one }) => ({
+  environment: one(clientEnvironments, {
+    fields: [clientEnvironmentMemos.parentId],
+    references: [clientEnvironments.id],
   }),
 }));
 

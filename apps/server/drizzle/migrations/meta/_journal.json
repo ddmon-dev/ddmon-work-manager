@@ -92,6 +92,20 @@
       "when": 1773584684831,
       "tag": "0012_add_owner_to_files",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1773935325155,
+      "tag": "0013_add_client_environments",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1773937463802,
+      "tag": "0014_drop_client_environments_git",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "client_environments" DROP COLUMN "git";

@@ -9,3 +9,4 @@ export * from "./mindnotes";
 export * from "./memos";
 export * from "./library";
 export * from "./partners";
+export * from "./client-environments";
