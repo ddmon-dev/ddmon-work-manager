@@ -251,6 +251,19 @@ userId 필터링: 모든 메모 API는 `user.id`로 자동 필터링 (사용자�
 - 연도별 요약 카드: 매출액·수금액 모두 **프로젝트 계약일 연도** 기준으로 집계
 - 월별 차트: 매출액은 계약일, 수금액은 **실제 입금일** 기준 (현금 흐름 반영)
 
+### Settlement (`/api/settlement`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/settlement` | 월별 미처리 건 조회 (`?year=&month=`) |
+| PATCH | `/settlement/invoices/batch` | 세금계산서 일괄 발행 마크 (`{ paymentIds, invoiceDate }`) |
+| PATCH | `/settlement/withholdings/batch` | 원천세 일괄 신고 마크 (`{ partnerPaymentIds, reportedDate }`) |
+
+**GET 응답**: `{ uninvoicedPayments, unreportedPartnerPayments, summary: { uninvoicedCount, unreportedCount } }`
+
+- 세금계산서 미발행: `project_payments` WHERE `tax_type='vat'` AND `invoice_issued=false` AND 해당 월
+- 원천세 미신고: `partner_payments` WHERE `withholding_reported=false` AND 해당 월
+
 ### Library Boards (`/api/library-boards`)
 
 | Method | Path | 설명 |

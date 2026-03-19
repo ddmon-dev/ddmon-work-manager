@@ -16,6 +16,7 @@ src/
 │   ├── auth/           # 인증
 │   ├── dashboard/      # 대시보드
 │   ├── revenue/        # 매출 현황
+│   ├── settlement/     # 정산 (세금계산서/원천세 일괄 처리)
 │   ├── library/        # 라이브러리 (보드/문서/드라이브/휴지통)
 │   ├── settings/       # 설정
 │   └── ui/             # 글로벌 UI (app-sidebar, 미니앱: todo-widget, mindnote-widget, memo-widget, calculator-widget)
@@ -47,6 +48,7 @@ RootLayout (Toaster, ThemeContext)
     ├── /partners      → PartnersPage
     ├── /schedules           → SchedulesPage
     ├── /revenue       → RevenuePage
+    ├── /settlement    → SettlementPage
     ├── /admins        → AdminsPage
     ├── /library       → LibraryPage
     ├── /unauthorized  → UnauthorizedPage
