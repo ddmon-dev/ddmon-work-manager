@@ -265,30 +265,15 @@ export function useUpdatePayment() {
     }: {
       projectId: string;
       paymentId: string;
-      description: string;
-      amount: number;
-      paidDate: string;
+      description?: string;
+      amount?: number;
+      paidDate?: string;
+      paymentType?: string;
+      invoiceIssued?: boolean;
+      invoiceDate?: string | null;
     }) => api.patch<PaymentDTO>(`/projects/payments/${paymentId}`, data),
-    onMutate: async ({ projectId, paymentId, description, amount, paidDate }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
-      const previous = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId));
-      queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId), (old) =>
-        old
-          ? {
-              ...old,
-              payments: old.payments.map((p) =>
-                p.id === paymentId
-                  ? { ...p, description, amount: String(amount), paidDate }
-                  : p
-              ),
-            }
-          : old
-      );
-      return { previous };
-    },
-    onError: (_err, { projectId }, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKeys.projects.detail(projectId), context.previous);
-      toast.error(CRUD_ERRORS.UPDATE_FAILED("입금 내역"));
+    onError: (error: Error) => {
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("입금 내역"));
     },
     onSettled: (_data, _err, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
@@ -320,6 +305,145 @@ export function useDeletePayment() {
     onSettled: (_data, _err, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+    },
+  });
+}
+
+// ── 지출 ────────────────────────────────────────────────────
+
+export function useCreateExpense() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      ...data
+    }: {
+      projectId: string;
+      description: string;
+      amount: number;
+      expenseDate: string;
+    }) => api.post(`/projects/${projectId}/expenses`, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      toast.success(SUCCESS_MESSAGES.CREATE_SUCCESS("지출"));
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("지출"));
+    },
+  });
+}
+
+export function useUpdateExpense() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      expenseId,
+      ...data
+    }: {
+      projectId: string;
+      expenseId: string;
+      description?: string;
+      amount?: number;
+      expenseDate?: string;
+    }) => api.patch(`/projects/expenses/${expenseId}`, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("지출"));
+    },
+  });
+}
+
+export function useDeleteExpense() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, expenseId }: { projectId: string; expenseId: string }) =>
+      api.delete(`/projects/expenses/${expenseId}`),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      toast.success(SUCCESS_MESSAGES.DELETE_SUCCESS("지출"));
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("지출"));
+    },
+  });
+}
+
+// ── 파트너 지급 ────────────────────────────────────────────────
+
+export function useCreatePartnerPayment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      ...data
+    }: {
+      projectId: string;
+      partnerId: string;
+      description: string;
+      amount: number;
+      paidDate: string;
+    }) => api.post(`/projects/${projectId}/partner-payments`, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      toast.success(SUCCESS_MESSAGES.CREATE_SUCCESS("파트너 지급"));
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("파트너 지급"));
+    },
+  });
+}
+
+export function useUpdatePartnerPayment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      partnerPaymentId,
+      ...data
+    }: {
+      projectId: string;
+      partnerPaymentId: string;
+      description?: string;
+      amount?: number;
+      paidDate?: string;
+      withholdingReported?: boolean;
+      withholdingReportedDate?: string | null;
+    }) => api.patch(`/projects/partner-payments/${partnerPaymentId}`, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("파트너 지급"));
+    },
+  });
+}
+
+export function useDeletePartnerPayment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, partnerPaymentId }: { projectId: string; partnerPaymentId: string }) =>
+      api.delete(`/projects/partner-payments/${partnerPaymentId}`),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      toast.success(SUCCESS_MESSAGES.DELETE_SUCCESS("파트너 지급"));
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("파트너 지급"));
     },
   });
 }
