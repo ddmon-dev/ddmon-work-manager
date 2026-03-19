@@ -16,7 +16,7 @@ import { ProjectInfoSection } from "./project-info-section";
 import { PriceSummary } from "./project-price-summary";
 import { ProjectPartnerSection } from "./project-partner-section";
 import { EstimateVersions } from "./project-estimate-versions";
-import { PaymentForm, PaymentHistory } from "./project-payment-section";
+import { ProjectFinancialSection } from "./project-financial-section";
 import { ProjectGantt } from "../project-schedules/gantt/project-gantt";
 import type { ProjectWithDetails } from "./types";
 
@@ -67,18 +67,24 @@ export function DetailView({ data, refetch }: DetailViewProps) {
             <SheetContainer>
               <PriceSummary
                 payments={data.payments}
+                expenses={data.expenses ?? []}
+                partnerPayments={data.partnerPayments ?? []}
                 contractAmount={contractAmount}
                 taxType={data.taxType}
               />
             </SheetContainer>
           )}
 
-          <SheetContainer className="border-b-0!">
-            <DetailSectionTitle>입금 내역</DetailSectionTitle>
-            <PaymentHistory projectId={data.id} payments={data.payments} refetch={refetch} />
-          </SheetContainer>
-          <SheetContainer className="sticky bottom-0 border-t border-border-dark/50 bg-background/60 backdrop-blur-md">
-            <PaymentForm projectId={data.id} onSuccess={refetch} />
+          <SheetContainer className="flex flex-col flex-1 min-h-0 border-b-0!">
+            <ProjectFinancialSection
+              projectId={data.id}
+              payments={data.payments}
+              expenses={data.expenses ?? []}
+              partnerPayments={data.partnerPayments ?? []}
+              projectPartners={data.projectPartners ?? []}
+              taxType={data.taxType}
+              refetch={refetch}
+            />
           </SheetContainer>
         </SheetScrollColumn>
 

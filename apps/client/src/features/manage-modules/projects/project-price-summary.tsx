@@ -4,12 +4,18 @@ import { calculateTaxBreakdown } from "@packages/utils";
 
 interface PriceSummaryProps {
   payments: { amount: string }[];
+  expenses: { amount: string }[];
+  partnerPayments: { amount: string }[];
   contractAmount: number;
   taxType: string | null;
 }
 
-export function PriceSummary({ payments, contractAmount, taxType }: PriceSummaryProps) {
+export function PriceSummary({ payments, expenses, partnerPayments, contractAmount, taxType }: PriceSummaryProps) {
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+  const totalExpenses =
+    expenses.reduce((sum, e) => sum + Number(e.amount), 0) +
+    partnerPayments.reduce((sum, pp) => sum + Number(pp.amount), 0);
+  const netProfit = totalPaid - totalExpenses;
 
   const isWithholding = taxType === "withholding";
   const isVat = taxType === "vat";
@@ -35,13 +41,24 @@ export function PriceSummary({ payments, contractAmount, taxType }: PriceSummary
         </AmountRow>
         <AmountRow label="부가세" value={formatCurrency(taxAmount)}>
           <AmountDetails
-            showDivider={false}
+            showDivider={totalExpenses <= 0}
             items={[
               { label: "입금", value: formatCurrency(vatPaid), variant: "positive" },
               { label: "잔금", value: formatCurrency(vatRemaining) },
             ]}
           />
         </AmountRow>
+        {totalExpenses > 0 && (
+          <>
+            <Divider />
+            <AmountRow label="총 지출" value={formatCurrency(totalExpenses)} variant="negative" />
+            <AmountRow
+              label="순이익"
+              value={formatCurrency(Math.abs(netProfit))}
+              variant={netProfit >= 0 ? "positive" : "negative"}
+            />
+          </>
+        )}
       </div>
     );
   }
@@ -71,6 +88,17 @@ export function PriceSummary({ payments, contractAmount, taxType }: PriceSummary
         label="잔금"
         value={formatCurrency(Math.max(remaining, 0))}
       />
+      {totalExpenses > 0 && (
+        <>
+          <Divider />
+          <AmountRow label="총 지출" value={formatCurrency(totalExpenses)} variant="negative" />
+          <AmountRow
+            label="순이익"
+            value={formatCurrency(Math.abs(netProfit))}
+            variant={netProfit >= 0 ? "positive" : "negative"}
+          />
+        </>
+      )}
     </div>
   );
 }
