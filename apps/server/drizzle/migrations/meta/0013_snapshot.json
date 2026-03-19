@@ -1,5 +1,5 @@
 {
-  "id": "24d966aa-7766-45b4-8ec7-16d8fc27e81b",
+  "id": "50551a9f-9896-4435-abdc-05eeb3fa5349",
   "prevId": "ee86b894-15c6-4cda-99d9-3dbbd09ec7fa",
   "version": "7",
   "dialect": "postgresql",
@@ -2774,12 +2774,6 @@
         },
         "ftp": {
           "name": "ftp",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "git": {
-          "name": "git",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false

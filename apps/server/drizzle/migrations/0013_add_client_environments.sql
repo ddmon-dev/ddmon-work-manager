@@ -15,7 +15,6 @@ CREATE TABLE "client_environments" (
 	"hosting" jsonb,
 	"domain" jsonb,
 	"ftp" jsonb,
-	"git" jsonb,
 	"custom_fields" jsonb,
 	"notes" text,
 	"author" text,
