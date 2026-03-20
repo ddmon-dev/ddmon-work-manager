@@ -14,6 +14,7 @@ import {
 } from "./api";
 import { ProjectInfoSection } from "./project-info-section";
 import { PriceSummary } from "./project-price-summary";
+import { ProjectInvoiceSection } from "./project-invoice-section";
 import { ProjectPartnerSection } from "./project-partner-section";
 import { EstimateVersions } from "./project-estimate-versions";
 import { ProjectFinancialSection, TransactionForm } from "./project-financial-section";
@@ -66,6 +67,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
           {contractAmount > 0 && (
             <SheetContainer>
               <PriceSummary
+                invoices={data.invoices ?? []}
                 payments={data.payments}
                 expenses={data.expenses ?? []}
                 partnerPayments={data.partnerPayments ?? []}
@@ -75,9 +77,20 @@ export function DetailView({ data, refetch }: DetailViewProps) {
             </SheetContainer>
           )}
 
+          {data.taxType === "vat" && contractAmount > 0 && (
+            <SheetContainer>
+              <ProjectInvoiceSection
+                projectId={data.id}
+                invoices={data.invoices ?? []}
+                refetch={refetch}
+              />
+            </SheetContainer>
+          )}
+
           <SheetContainer className="border-b-0!">
             <ProjectFinancialSection
               projectId={data.id}
+              invoices={data.invoices ?? []}
               payments={data.payments}
               expenses={data.expenses ?? []}
               partnerPayments={data.partnerPayments ?? []}

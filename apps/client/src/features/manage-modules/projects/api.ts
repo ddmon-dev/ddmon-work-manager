@@ -10,6 +10,7 @@ import type {
   ProjectWithDetails,
   ProjectListResponse,
   PaymentDTO,
+  InvoiceDTO,
   ProjectStatus,
   WorkPhase,
 } from "./types";
@@ -231,8 +232,6 @@ export function useCreatePayment() {
                   amount: String(amount),
                   paidDate,
                   paymentType,
-                  invoiceIssued: false,
-                  invoiceDate: null,
                   deleted: false,
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
@@ -269,8 +268,6 @@ export function useUpdatePayment() {
       amount?: number;
       paidDate?: string;
       paymentType?: string;
-      invoiceIssued?: boolean;
-      invoiceDate?: string | null;
     }) => api.patch<PaymentDTO>(`/projects/payments/${paymentId}`, data),
     onError: (error: Error) => {
       toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("입금 내역"));
@@ -305,6 +302,77 @@ export function useDeletePayment() {
     onSettled: (_data, _err, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+    },
+  });
+}
+
+// ── 세금계산서 ────────────────────────────────────────────────
+
+export function useCreateInvoice() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      ...data
+    }: {
+      projectId: string;
+      paymentType: "deposit" | "interim" | "balance" | "additional";
+      description: string;
+      amount: number;
+      issueDate: string;
+    }) => api.post<InvoiceDTO>(`/projects/${projectId}/invoices`, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      toast.success(SUCCESS_MESSAGES.CREATE_SUCCESS("세금계산서"));
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || CRUD_ERRORS.CREATE_FAILED("세금계산서"));
+    },
+  });
+}
+
+export function useUpdateInvoice() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      invoiceId,
+      ...data
+    }: {
+      projectId: string;
+      invoiceId: string;
+      paymentType?: string;
+      description?: string;
+      amount?: number;
+      issueDate?: string;
+      paidDate?: string | null;
+    }) => api.patch<InvoiceDTO>(`/projects/invoices/${invoiceId}`, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("세금계산서"));
+    },
+  });
+}
+
+export function useDeleteInvoice() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, invoiceId }: { projectId: string; invoiceId: string }) =>
+      api.delete<{ id: string }>(`/projects/invoices/${invoiceId}`),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      toast.success(SUCCESS_MESSAGES.DELETE_SUCCESS("세금계산서"));
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("세금계산서"));
     },
   });
 }

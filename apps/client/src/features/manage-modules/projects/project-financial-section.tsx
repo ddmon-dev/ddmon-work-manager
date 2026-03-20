@@ -26,6 +26,7 @@ import {
   useDeletePartnerPayment,
 } from "./api";
 import type {
+  InvoiceDTO,
   PaymentDTO,
   ExpenseDTO,
   PartnerPaymentDTO,
@@ -43,12 +44,11 @@ interface UnifiedTransaction {
   amount: number;
   description: string;
   paymentType?: string;
-  invoiceIssued?: boolean;
-  invoiceDate?: string | null;
   partnerId?: string;
   partnerName?: string;
   withholdingReported?: boolean;
   withholdingReportedDate?: string | null;
+  readOnly?: boolean;
 }
 
 const TYPE_LABELS: Record<TransactionType, string> = {
@@ -67,6 +67,7 @@ const TYPE_DOT_COLORS: Record<TransactionType, string> = {
 
 interface ProjectFinancialSectionProps {
   projectId: string;
+  invoices: InvoiceDTO[];
   payments: PaymentDTO[];
   expenses: ExpenseDTO[];
   partnerPayments: PartnerPaymentDTO[];
@@ -77,6 +78,7 @@ interface ProjectFinancialSectionProps {
 
 export function ProjectFinancialSection({
   projectId,
+  invoices,
   payments,
   expenses,
   partnerPayments,
@@ -84,7 +86,7 @@ export function ProjectFinancialSection({
   taxType,
   refetch,
 }: ProjectFinancialSectionProps) {
-  const transactions = buildUnifiedTransactions(payments, expenses, partnerPayments);
+  const transactions = buildUnifiedTransactions(invoices, payments, expenses, partnerPayments, taxType);
 
   return (
     <div>
@@ -102,21 +104,46 @@ export function ProjectFinancialSection({
 // ── 통합 변환 ──────────────────────────────────────────────────
 
 function buildUnifiedTransactions(
+  invoices: InvoiceDTO[],
   payments: PaymentDTO[],
   expenses: ExpenseDTO[],
-  partnerPayments: PartnerPaymentDTO[]
+  partnerPayments: PartnerPaymentDTO[],
+  taxType: string | null
 ): UnifiedTransaction[] {
-  const unified: UnifiedTransaction[] = [
-    ...payments.map((p) => ({
-      type: "payment" as const,
-      id: p.id,
-      date: p.paidDate,
-      amount: Number(p.amount),
-      description: p.description,
-      paymentType: p.paymentType,
-      invoiceIssued: p.invoiceIssued,
-      invoiceDate: p.invoiceDate,
-    })),
+  const unified: UnifiedTransaction[] = [];
+
+  // VAT: 수금완료 세금계산서를 읽기전용으로 포함
+  if (taxType === "vat") {
+    unified.push(
+      ...invoices
+        .filter((i) => i.paidDate !== null)
+        .map((i) => ({
+          type: "payment" as const,
+          id: i.id,
+          date: i.paidDate!,
+          amount: Number(i.amount),
+          description: i.description || "세금계산서",
+          paymentType: i.paymentType,
+          readOnly: true,
+        }))
+    );
+  }
+
+  // 원천징수: payments 그대로
+  if (taxType !== "vat") {
+    unified.push(
+      ...payments.map((p) => ({
+        type: "payment" as const,
+        id: p.id,
+        date: p.paidDate,
+        amount: Number(p.amount),
+        description: p.description,
+        paymentType: p.paymentType,
+      }))
+    );
+  }
+
+  unified.push(
     ...expenses.map((e) => ({
       type: "expense" as const,
       id: e.id,
@@ -134,8 +161,8 @@ function buildUnifiedTransactions(
       partnerName: pp.partner.name,
       withholdingReported: pp.withholdingReported,
       withholdingReportedDate: pp.withholdingReportedDate,
-    })),
-  ];
+    }))
+  );
 
   return unified.sort((a, b) => a.date.localeCompare(b.date));
 }
@@ -178,15 +205,6 @@ function TransactionList({ projectId, transactions, taxType, refetch }: Transact
         }
         refetch();
       },
-    });
-  };
-
-  const handleInvoiceToggle = (tx: UnifiedTransaction, checked: boolean) => {
-    updatePayment.mutate({
-      projectId,
-      paymentId: tx.id,
-      invoiceIssued: checked,
-      invoiceDate: checked ? tx.date : null,
     });
   };
 
@@ -235,15 +253,8 @@ function TransactionList({ projectId, transactions, taxType, refetch }: Transact
           <div className="flex items-center justify-between gap-x-2">
             <div className="flex items-center gap-3">
               <span className="text-muted-foreground text-xs">{tx.date}</span>
-              {tx.type === "payment" && taxType === "vat" && (
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <Checkbox
-                    className="size-4 md:size-3.5 rounded-[3px]"
-                    checked={tx.invoiceIssued}
-                    onCheckedChange={(checked) => handleInvoiceToggle(tx, !!checked)}
-                  />
-                  <span className="text-xs text-muted-foreground">세금계산서</span>
-                </label>
+              {tx.readOnly && (
+                <Badge variant="muted" className="text-[10px] px-1.5 py-0">세금계산서</Badge>
               )}
               {tx.type === "partnerPayment" && (
                 <label className="flex items-center gap-1.5 cursor-pointer">
@@ -256,22 +267,24 @@ function TransactionList({ projectId, transactions, taxType, refetch }: Transact
                 </label>
               )}
             </div>
-            <nav className="flex items-center -mb-1 -mr-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <EditTransactionButton
-                projectId={projectId}
-                transaction={tx}
-                taxType={taxType}
-                onSuccess={refetch}
-              />
-              <Button
-                type="button"
-                size="icon-xs"
-                variant="ghost"
-                onClick={() => handleDelete(tx)}
-              >
-                <Trash2Icon className="size-3" />
-              </Button>
-            </nav>
+            {!tx.readOnly && (
+              <nav className="flex items-center -mb-1 -mr-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <EditTransactionButton
+                  projectId={projectId}
+                  transaction={tx}
+                  taxType={taxType}
+                  onSuccess={refetch}
+                />
+                <Button
+                  type="button"
+                  size="icon-xs"
+                  variant="ghost"
+                  onClick={() => handleDelete(tx)}
+                >
+                  <Trash2Icon className="size-3" />
+                </Button>
+              </nav>
+            )}
           </div>
         </li>
       ))}
@@ -428,7 +441,7 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ projectId, projectPartners, taxType, onSuccess }: TransactionFormProps) {
-  const [activeType, setActiveType] = useState<TransactionType>("payment");
+  const [activeType, setActiveType] = useState<TransactionType>(taxType === "vat" ? "expense" : "payment");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState<number | undefined>(undefined);
   const [date, setDate] = useState<Date>(new Date());
@@ -481,7 +494,7 @@ export function TransactionForm({ projectId, projectPartners, taxType, onSuccess
   };
 
   const typeButtons: { type: TransactionType; label: string }[] = [
-    { type: "payment", label: "수금" },
+    ...(taxType !== "vat" ? [{ type: "payment" as const, label: "수금" }] : []),
     { type: "expense", label: "지출" },
     { type: "partnerPayment", label: "파트너지급" },
   ];

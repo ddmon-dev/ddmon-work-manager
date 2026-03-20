@@ -9,6 +9,19 @@ export interface ProjectClientInfo {
   companyName: string;
 }
 
+export interface InvoiceDTO {
+  id: string;
+  projectId: string;
+  paymentType: string;
+  description: string;
+  amount: string;
+  issueDate: string;
+  paidDate: string | null;
+  deleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PaymentDTO {
   id: string;
   projectId: string;
@@ -16,8 +29,6 @@ export interface PaymentDTO {
   amount: string;
   paidDate: string;
   paymentType: string;
-  invoiceIssued: boolean;
-  invoiceDate: string | null;
   deleted: boolean;
   createdAt: string;
   updatedAt: string;
@@ -90,6 +101,7 @@ export interface ProjectPartnerDTO {
 }
 
 export interface ProjectWithDetails extends Omit<ProjectDTO, "totalPaid"> {
+  invoices: InvoiceDTO[];
   payments: PaymentDTO[];
   memos: MemoItem[];
   projectPartners: ProjectPartnerDTO[];
