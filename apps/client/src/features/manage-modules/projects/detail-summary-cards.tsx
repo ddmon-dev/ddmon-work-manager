@@ -36,46 +36,50 @@ export function SummaryCards({ data, activePanel, onSelect }: SummaryCardsProps)
     type: PanelType;
     icon: React.ReactNode;
     title: string;
+    badge?: string;
     detail: string;
     show: boolean;
   }[] = [
     {
       type: "invoice",
-      icon: <FileText className="size-4" />,
+      icon: <FileText className="size-3.5" />,
       title: "세금계산서",
+      badge: invoiceCount > 0 ? `${invoiceCount}건` : undefined,
       detail: invoiceCount > 0
-        ? `${invoiceCount}건 / ${formatCurrency(invoiceTotal)}원 (${invoiceCollectionRate}%)`
+        ? `${formatCurrency(invoiceTotal)}원 (수금 ${invoiceCollectionRate}%)`
         : "발행 내역 없음",
       show: isVat && contractAmount > 0,
     },
     {
       type: "financial",
-      icon: <ArrowLeftRight className="size-4" />,
+      icon: <ArrowLeftRight className="size-3.5" />,
       title: "거래 내역",
+      badge: expenseCount > 0 ? `${expenseCount}건` : undefined,
       detail: expenseCount > 0
-        ? `${expenseCount}건 / 지출 ${formatCurrency(expenseTotal)}원`
+        ? `지출 ${formatCurrency(expenseTotal)}원`
         : "거래 내역 없음",
       show: true,
     },
     {
       type: "partner",
-      icon: <Users className="size-4" />,
+      icon: <Users className="size-3.5" />,
       title: "파트너",
+      badge: partnerCount > 0 ? `${partnerCount}명` : undefined,
       detail: partnerCount > 0
-        ? `${partnerCount}명 (${partnerNames.join(", ")}${partnerCount > 3 ? " ..." : ""})`
+        ? partnerNames.join(", ") + (partnerCount > 3 ? " ..." : "")
         : "배치된 파트너 없음",
       show: true,
     },
     {
       type: "estimate",
-      icon: <FileSpreadsheet className="size-4" />,
+      icon: <FileSpreadsheet className="size-3.5" />,
       title: "견적서",
-      detail: data.estimateNumber ?? "연결된 견적서 없음",
+      detail: data.estimateNumber ?? "",
       show: !!data.estimateNumber,
     },
     {
       type: "file",
-      icon: <FolderOpen className="size-4" />,
+      icon: <FolderOpen className="size-3.5" />,
       title: "파일",
       detail: "파일 관리",
       show: true,
@@ -85,31 +89,41 @@ export function SummaryCards({ data, activePanel, onSelect }: SummaryCardsProps)
   const visibleCards = cards.filter((c) => c.show);
 
   return (
-    <div className="flex flex-col gap-1.5">
-      {visibleCards.map((card) => (
-        <button
-          key={card.type}
-          type="button"
-          onClick={() => onSelect(card.type)}
-          className={cn(
-            "flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
-            activePanel === card.type
-              ? "border-primary bg-primary/5"
-              : "hover:border-border-dark/50 hover:bg-muted/30"
-          )}
-        >
-          <span className={cn(
-            "shrink-0",
-            activePanel === card.type ? "text-primary" : "text-muted-foreground"
-          )}>
-            {card.icon}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">{card.title}</p>
-            <p className="text-xs text-muted-foreground truncate">{card.detail}</p>
-          </div>
-        </button>
-      ))}
+    <div className="grid grid-cols-2 gap-1.5">
+      {visibleCards.map((card) => {
+        const isActive = activePanel === card.type;
+        return (
+          <button
+            key={card.type}
+            type="button"
+            onClick={() => onSelect(card.type)}
+            className={cn(
+              "flex flex-col gap-1 rounded-lg border px-3 py-2.5 text-left transition-all",
+              isActive
+                ? "border-primary bg-primary/5 shadow-sm"
+                : "bg-muted/20 hover:bg-muted/40"
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")}>
+                  {card.icon}
+                </span>
+                <span className="text-xs font-medium">{card.title}</span>
+              </div>
+              {card.badge && (
+                <span className={cn(
+                  "text-[10px] font-medium rounded-full px-1.5 py-0.5",
+                  isActive ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                )}>
+                  {card.badge}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground truncate">{card.detail}</p>
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -19,17 +19,15 @@ export function PriceSummary({ collections, expenses, partnerPayments, contractA
   const isVat = taxType === "vat";
   const { supplyAmount } = calculateTaxBreakdown(contractAmount, taxType ?? "");
 
-  // 잔금 계산
   const remaining = isVat
     ? contractAmount - Math.min(totalPaid, contractAmount)
     : supplyAmount - totalPaid;
 
-  // 순이익 계산
   const revenueForProfit = isVat ? Math.min(totalPaid, contractAmount) : totalPaid;
   const netProfit = revenueForProfit - totalExpenses;
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-2">
       <PriceCard
         label={isVat ? "공급가액" : "계약금액"}
         value={formatCurrency(contractAmount)}
@@ -37,17 +35,17 @@ export function PriceSummary({ collections, expenses, partnerPayments, contractA
       <PriceCard
         label="입금액"
         value={formatCurrency(totalPaid)}
-        variant="positive"
+        variant={totalPaid > 0 ? "positive" : "muted"}
       />
       <PriceCard
         label="잔금"
         value={formatCurrency(Math.max(remaining, 0))}
-        variant={remaining > 0 ? "warning" : "normal"}
+        variant={remaining > 0 ? "warning" : "muted"}
       />
       <PriceCard
         label="순이익"
         value={formatCurrency(Math.abs(netProfit))}
-        variant={netProfit >= 0 ? "positive" : "negative"}
+        variant={netProfit > 0 ? "positive" : netProfit < 0 ? "negative" : "muted"}
         prefix={netProfit < 0 ? "-" : undefined}
       />
     </div>
@@ -59,20 +57,21 @@ export function PriceSummary({ collections, expenses, partnerPayments, contractA
 interface PriceCardProps {
   label: string;
   value: string;
-  variant?: "normal" | "positive" | "negative" | "warning";
+  variant?: "normal" | "positive" | "negative" | "warning" | "muted";
   prefix?: string;
 }
 
 function PriceCard({ label, value, variant = "normal", prefix }: PriceCardProps) {
   return (
-    <div className="rounded-lg border px-3 py-2.5">
-      <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+    <div className="rounded-lg border bg-muted/20 px-3 py-2">
+      <p className="text-[11px] text-muted-foreground mb-0.5">{label}</p>
       <p
         className={cn(
           "text-sm font-semibold tabular-nums",
           variant === "positive" && "text-info",
           variant === "negative" && "text-destructive",
-          variant === "warning" && "text-amber-600 dark:text-amber-400"
+          variant === "warning" && "text-amber-600 dark:text-amber-400",
+          variant === "muted" && "text-muted-foreground"
         )}
       >
         {prefix}{value}원

@@ -35,12 +35,9 @@ export function FinancialModule() {
   return (
     <>
       <AppHeader title="재무" />
-      <Container className="flex flex-col gap-6 py-6">
-        <div className="flex items-center justify-between">
-          <YearFilter value={year} onChange={handleYearChange} />
-        </div>
-
+      <Container className="flex flex-col gap-5 py-6">
         <KpiCards
+          yearFilter={<YearFilter value={year} onChange={handleYearChange} />}
           revenue={revenueData}
           settlement={settlementData}
           onPendingClick={handlePendingClick}
