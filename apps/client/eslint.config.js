@@ -11,5 +11,5 @@ export default [
     plugins: { "react-hooks": reactHooks },
     rules: { ...reactHooks.configs.recommended.rules },
   },
-  { ignores: ["dist/**", "dist-production/**"] },
+  { ignores: ["dist/**"] },
 ];

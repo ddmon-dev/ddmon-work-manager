@@ -12,23 +12,26 @@ npm workspaces 기반 모노레포.
 │   ├── schemas/         # Zod 스키마 (클라이언트·서버 공유)
 │   ├── types/           # 상수, 타입 정의
 │   └── utils/           # 금액 계산 등 유틸리티
-├── scripts/             # 운영 스크립트
+├── scripts/             # 유틸리티 스크립트
 ├── storage/             # 로컬 파일 스토리지 (gitignore)
 │   ├── files/           # 드라이브 파일 (flat, UUID 기반)
 │   └── editor/          # 에디터 첨부 이미지 (flat, UUID 기반)
-├── .env                 # 프로젝트명 + DB 크레덴셜 (gitignore)
+├── .env                 # 프로젝트명 + DB 크레덴셜 + Docker 설정 (gitignore)
 ├── .env.example         # .env 템플릿
-├── docker-compose.yml   # 개발환경 Docker
-├── docker-compose.production.yml  # 운영환경 Docker
-├── .env.development     # 개발환경 변수
-└── .env.production      # 운영환경 변수 (gitignore)
+├── .env.local           # 앱 환경 변수 (gitignore)
+├── .env.local.example   # .env.local 템플릿
+└── docker-compose.yml   # Docker (환경변수로 dev/production 분기)
 ```
 
 npm workspaces 기반. 패키지 스코프: `@packages/*`.
 
+### 환경 분리 전략
+
+개발(`~/dev/ddmon/work-manager/`)과 운영(`~/production/work-manager/`)을 **별도 디렉토리**로 완전 분리. 하나의 디렉토리 = 하나의 환경. 같은 `docker-compose.yml`, 같은 스크립트를 사용하되 `.env`와 `.env.local`의 값만 다르게 설정.
+
 ### 프로젝트 환경변수 (`.env`)
 
-`.env`에서 프로젝트명과 DB 크레덴셜을 관리. Docker Compose, 스크립트, plist에서 참조.
+`.env`에서 프로젝트명, DB 크레덴셜, Docker 설정을 관리. Docker Compose, 스크립트에서 참조.
 
 **이 파일은 `.gitignore`에 포함** — `.env.example`을 복사하여 생성.
 
@@ -39,9 +42,26 @@ cp .env.example .env
 
 ```env
 PROJECT_NAME=work-manager
+ENVIRONMENT=dev              # dev | production
 POSTGRES_USER=your_db_user
 POSTGRES_PASSWORD=your_db_password
 POSTGRES_DB=work_manager
+POSTGRES_PORT=8002           # 개발: 8002, 운영: 7020
+```
+
+### 앱 환경변수 (`.env.local`)
+
+Hono 서버와 Drizzle에서 사용하는 환경변수. `.env.local.example`을 복사하여 생성. DB 크레덴셜은 `.env`와 일치시킬 것.
+
+```env
+DATABASE_URL=postgresql://your_db_user:your_db_password@localhost:8002/work_manager
+PORT=8001
+BETTER_AUTH_SECRET=your-secret-change-this-in-production
+BETTER_AUTH_URL=http://localhost:8001
+CLIENT_URL=http://localhost:8000
+STORAGE_DIR=../../storage
+MAX_FILE_SIZE_MB=100
+MAX_EDITOR_IMAGE_SIZE_MB=10
 ```
 
 ### 파일 스토리지
@@ -67,26 +87,13 @@ Vite 개발 서버가 `/api` 요청을 서버(8001)로 프록시.
 
 ### Docker
 
-`docker-compose.yml` (프로젝트명: `${PROJECT_NAME}-dev`)
+`docker-compose.yml` — `.env`의 `ENVIRONMENT=dev`, `POSTGRES_PORT=8002` 참조.
 
 - PostgreSQL 17 Alpine
 - 크레덴셜: `.env`의 `POSTGRES_USER`/`POSTGRES_PASSWORD` 참조
 - 컨테이너: `${PROJECT_NAME}-postgres-dev`
 - 볼륨: `${PROJECT_NAME}-dev_pgdata`
 - `docker compose up -d` 명령 사용 (`.env` 자동 로드)
-
-### 환경 변수 (`.env.development`)
-
-```env
-DATABASE_URL=postgresql://your_db_user:your_db_password@localhost:8002/work_manager
-PORT=8001
-BETTER_AUTH_SECRET=dev-secret-do-not-use-in-production
-BETTER_AUTH_URL=http://localhost:8001
-CLIENT_URL=http://localhost:8000
-STORAGE_DIR=../../storage
-```
-
-`.env.development.example`을 복사하여 생성. DB 크레덴셜은 `.env`와 일치시킬 것.
 
 ### 명령어
 
@@ -111,7 +118,7 @@ npm run type-check    # TypeScript 타입 체크
 
 ## 운영환경
 
-개발환경과 완전히 분리된 독립 환경. macOS LaunchAgent로 시스템 부팅 시 자동 기동.
+개발환경과 완전히 분리된 독립 디렉토리(`~/production/work-manager/`). macOS LaunchAgent로 시스템 부팅 시 자동 기동.
 
 ### 포트 할당
 
@@ -133,15 +140,16 @@ npm run type-check    # TypeScript 타입 체크
 
 ### Docker
 
-`docker-compose.production.yml` (프로젝트명: `${PROJECT_NAME}-production`)
+같은 `docker-compose.yml` 사용 — `.env`의 `ENVIRONMENT=production`, `POSTGRES_PORT=7020` 참조.
 
 - PostgreSQL 17 Alpine, 포트 7020
 - 컨테이너: `${PROJECT_NAME}-postgres-production`
 - 볼륨: `${PROJECT_NAME}-production_pgdata` (개발환경과 완전 분리)
 - `restart: unless-stopped`
-- `docker compose --env-file .env` 명령 사용
 
-### 환경 변수 (`.env.production`)
+### 환경 변수 (`.env.local`)
+
+운영 디렉토리의 `.env.local`:
 
 ```env
 DATABASE_URL=postgresql://your_db_user:your_db_password@localhost:7020/work_manager
@@ -151,26 +159,26 @@ CLIENT_URL=http://localhost:7070
 PORT=7070
 NODE_ENV=production
 SERVE_STATIC=true
-STATIC_DIR=../../apps/client/dist-production
+STATIC_DIR=../../apps/client/dist
 STORAGE_DIR=../../storage
 ```
-
-`.env.production.example`을 복사하여 생성. DB 크레덴셜은 `.env`와 일치시킬 것.
 
 ### 빌드
 
 ```bash
-npm run build:production    # 클라이언트(dist-production) + 서버(tsup) 빌드
+npm run build    # 클라이언트(dist/) + 서버(tsup) 빌드
 ```
 
-- **클라이언트**: Vite → `apps/client/dist-production/`
+- **클라이언트**: Vite → `apps/client/dist/`
 - **서버**: tsup → `apps/server/dist/`
   - `noExternal: [/@packages\/.*/]` — 워크스페이스 패키지를 번들에 포함
   - `clean: true` — 빌드 전 dist/ 디렉토리 정리
   - tsup 사용 이유: `moduleResolution: bundler`와 Node.js ESM 간 디렉토리 임포트 충돌 해결
   - **tsc/tsup 분리**: 모든 tsconfig에 `emitDeclarationOnly: true` 설정. tsc는 .d.ts만 생성하고, JS 빌드는 tsup이 전담
 
-### 스크립트 (`scripts/`)
+### 스크립트
+
+운영 전용 스크립트는 운영 디렉토리(`~/production/work-manager/scripts/`)에서만 관리. git으로 추적하지 않음.
 
 | 명령어 | 스크립트 | 설명 |
 |--------|---------|------|
@@ -231,11 +239,11 @@ npm run db:migrate                          # 마이그레이션 실행
 
 ### 운영환경 마이그레이션
 
-drizzle-kit은 현재 디렉토리 기준으로 경로 해석하므로 `apps/server`에서 실행 필수:
+운영 디렉토리에서 동일한 `npm run db:migrate` 사용 (`.env.local`이 운영 DB를 가리킴):
 
 ```bash
 npm run production:migrate
-# 내부: node --env-file=../../.env.production ../../node_modules/.bin/drizzle-kit migrate
+# 내부: npm run db:migrate --workspace=apps/server
 ```
 
 ### 시드 데이터
@@ -243,6 +251,6 @@ npm run production:migrate
 `apps/server/src/db/seed.ts` — 기존 Next.js 운영 DB에서 이관한 데이터. `.gitignore`에 포함(개인정보).
 
 ```bash
-npm run db:reset      # reset.ts(DB 초기화) + migrate + seed 통합
+npm run db:reset           # reset.ts(DB 초기화) + migrate + seed 통합
 npm run production:seed    # 운영환경에 시드 적용
 ```

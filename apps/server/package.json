@@ -4,17 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --env-file=../../.env.development src/index.ts",
+    "dev": "tsx watch --env-file=../../.env.local src/index.ts",
     "build": "tsup",
     "start": "node dist/index.js",
-    "db:generate": "node --env-file=../../.env.development ../../node_modules/.bin/drizzle-kit generate",
-    "db:migrate": "node --env-file=../../.env.development ../../node_modules/.bin/drizzle-kit migrate",
-    "db:push": "node --env-file=../../.env.development ../../node_modules/.bin/drizzle-kit push",
-    "db:studio": "node --env-file=../../.env.development ../../node_modules/.bin/drizzle-kit studio",
-    "db:seed": "tsx --env-file=../../.env.development src/db/seed.ts",
-    "db:reset": "tsx --env-file=../../.env.development src/db/reset.ts && npm run db:migrate && npm run db:seed",
-    "db:migrate:production": "node --env-file=../../.env.production ../../node_modules/.bin/drizzle-kit migrate",
-    "db:seed:production": "tsx --env-file=../../.env.production src/db/seed.ts"
+    "db:generate": "node --env-file=../../.env.local ../../node_modules/.bin/drizzle-kit generate",
+    "db:migrate": "node --env-file=../../.env.local ../../node_modules/.bin/drizzle-kit migrate",
+    "db:push": "node --env-file=../../.env.local ../../node_modules/.bin/drizzle-kit push",
+    "db:studio": "node --env-file=../../.env.local ../../node_modules/.bin/drizzle-kit studio",
+    "db:seed": "tsx --env-file=../../.env.local src/db/seed.ts",
+    "db:reset": "tsx --env-file=../../.env.local src/db/reset.ts && npm run db:migrate && npm run db:seed"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.1",
