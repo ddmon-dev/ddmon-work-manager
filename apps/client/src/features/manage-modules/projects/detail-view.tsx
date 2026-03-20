@@ -66,7 +66,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
 
   return (
     <>
-      <SheetBody className="lg:grid-cols-[380px_1fr]">
+      <SheetBody className="lg:grid-cols-[420px_1fr]">
         {/* 좌측 마스터 */}
         <SheetScrollColumn className="flex flex-col">
           <SheetContainer>
