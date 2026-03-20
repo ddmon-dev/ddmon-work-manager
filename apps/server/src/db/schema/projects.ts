@@ -53,24 +53,25 @@ export const projectInvoices = pgTable("project_invoices", {
   description: text("description").notNull().default(""),
   amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
   issueDate: date("issue_date").notNull(),
-  paidDate: date("paid_date"),
   deleted: boolean("deleted").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const projectPayments = pgTable("project_payments", {
+export const projectCollections = pgTable("project_collections", {
   id: uuid("id").primaryKey().defaultRandom(),
   projectId: uuid("project_id")
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
-  description: text("description").notNull(),
+  invoiceId: uuid("invoice_id")
+    .references(() => projectInvoices.id, { onDelete: "cascade" }),
   amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
-  paidDate: date("paid_date").notNull().default(new Date().toISOString().split("T")[0]),
+  paidDate: date("paid_date").notNull(),
   paymentType: text("payment_type").notNull().default("deposit"), // deposit, interim, balance, additional
+  description: text("description").notNull().default(""),
+  deleted: boolean("deleted").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  deleted: boolean("deleted").notNull().default(false),
 });
 
 export const projectExpenses = pgTable("project_expenses", {
@@ -97,6 +98,7 @@ export const partnerPayments = pgTable("partner_payments", {
   description: text("description").notNull(),
   amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
   paidDate: date("paid_date").notNull(),
+  taxType: text("tax_type").notNull().default("withholding"), // withholding, vat
   withholdingReported: boolean("withholding_reported").notNull().default(false),
   withholdingReportedDate: date("withholding_reported_date"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { projects, projectInvoices, projectPayments, projectMemos, projectPartners, projectScheduleLanes, projectExpenses, partnerPayments, user } from "../db/schema";
+import { projects, projectInvoices, projectCollections, projectMemos, projectPartners, projectScheduleLanes, projectExpenses, partnerPayments, user } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { projectWriteSchema, projectPartnerWriteSchema } from "@packages/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
@@ -40,12 +40,8 @@ app.get("/", async (c) => {
       where,
       with: {
         client: true,
-        invoices: {
-          where: softDeleteFilter(projectInvoices.deleted),
-          columns: { amount: true, paidDate: true },
-        },
-        payments: {
-          where: softDeleteFilter(projectPayments.deleted),
+        collections: {
+          where: softDeleteFilter(projectCollections.deleted),
           columns: { amount: true },
         },
       },
@@ -56,17 +52,12 @@ app.get("/", async (c) => {
     db.select({ total: count() }).from(projects).where(where),
   ]);
 
-  // 수금 합계: VAT→invoices(수금완료건), 원천징수→payments
   const items = rows.map((p) => {
-    const invoicePaid = p.invoices
-      .filter((i) => i.paidDate !== null)
-      .reduce((acc, i) => acc + Number(i.amount), 0);
-    const paymentPaid = p.payments.reduce((acc, pay) => acc + Number(pay.amount), 0);
+    const totalPaid = p.collections.reduce((acc, c) => acc + Number(c.amount), 0);
     return {
       ...p,
-      totalPaid: invoicePaid + paymentPaid,
-      invoices: undefined,
-      payments: undefined,
+      totalPaid,
+      collections: undefined,
     };
   });
 
@@ -90,39 +81,40 @@ app.put("/reorder", async (c) => {
 
 // 서브 리소스 직접 라우트 — /:id 전에 등록
 
-// PATCH /projects/payments/:id — 수금 수정
-app.patch("/payments/:id", async (c) => {
+// PATCH /projects/collections/:id — 수금 수정
+app.patch("/collections/:id", async (c) => {
   const id = c.req.param("id");
   const parsed = z.object({
-    description: z.string().min(1).optional(),
+    description: z.string().optional(),
     amount: z.number().positive().optional(),
     paidDate: z.string().optional(),
     paymentType: z.enum(["deposit", "interim", "balance", "additional"]).optional(),
+    invoiceId: z.string().uuid().nullable().optional(),
   }).safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
   const { amount, ...rest } = parsed.data;
   const [updated] = await db
-    .update(projectPayments)
+    .update(projectCollections)
     .set({
       ...rest,
       ...(amount !== undefined && { amount: String(amount) }),
       updatedAt: new Date(),
     })
-    .where(and(eq(projectPayments.id, id), softDeleteFilter(projectPayments.deleted)))
+    .where(and(eq(projectCollections.id, id), softDeleteFilter(projectCollections.deleted)))
     .returning();
 
   if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
   return successResponse(c, updated);
 });
 
-// DELETE /projects/payments/:id — 수금 소프트 삭제
-app.delete("/payments/:id", async (c) => {
+// DELETE /projects/collections/:id — 수금 소프트 삭제
+app.delete("/collections/:id", async (c) => {
   const id = c.req.param("id");
   const [deleted] = await db
-    .update(projectPayments)
+    .update(projectCollections)
     .set(softDeletePayload())
-    .where(and(eq(projectPayments.id, id), softDeleteFilter(projectPayments.deleted)))
+    .where(and(eq(projectCollections.id, id), softDeleteFilter(projectCollections.deleted)))
     .returning();
 
   if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -137,17 +129,15 @@ app.patch("/invoices/:id", async (c) => {
     description: z.string().optional(),
     amount: z.number().positive().optional(),
     issueDate: z.string().optional(),
-    paidDate: z.string().nullable().optional(),
   }).safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
-  const { amount, paidDate, ...rest } = parsed.data;
+  const { amount, ...rest } = parsed.data;
   const [updated] = await db
     .update(projectInvoices)
     .set({
       ...rest,
       ...(amount !== undefined && { amount: String(amount) }),
-      ...(paidDate !== undefined && { paidDate }),
       updatedAt: new Date(),
     })
     .where(and(eq(projectInvoices.id, id), softDeleteFilter(projectInvoices.deleted)))
@@ -325,9 +315,9 @@ app.get("/:id", async (c) => {
         where: softDeleteFilter(projectInvoices.deleted),
         orderBy: [desc(projectInvoices.issueDate)],
       },
-      payments: {
-        where: softDeleteFilter(projectPayments.deleted),
-        orderBy: [desc(projectPayments.paidDate)],
+      collections: {
+        where: softDeleteFilter(projectCollections.deleted),
+        orderBy: [desc(projectCollections.paidDate)],
       },
       memos: {
         where: softDeleteFilter(projectMemos.deleted),
@@ -453,10 +443,11 @@ app.patch("/:id/status", async (c) => {
   return successResponse(c, updated);
 });
 
-// POST /projects/:id/payments — 수금 등록
-app.post("/:id/payments", async (c) => {
+// POST /projects/:id/collections — 수금 등록
+app.post("/:id/collections", async (c) => {
   const projectId = c.req.param("id");
   const parsed = z.object({
+    invoiceId: z.string().uuid().nullable().optional(),
     description: z.string().default(""),
     amount: z.number().positive("금액은 양수여야 합니다."),
     paidDate: z.string(),
@@ -469,12 +460,17 @@ app.post("/:id/payments", async (c) => {
   });
   if (!project) return errorResponse(c, ERRORS.NOT_FOUND, 404);
 
-  const [payment] = await db
-    .insert(projectPayments)
-    .values({ projectId, ...parsed.data, amount: parsed.data.amount.toString() })
+  const [collection] = await db
+    .insert(projectCollections)
+    .values({
+      projectId,
+      ...parsed.data,
+      invoiceId: parsed.data.invoiceId ?? null,
+      amount: parsed.data.amount.toString(),
+    })
     .returning();
 
-  return successResponse(c, payment, 201);
+  return successResponse(c, collection, 201);
 });
 
 // POST /projects/:id/invoices — 세금계산서 발행

@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { and, eq, sql, isNotNull } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "../db";
-import { projects, projectInvoices, projectPayments, clients } from "../db/schema";
+import { projects, projectCollections, clients } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { softDeleteFilter, getExpectedReceivable } from "../lib/query-helpers";
@@ -25,8 +25,8 @@ app.get("/", async (c) => {
   const currentYear = new Date().getFullYear();
   const prevYear = currentYear - 1;
 
-  // 1. 프로젝트 + 수금(invoices + payments) 병렬 조회
-  const [allProjects, allInvoices, allPayments] = await Promise.all([
+  // 1. 프로젝트 + 수금(collections) 병렬 조회
+  const [allProjects, allCollections] = await Promise.all([
     db
       .select({
         id: projects.id,
@@ -46,29 +46,15 @@ app.get("/", async (c) => {
           sql`${projects.status} != 'discarded'`
         )
       ),
-    // VAT 프로젝트의 수금 완료 세금계산서
+    // 통합 수금: project_collections 단일 소스
     db
       .select({
-        projectId: projectInvoices.projectId,
-        amount: projectInvoices.amount,
-        paidDate: projectInvoices.paidDate,
+        projectId: projectCollections.projectId,
+        amount: projectCollections.amount,
+        paidDate: projectCollections.paidDate,
       })
-      .from(projectInvoices)
-      .where(
-        and(
-          softDeleteFilter(projectInvoices.deleted),
-          isNotNull(projectInvoices.paidDate)
-        )
-      ),
-    // 원천징수 프로젝트의 수금
-    db
-      .select({
-        projectId: projectPayments.projectId,
-        amount: projectPayments.amount,
-        paidDate: projectPayments.paidDate,
-      })
-      .from(projectPayments)
-      .where(softDeleteFilter(projectPayments.deleted)),
+      .from(projectCollections)
+      .where(softDeleteFilter(projectCollections.deleted)),
   ]);
 
   const validProjectIds = new Set(allProjects.map((p) => p.id));
@@ -118,7 +104,7 @@ app.get("/", async (c) => {
     }
   }
 
-  // 수금 집계 (invoices + payments 합산)
+  // 수금 집계 (collections 단일 소스)
   let allPaymentTotal = 0;
   const paidByProjectId = new Map<string, number>();
 
@@ -137,22 +123,17 @@ app.get("/", async (c) => {
     }
   }
 
-  // 수금 처리: invoices(VAT) + payments(원천징수)
-  const allPaidRecords = [
-    ...allInvoices.map((i) => ({ projectId: i.projectId, amount: i.amount, paidDate: i.paidDate! })),
-    ...allPayments.map((p) => ({ projectId: p.projectId, amount: p.amount, paidDate: p.paidDate })),
-  ];
-
-  for (const pay of allPaidRecords) {
-    if (!validProjectIds.has(pay.projectId)) continue;
-    const amount = Number(pay.amount);
+  // 수금 처리: collections 단일 소스
+  for (const col of allCollections) {
+    if (!validProjectIds.has(col.projectId)) continue;
+    const amount = Number(col.amount);
     allPaymentTotal += amount;
 
-    const current = paidByProjectId.get(pay.projectId) ?? 0;
-    paidByProjectId.set(pay.projectId, current + amount);
+    const current = paidByProjectId.get(col.projectId) ?? 0;
+    paidByProjectId.set(col.projectId, current + amount);
 
     // 수금은 프로젝트 계약연도 기준으로 집계
-    const contractYear = projectContractYearMap.get(pay.projectId);
+    const contractYear = projectContractYearMap.get(col.projectId);
     if (contractYear !== undefined) {
       const bucket = yearBuckets.get(contractYear);
       if (bucket) {
@@ -160,7 +141,7 @@ app.get("/", async (c) => {
       }
     }
 
-    const paidDate = new Date(pay.paidDate);
+    const paidDate = new Date(col.paidDate);
     if (paidDate.getFullYear() === chartYear) {
       monthlyPayment[paidDate.getMonth()] += amount;
     }

@@ -67,8 +67,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
           {contractAmount > 0 && (
             <SheetContainer>
               <PriceSummary
-                invoices={data.invoices ?? []}
-                payments={data.payments}
+                collections={data.collections ?? []}
                 expenses={data.expenses ?? []}
                 partnerPayments={data.partnerPayments ?? []}
                 contractAmount={contractAmount}
@@ -82,6 +81,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
               <ProjectInvoiceSection
                 projectId={data.id}
                 invoices={data.invoices ?? []}
+                collections={data.collections ?? []}
                 refetch={refetch}
               />
             </SheetContainer>
@@ -90,8 +90,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
           <SheetContainer className="border-b-0!">
             <ProjectFinancialSection
               projectId={data.id}
-              invoices={data.invoices ?? []}
-              payments={data.payments}
+              collections={data.collections ?? []}
               expenses={data.expenses ?? []}
               partnerPayments={data.partnerPayments ?? []}
               projectPartners={data.projectPartners ?? []}

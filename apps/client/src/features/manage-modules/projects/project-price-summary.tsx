@@ -3,19 +3,15 @@ import { formatCurrency } from "@/shared/utils/format";
 import { calculateTaxBreakdown } from "@packages/utils";
 
 interface PriceSummaryProps {
-  invoices: { amount: string; paidDate: string | null }[];
-  payments: { amount: string }[];
+  collections: { amount: string }[];
   expenses: { amount: string }[];
   partnerPayments: { amount: string }[];
   contractAmount: number;
   taxType: string | null;
 }
 
-export function PriceSummary({ invoices, payments, expenses, partnerPayments, contractAmount, taxType }: PriceSummaryProps) {
-  // VAT: invoices의 수금완료 건, 원천징수: payments
-  const totalPaid = taxType === "vat"
-    ? invoices.filter((i) => i.paidDate !== null).reduce((sum, i) => sum + Number(i.amount), 0)
-    : payments.reduce((sum, p) => sum + Number(p.amount), 0);
+export function PriceSummary({ collections, expenses, partnerPayments, contractAmount, taxType }: PriceSummaryProps) {
+  const totalPaid = collections.reduce((sum, c) => sum + Number(c.amount), 0);
   const totalExpenses =
     expenses.reduce((sum, e) => sum + Number(e.amount), 0) +
     partnerPayments.reduce((sum, pp) => sum + Number(pp.amount), 0);

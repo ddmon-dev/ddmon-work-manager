@@ -5,6 +5,8 @@ export interface UncollectedInvoice {
   clientName: string | null;
   paymentType: string;
   amount: string;
+  collectedAmount: string;
+  remainingAmount: string;
   issueDate: string;
   description: string;
 }

@@ -9,7 +9,7 @@ import type {
   ProjectDTO,
   ProjectWithDetails,
   ProjectListResponse,
-  PaymentDTO,
+  CollectionDTO,
   InvoiceDTO,
   ProjectStatus,
   WorkPhase,
@@ -202,7 +202,7 @@ export function useUpdateProjectStatus() {
 
 // ── 수금 ────────────────────────────────────────────────────
 
-export function useCreatePayment() {
+export function useCreateCollection() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -211,23 +211,25 @@ export function useCreatePayment() {
       ...data
     }: {
       projectId: string;
+      invoiceId?: string | null;
       description: string;
       amount: number;
       paidDate: string;
       paymentType: "deposit" | "interim" | "balance" | "additional";
-    }) => api.post<PaymentDTO>(`/projects/${projectId}/payments`, data),
-    onMutate: async ({ projectId, description, amount, paidDate, paymentType }) => {
+    }) => api.post<CollectionDTO>(`/projects/${projectId}/collections`, data),
+    onMutate: async ({ projectId, invoiceId, description, amount, paidDate, paymentType }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
       const previous = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId));
       queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId), (old) =>
         old
           ? {
               ...old,
-              payments: [
-                ...old.payments,
+              collections: [
+                ...old.collections,
                 {
                   id: crypto.randomUUID(),
                   projectId,
+                  invoiceId: invoiceId ?? null,
                   description,
                   amount: String(amount),
                   paidDate,
@@ -244,7 +246,7 @@ export function useCreatePayment() {
     },
     onError: (_err, { projectId }, context) => {
       if (context?.previous) queryClient.setQueryData(queryKeys.projects.detail(projectId), context.previous);
-      toast.error(CRUD_ERRORS.CREATE_FAILED("입금 내역"));
+      toast.error(CRUD_ERRORS.CREATE_FAILED("수금 내역"));
     },
     onSettled: (_data, _err, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
@@ -253,24 +255,25 @@ export function useCreatePayment() {
   });
 }
 
-export function useUpdatePayment() {
+export function useUpdateCollection() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({
       projectId,
-      paymentId,
+      collectionId,
       ...data
     }: {
       projectId: string;
-      paymentId: string;
+      collectionId: string;
       description?: string;
       amount?: number;
       paidDate?: string;
       paymentType?: string;
-    }) => api.patch<PaymentDTO>(`/projects/payments/${paymentId}`, data),
+      invoiceId?: string | null;
+    }) => api.patch<CollectionDTO>(`/projects/collections/${collectionId}`, data),
     onError: (error: Error) => {
-      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("입금 내역"));
+      toast.error(error.message || CRUD_ERRORS.UPDATE_FAILED("수금 내역"));
     },
     onSettled: (_data, _err, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
@@ -279,25 +282,25 @@ export function useUpdatePayment() {
   });
 }
 
-export function useDeletePayment() {
+export function useDeleteCollection() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ projectId, paymentId }: { projectId: string; paymentId: string }) =>
-      api.delete<{ id: string }>(`/projects/payments/${paymentId}`),
-    onMutate: async ({ projectId, paymentId }) => {
+    mutationFn: ({ projectId, collectionId }: { projectId: string; collectionId: string }) =>
+      api.delete<{ id: string }>(`/projects/collections/${collectionId}`),
+    onMutate: async ({ projectId, collectionId }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
       const previous = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId));
       queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(projectId), (old) =>
         old
-          ? { ...old, payments: old.payments.filter((p) => p.id !== paymentId) }
+          ? { ...old, collections: old.collections.filter((c) => c.id !== collectionId) }
           : old
       );
       return { previous };
     },
     onError: (_err, { projectId }, context) => {
       if (context?.previous) queryClient.setQueryData(queryKeys.projects.detail(projectId), context.previous);
-      toast.error(CRUD_ERRORS.DELETE_FAILED("입금 내역"));
+      toast.error(CRUD_ERRORS.DELETE_FAILED("수금 내역"));
     },
     onSettled: (_data, _err, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
@@ -348,7 +351,6 @@ export function useUpdateInvoice() {
       description?: string;
       amount?: number;
       issueDate?: string;
-      paidDate?: string | null;
     }) => api.patch<InvoiceDTO>(`/projects/invoices/${invoiceId}`, data),
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });

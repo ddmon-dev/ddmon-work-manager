@@ -15,9 +15,9 @@ import { useDialog } from "@/shared/ui/app-dialog";
 import { InlineEmpty } from "@/shared/ui/inline-empty";
 import { DetailSectionTitle } from "../_base/ui";
 import {
-  useCreatePayment,
-  useUpdatePayment,
-  useDeletePayment,
+  useCreateCollection,
+  useUpdateCollection,
+  useDeleteCollection,
   useCreateExpense,
   useUpdateExpense,
   useDeleteExpense,
@@ -26,8 +26,7 @@ import {
   useDeletePartnerPayment,
 } from "./api";
 import type {
-  InvoiceDTO,
-  PaymentDTO,
+  CollectionDTO,
   ExpenseDTO,
   PartnerPaymentDTO,
   ProjectPartnerDTO,
@@ -35,7 +34,7 @@ import type {
 
 // ── 타입 ────────────────────────────────────────────────────
 
-type TransactionType = "payment" | "expense" | "partnerPayment";
+type TransactionType = "collection" | "expense" | "partnerPayment";
 
 interface UnifiedTransaction {
   type: TransactionType;
@@ -49,16 +48,17 @@ interface UnifiedTransaction {
   withholdingReported?: boolean;
   withholdingReportedDate?: string | null;
   readOnly?: boolean;
+  invoiceId?: string | null;
 }
 
 const TYPE_LABELS: Record<TransactionType, string> = {
-  payment: "수금",
+  collection: "수금",
   expense: "지출",
   partnerPayment: "파트너지급",
 };
 
 const TYPE_DOT_COLORS: Record<TransactionType, string> = {
-  payment: "bg-blue-500",
+  collection: "bg-blue-500",
   expense: "bg-red-500",
   partnerPayment: "bg-orange-500",
 };
@@ -67,8 +67,7 @@ const TYPE_DOT_COLORS: Record<TransactionType, string> = {
 
 interface ProjectFinancialSectionProps {
   projectId: string;
-  invoices: InvoiceDTO[];
-  payments: PaymentDTO[];
+  collections: CollectionDTO[];
   expenses: ExpenseDTO[];
   partnerPayments: PartnerPaymentDTO[];
   projectPartners: ProjectPartnerDTO[];
@@ -78,15 +77,14 @@ interface ProjectFinancialSectionProps {
 
 export function ProjectFinancialSection({
   projectId,
-  invoices,
-  payments,
+  collections,
   expenses,
   partnerPayments,
   projectPartners,
   taxType,
   refetch,
 }: ProjectFinancialSectionProps) {
-  const transactions = buildUnifiedTransactions(invoices, payments, expenses, partnerPayments, taxType);
+  const transactions = buildUnifiedTransactions(collections, expenses, partnerPayments, taxType);
 
   return (
     <div>
@@ -104,41 +102,57 @@ export function ProjectFinancialSection({
 // ── 통합 변환 ──────────────────────────────────────────────────
 
 function buildUnifiedTransactions(
-  invoices: InvoiceDTO[],
-  payments: PaymentDTO[],
+  collections: CollectionDTO[],
   expenses: ExpenseDTO[],
   partnerPayments: PartnerPaymentDTO[],
   taxType: string | null
 ): UnifiedTransaction[] {
   const unified: UnifiedTransaction[] = [];
 
-  // VAT: 수금완료 세금계산서를 읽기전용으로 포함
+  // VAT: invoice 연결 수금은 읽기전용 (invoice-section에서 관리)
+  // 원천징수: invoice 미연결 수금 (독립 수금)
   if (taxType === "vat") {
+    // VAT에서는 invoice 연결 collections는 invoice-section에서 표시하므로
+    // 여기서는 invoice 미연결 collections만 표시 (보통 없음)
     unified.push(
-      ...invoices
-        .filter((i) => i.paidDate !== null)
-        .map((i) => ({
-          type: "payment" as const,
-          id: i.id,
-          date: i.paidDate!,
-          amount: Number(i.amount),
-          description: i.description || "세금계산서",
-          paymentType: i.paymentType,
-          readOnly: true,
+      ...collections
+        .filter((c) => c.invoiceId === null)
+        .map((c) => ({
+          type: "collection" as const,
+          id: c.id,
+          date: c.paidDate,
+          amount: Number(c.amount),
+          description: c.description,
+          paymentType: c.paymentType,
+          invoiceId: c.invoiceId,
         }))
     );
-  }
-
-  // 원천징수: payments 그대로
-  if (taxType !== "vat") {
+    // invoice 연결 collections는 읽기전용으로 포함
     unified.push(
-      ...payments.map((p) => ({
-        type: "payment" as const,
-        id: p.id,
-        date: p.paidDate,
-        amount: Number(p.amount),
-        description: p.description,
-        paymentType: p.paymentType,
+      ...collections
+        .filter((c) => c.invoiceId !== null)
+        .map((c) => ({
+          type: "collection" as const,
+          id: c.id,
+          date: c.paidDate,
+          amount: Number(c.amount),
+          description: c.description || "세금계산서 수금",
+          paymentType: c.paymentType,
+          readOnly: true,
+          invoiceId: c.invoiceId,
+        }))
+    );
+  } else {
+    // 원천징수: 모든 collections (invoice_id = null)
+    unified.push(
+      ...collections.map((c) => ({
+        type: "collection" as const,
+        id: c.id,
+        date: c.paidDate,
+        amount: Number(c.amount),
+        description: c.description,
+        paymentType: c.paymentType,
+        invoiceId: c.invoiceId,
       }))
     );
   }
@@ -178,15 +192,15 @@ interface TransactionListProps {
 
 function TransactionList({ projectId, transactions, taxType, refetch }: TransactionListProps) {
   const dialog = useDialog();
-  const deletePayment = useDeletePayment();
+  const deleteCollection = useDeleteCollection();
   const deleteExpense = useDeleteExpense();
   const deletePartnerPayment = useDeletePartnerPayment();
-  const updatePayment = useUpdatePayment();
+  const updateCollection = useUpdateCollection();
   const updatePartnerPayment = useUpdatePartnerPayment();
 
   const handleDelete = (tx: UnifiedTransaction) => {
     const labels: Record<TransactionType, string> = {
-      payment: "수금 내역",
+      collection: "수금 내역",
       expense: "지출 내역",
       partnerPayment: "파트너 지급 내역",
     };
@@ -196,8 +210,8 @@ function TransactionList({ projectId, transactions, taxType, refetch }: Transact
       variant: "destructive",
       confirmText: "삭제",
       onConfirm: async () => {
-        if (tx.type === "payment") {
-          await deletePayment.mutateAsync({ projectId, paymentId: tx.id });
+        if (tx.type === "collection") {
+          await deleteCollection.mutateAsync({ projectId, collectionId: tx.id });
         } else if (tx.type === "expense") {
           await deleteExpense.mutateAsync({ projectId, expenseId: tx.id });
         } else {
@@ -229,7 +243,7 @@ function TransactionList({ projectId, transactions, taxType, refetch }: Transact
             <div className="flex items-center gap-2 min-w-0">
               <span className={`size-2 rounded-full shrink-0 ${TYPE_DOT_COLORS[tx.type]}`} />
               <span className="text-muted-foreground text-xs shrink-0">{TYPE_LABELS[tx.type]}</span>
-              {tx.type === "payment" && tx.paymentType && (
+              {tx.type === "collection" && tx.paymentType && (
                 <Badge variant="muted" className="text-[10px] px-1.5 py-0">
                   {PAYMENT_TYPE_LABELS[tx.paymentType as keyof typeof PAYMENT_TYPE_LABELS]}
                 </Badge>
@@ -243,10 +257,10 @@ function TransactionList({ projectId, transactions, taxType, refetch }: Transact
             </div>
             <span
               className={`font-semibold shrink-0 tabular-nums ${
-                tx.type === "payment" ? "text-info" : "text-destructive"
+                tx.type === "collection" ? "text-info" : "text-destructive"
               }`}
             >
-              {tx.type !== "payment" && "-"}
+              {tx.type !== "collection" && "-"}
               {formatCurrency(tx.amount)}원
             </span>
           </div>
@@ -349,7 +363,7 @@ function EditTransactionForm({
   const [paymentType, setPaymentType] = useState(tx.paymentType ?? "deposit");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const updatePayment = useUpdatePayment();
+  const updateCollection = useUpdateCollection();
   const updateExpense = useUpdateExpense();
   const updatePartnerPayment = useUpdatePartnerPayment();
 
@@ -358,10 +372,10 @@ function EditTransactionForm({
     setIsSubmitting(true);
     const dateStr = format(date, "yyyy-MM-dd");
     try {
-      if (tx.type === "payment") {
-        await updatePayment.mutateAsync({
+      if (tx.type === "collection") {
+        await updateCollection.mutateAsync({
           projectId,
-          paymentId: tx.id,
+          collectionId: tx.id,
           description: description.trim() || undefined,
           amount,
           paidDate: dateStr,
@@ -392,7 +406,7 @@ function EditTransactionForm({
 
   return (
     <div className="space-y-3">
-      {tx.type === "payment" && (
+      {tx.type === "collection" && (
         <NativeSelect value={paymentType} onChange={(e) => setPaymentType(e.target.value)}>
           {Object.entries(PAYMENT_TYPE_LABELS).map(([value, label]) => (
             <NativeSelectOption key={value} value={value}>
@@ -441,7 +455,7 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ projectId, projectPartners, taxType, onSuccess }: TransactionFormProps) {
-  const [activeType, setActiveType] = useState<TransactionType>(taxType === "vat" ? "expense" : "payment");
+  const [activeType, setActiveType] = useState<TransactionType>(taxType === "vat" ? "expense" : "collection");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState<number | undefined>(undefined);
   const [date, setDate] = useState<Date>(new Date());
@@ -449,7 +463,7 @@ export function TransactionForm({ projectId, projectPartners, taxType, onSuccess
   const [partnerId, setPartnerId] = useState(projectPartners[0]?.partnerId ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const createPayment = useCreatePayment();
+  const createCollection = useCreateCollection();
   const createExpense = useCreateExpense();
   const createPartnerPayment = useCreatePartnerPayment();
 
@@ -460,8 +474,8 @@ export function TransactionForm({ projectId, projectPartners, taxType, onSuccess
     setIsSubmitting(true);
     const dateStr = format(date, "yyyy-MM-dd");
     try {
-      if (activeType === "payment") {
-        await createPayment.mutateAsync({
+      if (activeType === "collection") {
+        await createCollection.mutateAsync({
           projectId,
           description: description.trim(),
           amount,
@@ -494,7 +508,7 @@ export function TransactionForm({ projectId, projectPartners, taxType, onSuccess
   };
 
   const typeButtons: { type: TransactionType; label: string }[] = [
-    ...(taxType !== "vat" ? [{ type: "payment" as const, label: "수금" }] : []),
+    ...(taxType !== "vat" ? [{ type: "collection" as const, label: "수금" }] : []),
     { type: "expense", label: "지출" },
     { type: "partnerPayment", label: "파트너지급" },
   ];
@@ -516,7 +530,7 @@ export function TransactionForm({ projectId, projectPartners, taxType, onSuccess
       </div>
 
       <div className="flex gap-2 items-start">
-        {activeType === "payment" && (
+        {activeType === "collection" && (
           <NativeSelect value={paymentType} onChange={(e) => setPaymentType(e.target.value)}>
             {Object.entries(PAYMENT_TYPE_LABELS).map(([value, label]) => (
               <NativeSelectOption key={value} value={value}>
@@ -628,7 +642,7 @@ function AmountInput({
 // ── 유틸 ────────────────────────────────────────────────────────
 
 function getAmountPlaceholder(type: TransactionType, taxType: string | null): string {
-  if (type === "payment") {
+  if (type === "collection") {
     if (taxType === "vat") return "VAT 포함";
     if (taxType === "withholding") return "실수령액";
     return "금액";

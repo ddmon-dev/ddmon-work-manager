@@ -69,7 +69,9 @@ export function InvoiceSection({ invoices, year, month }: InvoiceSectionProps) {
                   <th className="text-left p-3 font-medium">프로젝트</th>
                   <th className="text-left p-3 font-medium hidden md:table-cell">클라이언트</th>
                   <th className="text-left p-3 font-medium hidden md:table-cell">수금유형</th>
-                  <th className="text-right p-3 font-medium">금액</th>
+                  <th className="text-right p-3 font-medium">발행액</th>
+                  <th className="text-right p-3 font-medium hidden md:table-cell">수금액</th>
+                  <th className="text-right p-3 font-medium">잔여액</th>
                   <th className="text-left p-3 font-medium hidden md:table-cell">발행일</th>
                   <th className="text-left p-3 font-medium hidden lg:table-cell">내용</th>
                 </tr>
@@ -95,6 +97,12 @@ export function InvoiceSection({ invoices, year, month }: InvoiceSectionProps) {
                     </td>
                     <td className="p-3 text-right tabular-nums">
                       {formatCurrency(Number(invoice.amount))}원
+                    </td>
+                    <td className="p-3 text-right tabular-nums hidden md:table-cell text-info">
+                      {formatCurrency(Number(invoice.collectedAmount))}원
+                    </td>
+                    <td className="p-3 text-right tabular-nums font-medium">
+                      {formatCurrency(Number(invoice.remainingAmount))}원
                     </td>
                     <td className="p-3 hidden md:table-cell">{invoice.issueDate}</td>
                     <td className="p-3 hidden lg:table-cell text-muted-foreground truncate max-w-[200px]">

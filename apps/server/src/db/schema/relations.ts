@@ -7,7 +7,7 @@ import {
   estimateItemGroups,
   estimateItems,
 } from "./estimates";
-import { projects, projectInvoices, projectPayments, projectMemos, projectExpenses, partnerPayments } from "./projects";
+import { projects, projectInvoices, projectCollections, projectMemos, projectExpenses, partnerPayments } from "./projects";
 import { projectScheduleLanes, projectSchedules } from "./project-schedules";
 import { todos, todoTimeBlocks } from "./todos";
 import { mindnotes } from "./mindnotes";
@@ -82,7 +82,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     references: [estimateSeries.estimateNumber],
   }),
   invoices: many(projectInvoices),
-  payments: many(projectPayments),
+  collections: many(projectCollections),
   expenses: many(projectExpenses),
   partnerPayments: many(partnerPayments),
   memos: many(projectMemos),
@@ -93,20 +93,25 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
 
 export const projectInvoicesRelations = relations(
   projectInvoices,
-  ({ one }) => ({
+  ({ one, many }) => ({
     project: one(projects, {
       fields: [projectInvoices.projectId],
       references: [projects.id],
     }),
+    collections: many(projectCollections),
   })
 );
 
-export const projectPaymentsRelations = relations(
-  projectPayments,
+export const projectCollectionsRelations = relations(
+  projectCollections,
   ({ one }) => ({
     project: one(projects, {
-      fields: [projectPayments.projectId],
+      fields: [projectCollections.projectId],
       references: [projects.id],
+    }),
+    invoice: one(projectInvoices, {
+      fields: [projectCollections.invoiceId],
+      references: [projectInvoices.id],
     }),
   })
 );

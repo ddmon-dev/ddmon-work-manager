@@ -4,7 +4,7 @@ import { db } from "../db";
 import {
   estimateSeries,
   projects,
-  projectPayments,
+  projectCollections,
   schedules,
 } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
@@ -76,12 +76,12 @@ app.get("/revenue-summary", async (c) => {
   // 전체 수금
   const allPayments = await db
     .select({
-      projectId: projectPayments.projectId,
-      amount: projectPayments.amount,
-      paidDate: projectPayments.paidDate,
+      projectId: projectCollections.projectId,
+      amount: projectCollections.amount,
+      paidDate: projectCollections.paidDate,
     })
-    .from(projectPayments)
-    .where(softDeleteFilter(projectPayments.deleted));
+    .from(projectCollections)
+    .where(softDeleteFilter(projectCollections.deleted));
 
   const validProjectIds = new Set(allProjects.map((p) => p.id));
 
