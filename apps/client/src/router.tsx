@@ -10,8 +10,7 @@ import { EstimatesPage } from "@/pages/estimates";
 import { ProjectsPage } from "@/pages/projects";
 import { ProjectSchedulesPage } from "@/pages/project-schedules";
 import { SchedulesPage } from "@/pages/schedules";
-import { RevenuePage } from "@/pages/revenue";
-import { SettlementPage } from "@/pages/settlement";
+import { FinancialPage } from "@/pages/financial";
 import { PartnersPage } from "@/pages/partners";
 import { AdminsPage } from "@/pages/admins";
 import { LibraryPage } from "@/pages/library";
@@ -40,8 +39,7 @@ export const router = createBrowserRouter([
               { path: "/project-schedules", element: <ProjectSchedulesPage /> },
               { path: "/schedules", element: <SchedulesPage /> },
               { path: "/partners", element: <PartnersPage /> },
-              { path: "/revenue", element: <RevenuePage /> },
-              { path: "/settlement", element: <SettlementPage /> },
+              { path: "/financial", element: <FinancialPage /> },
               { path: "/admins", element: <AdminsPage /> },
               { path: "/library", element: <LibraryPage /> },
               { path: "/unauthorized", element: <UnauthorizedPage /> },

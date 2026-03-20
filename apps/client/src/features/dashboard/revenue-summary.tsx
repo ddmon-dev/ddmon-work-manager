@@ -27,7 +27,7 @@ export function RevenueSummary() {
           </h3>
         </div>
         <Link
-          to="/revenue"
+          to="/financial"
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           자세히 <ArrowRight className="size-3" />

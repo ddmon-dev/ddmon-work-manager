@@ -1,6 +1,6 @@
+import { useState } from "react";
 import { SheetFooter, SheetBody, SheetContainer, SheetScrollColumn } from "@/shared/ui/sheet";
 import {
-  DetailSectionTitle,
   FileBrowser,
   ManageSheetClose,
   ManageSheetModeChange,
@@ -19,6 +19,7 @@ import { ProjectPartnerSection } from "./project-partner-section";
 import { EstimateVersions } from "./project-estimate-versions";
 import { ProjectFinancialSection, TransactionForm } from "./project-financial-section";
 import { ProjectGantt } from "../project-schedules/gantt/project-gantt";
+import { SummaryCards, type PanelType } from "./detail-summary-cards";
 import type { ProjectWithDetails } from "./types";
 
 const projectMemoHooks = {
@@ -26,6 +27,13 @@ const projectMemoHooks = {
   useUpdateMemo: useUpdateProjectMemo,
   useDeleteMemo: useDeleteProjectMemo,
 };
+
+function getDefaultPanel(data: ProjectWithDetails): PanelType {
+  const contractAmount = data.contractAmount ? Number(data.contractAmount) : 0;
+  if (contractAmount > 0 && data.taxType === "vat") return "invoice";
+  if (contractAmount > 0) return "financial";
+  return "partner";
+}
 
 // ── 헤더 ────────────────────────────────────────────────────
 
@@ -54,11 +62,12 @@ interface DetailViewProps {
 
 export function DetailView({ data, refetch }: DetailViewProps) {
   const contractAmount = data.contractAmount ? Number(data.contractAmount) : 0;
+  const [activePanel, setActivePanel] = useState<PanelType>(() => getDefaultPanel(data));
 
   return (
     <>
-      <SheetBody className="lg:grid-cols-[2.5fr_2.5fr_2fr]">
-        {/* 좌측 */}
+      <SheetBody className="lg:grid-cols-[380px_1fr]">
+        {/* 좌측 마스터 */}
         <SheetScrollColumn className="flex flex-col">
           <SheetContainer>
             <ProjectInfoSection data={data} />
@@ -76,7 +85,26 @@ export function DetailView({ data, refetch }: DetailViewProps) {
             </SheetContainer>
           )}
 
-          {data.taxType === "vat" && contractAmount > 0 && (
+          <SheetContainer>
+            <SummaryCards
+              data={data}
+              activePanel={activePanel}
+              onSelect={setActivePanel}
+            />
+          </SheetContainer>
+
+          <SheetContainer>
+            <MemoSection
+              parentId={data.id}
+              memos={data.memos}
+              hooks={projectMemoHooks}
+            />
+          </SheetContainer>
+        </SheetScrollColumn>
+
+        {/* 우측 디테일 */}
+        <SheetScrollColumn className="flex flex-col">
+          {activePanel === "invoice" && data.taxType === "vat" && contractAmount > 0 && (
             <SheetContainer>
               <ProjectInvoiceSection
                 projectId={data.id}
@@ -87,59 +115,55 @@ export function DetailView({ data, refetch }: DetailViewProps) {
             </SheetContainer>
           )}
 
-          <SheetContainer className="border-b-0!">
-            <ProjectFinancialSection
-              projectId={data.id}
-              collections={data.collections ?? []}
-              expenses={data.expenses ?? []}
-              partnerPayments={data.partnerPayments ?? []}
-              projectPartners={data.projectPartners ?? []}
-              taxType={data.taxType}
-              refetch={refetch}
-            />
-          </SheetContainer>
-          <SheetContainer className="sticky bottom-0 border-t border-border-dark/50 bg-background/60 backdrop-blur-md">
-            <TransactionForm
-              projectId={data.id}
-              projectPartners={data.projectPartners ?? []}
-              taxType={data.taxType}
-              onSuccess={refetch}
-            />
-          </SheetContainer>
-        </SheetScrollColumn>
+          {activePanel === "financial" && (
+            <>
+              <SheetContainer className="border-b-0!">
+                <ProjectFinancialSection
+                  projectId={data.id}
+                  collections={data.collections ?? []}
+                  expenses={data.expenses ?? []}
+                  partnerPayments={data.partnerPayments ?? []}
+                  projectPartners={data.projectPartners ?? []}
+                  taxType={data.taxType}
+                  refetch={refetch}
+                />
+              </SheetContainer>
+              <SheetContainer className="sticky bottom-0 border-t border-border-dark/50 bg-background/60 backdrop-blur-md">
+                <TransactionForm
+                  projectId={data.id}
+                  projectPartners={data.projectPartners ?? []}
+                  taxType={data.taxType}
+                  onSuccess={refetch}
+                />
+              </SheetContainer>
+            </>
+          )}
 
-        {/* 우측 */}
-        <SheetScrollColumn>
-          <SheetContainer>
-            <ProjectPartnerSection
-              projectId={data.id}
-              partners={data.projectPartners ?? []}
-              refetch={refetch}
-            />
-          </SheetContainer>
-          {data.estimateNumber && (
+          {activePanel === "partner" && (
+            <SheetContainer>
+              <ProjectPartnerSection
+                projectId={data.id}
+                partners={data.projectPartners ?? []}
+                refetch={refetch}
+              />
+            </SheetContainer>
+          )}
+
+          {activePanel === "estimate" && data.estimateNumber && (
             <SheetContainer>
               <EstimateVersions estimateNumber={data.estimateNumber} />
             </SheetContainer>
           )}
-          <SheetContainer>
-            <MemoSection
-              parentId={data.id}
-              memos={data.memos}
-              hooks={projectMemoHooks}
-            />
-          </SheetContainer>
-        </SheetScrollColumn>
 
-        {/* 파일 브라우저 */}
-        <SheetScrollColumn className="flex flex-col">
-          <SheetContainer className="flex flex-col flex-1 min-h-0">
-            <FileBrowser
-              owner={{ ownerType: "project", ownerId: data.id }}
-              ownerName={data.name}
-              fullHeight
-            />
-          </SheetContainer>
+          {activePanel === "file" && (
+            <SheetContainer className="flex flex-col flex-1 min-h-0">
+              <FileBrowser
+                owner={{ ownerType: "project", ownerId: data.id }}
+                ownerName={data.name}
+                fullHeight
+              />
+            </SheetContainer>
+          )}
         </SheetScrollColumn>
       </SheetBody>
 

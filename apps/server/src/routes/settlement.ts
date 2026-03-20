@@ -28,7 +28,15 @@ app.get("/", async (c) => {
   const monthParsed = z.coerce.number().int().min(1).max(12).safeParse(monthParam);
 
   const year = yearParsed.success ? yearParsed.data : currentDate.getFullYear();
-  const month = monthParsed.success ? monthParsed.data : currentDate.getMonth() + 1;
+  const month = monthParsed.success ? monthParsed.data : null; // null = 전체
+
+  // 월 필터 조건 (null이면 연도만 필터)
+  const invoiceMonthFilter = month !== null
+    ? sql`EXTRACT(MONTH FROM ${projectInvoices.issueDate}::date) = ${month}`
+    : undefined;
+  const paymentMonthFilter = month !== null
+    ? sql`EXTRACT(MONTH FROM ${partnerPayments.paidDate}::date) = ${month}`
+    : undefined;
 
   const [uncollectedInvoices, unreportedPartnerPayments] = await Promise.all([
     // 미수금 세금계산서: VAT 프로젝트의 발행했지만 수금 완료되지 않은 건
@@ -58,7 +66,7 @@ app.get("/", async (c) => {
           softDeleteFilter(projects.deleted),
           eq(projects.taxType, "vat"),
           sql`EXTRACT(YEAR FROM ${projectInvoices.issueDate}::date) = ${year}`,
-          sql`EXTRACT(MONTH FROM ${projectInvoices.issueDate}::date) = ${month}`
+          invoiceMonthFilter
         )
       )
       .groupBy(
@@ -102,7 +110,7 @@ app.get("/", async (c) => {
           softDeleteFilter(projects.deleted),
           eq(partnerPayments.withholdingReported, false),
           sql`EXTRACT(YEAR FROM ${partnerPayments.paidDate}::date) = ${year}`,
-          sql`EXTRACT(MONTH FROM ${partnerPayments.paidDate}::date) = ${month}`
+          paymentMonthFilter
         )
       )
       .orderBy(partnerPayments.paidDate),

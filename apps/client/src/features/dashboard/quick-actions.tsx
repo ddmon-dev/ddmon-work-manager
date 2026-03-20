@@ -20,7 +20,7 @@ const actions: QuickAction[] = [
   { title: "견적서", href: "/estimates", icon: FileSpreadsheet },
   { title: "프로젝트", href: "/projects", icon: FolderKanban },
   { title: "일정", href: "/schedules", icon: CalendarDays },
-  { title: "매출/수금", href: "/revenue", icon: TrendingUp },
+  { title: "재무", href: "/financial", icon: TrendingUp },
   { title: "관리자", href: "/admins", icon: Users },
 ];
 
