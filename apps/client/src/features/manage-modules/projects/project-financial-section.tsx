@@ -109,11 +109,10 @@ function buildUnifiedTransactions(
 ): UnifiedTransaction[] {
   const unified: UnifiedTransaction[] = [];
 
-  // VAT: invoice 연결 수금은 읽기전용 (invoice-section에서 관리)
-  // 원천징수: invoice 미연결 수금 (독립 수금)
+  // VAT: invoice 연결 수금은 invoice-section에서만 관리 → 여기서 제외
+  // 원천징수: 모든 수금을 여기서 관리 (invoice 연결 없음)
   if (taxType === "vat") {
-    // VAT에서는 invoice 연결 collections는 invoice-section에서 표시하므로
-    // 여기서는 invoice 미연결 collections만 표시 (보통 없음)
+    // VAT에서는 invoice 미연결 collections만 표시 (보통 없음)
     unified.push(
       ...collections
         .filter((c) => c.invoiceId === null)
@@ -124,21 +123,6 @@ function buildUnifiedTransactions(
           amount: Number(c.amount),
           description: c.description,
           paymentType: c.paymentType,
-          invoiceId: c.invoiceId,
-        }))
-    );
-    // invoice 연결 collections는 읽기전용으로 포함
-    unified.push(
-      ...collections
-        .filter((c) => c.invoiceId !== null)
-        .map((c) => ({
-          type: "collection" as const,
-          id: c.id,
-          date: c.paidDate,
-          amount: Number(c.amount),
-          description: c.description || "세금계산서 수금",
-          paymentType: c.paymentType,
-          readOnly: true,
           invoiceId: c.invoiceId,
         }))
     );

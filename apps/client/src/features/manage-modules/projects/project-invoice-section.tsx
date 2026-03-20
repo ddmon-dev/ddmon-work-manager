@@ -13,7 +13,7 @@ import { Badge } from "@/shared/ui/badge";
 import { useDialog } from "@/shared/ui/app-dialog";
 import { InlineEmpty } from "@/shared/ui/inline-empty";
 import { DetailSectionTitle } from "../_base/ui";
-import { useCreateInvoice, useUpdateInvoice, useDeleteInvoice, useCreateCollection, useDeleteCollection } from "./api";
+import { useCreateInvoice, useUpdateInvoice, useDeleteInvoice, useCreateCollection, useUpdateCollection, useDeleteCollection } from "./api";
 import type { InvoiceDTO, CollectionDTO } from "./types";
 
 // ── 금액 입력 ────────────────────────────────────────────────
@@ -291,28 +291,36 @@ function InvoiceList({
 
             {/* 수금 건 인라인 표시 */}
             {invoiceCollections.length > 0 && (
-              <ul className="mt-2 pl-4 space-y-1 border-l-2 border-muted">
-                {invoiceCollections.map((col) => (
-                  <li key={col.id} className="group/col flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <span>수금 {col.paidDate}</span>
-                      {col.description && <span className="truncate max-w-[120px]">{col.description}</span>}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="tabular-nums text-info">{formatCurrency(Number(col.amount))}원</span>
-                      <Button
-                        type="button"
-                        size="icon-xs"
-                        variant="ghost"
-                        className="opacity-0 group-hover/col:opacity-100 transition-opacity"
-                        onClick={() => handleDeleteCollection(col)}
-                      >
-                        <Trash2Icon className="size-2.5" />
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-2 pl-4 border-l-2 border-muted">
+                <p className="text-[10px] font-medium text-muted-foreground mb-1">수금 {invoiceCollections.length}건</p>
+                <ul className="space-y-1">
+                  {invoiceCollections.map((col) => (
+                    <li key={col.id} className="group/col flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <span>수금 {col.paidDate}</span>
+                        {col.description && <span className="truncate max-w-[120px]">{col.description}</span>}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="tabular-nums text-info">{formatCurrency(Number(col.amount))}원</span>
+                        <EditCollectionButton
+                          projectId={projectId}
+                          collection={col}
+                          onSuccess={refetch}
+                        />
+                        <Button
+                          type="button"
+                          size="icon-xs"
+                          variant="ghost"
+                          className="opacity-0 group-hover/col:opacity-100 transition-opacity"
+                          onClick={() => handleDeleteCollection(col)}
+                        >
+                          <Trash2Icon className="size-2.5" />
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </li>
         );
@@ -519,6 +527,107 @@ function EditInvoiceForm({
           placeholder="발행일"
         />
       </div>
+      <div className="flex justify-end gap-1">
+        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
+          취소
+        </Button>
+        <LoadingButton size="sm" isLoading={isSubmitting} onClick={handleSubmit}>
+          저장
+        </LoadingButton>
+      </div>
+    </div>
+  );
+}
+
+// ── 수금 수정 팝오버 ─────────────────────────────────────────────
+
+function EditCollectionButton({
+  projectId,
+  collection,
+  onSuccess,
+}: {
+  projectId: string;
+  collection: CollectionDTO;
+  onSuccess: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="opacity-0 group-hover/col:opacity-100 transition-opacity"
+        >
+          <PencilIcon className="size-2.5" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72">
+        <EditCollectionForm
+          projectId={projectId}
+          collection={collection}
+          onSuccess={() => {
+            setOpen(false);
+            onSuccess();
+          }}
+          onCancel={() => setOpen(false)}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function EditCollectionForm({
+  projectId,
+  collection,
+  onSuccess,
+  onCancel,
+}: {
+  projectId: string;
+  collection: CollectionDTO;
+  onSuccess: () => void;
+  onCancel: () => void;
+}) {
+  const [amount, setAmount] = useState<number | undefined>(Number(collection.amount));
+  const [paidDate, setPaidDate] = useState<Date>(parseISO(collection.paidDate));
+  const [description, setDescription] = useState(collection.description ?? "");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const updateCollection = useUpdateCollection();
+
+  const handleSubmit = async () => {
+    if (!amount || !paidDate) return;
+    setIsSubmitting(true);
+    try {
+      await updateCollection.mutateAsync({
+        projectId,
+        collectionId: collection.id,
+        description: description.trim() || undefined,
+        amount,
+        paidDate: format(paidDate, "yyyy-MM-dd"),
+        paymentType: collection.paymentType,
+      });
+      onSuccess();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <AmountInput value={amount} onChange={setAmount} placeholder="수금 금액" />
+      <DatePicker
+        mode="single"
+        value={paidDate}
+        onValueChange={(d) => d && setPaidDate(d)}
+        placeholder="수금일"
+      />
+      <Input
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="메모 (선택)"
+      />
       <div className="flex justify-end gap-1">
         <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
           취소
