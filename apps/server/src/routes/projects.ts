@@ -186,12 +186,27 @@ app.patch("/memos/:id", async (c) => {
 // DELETE /projects/partners/:id — 파트너 배치 해제 (하드 삭제)
 app.delete("/partners/:id", async (c) => {
   const id = c.req.param("id");
-  const [deleted] = await db
-    .delete(projectPartners)
-    .where(eq(projectPartners.id, id))
-    .returning();
 
-  if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+  const assignment = await db.query.projectPartners.findFirst({
+    where: eq(projectPartners.id, id),
+  });
+  if (!assignment) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  // 활성 지급내역이 있으면 배치 해제 차단
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(partnerPayments)
+    .where(and(
+      eq(partnerPayments.projectId, assignment.projectId),
+      eq(partnerPayments.partnerId, assignment.partnerId),
+      softDeleteFilter(partnerPayments.deleted),
+    ));
+
+  if (total > 0) {
+    return errorResponse(c, { code: "HAS_PAYMENTS", message: "지급내역이 존재하는 파트너는 배치 해제할 수 없습니다. 지급내역을 먼저 삭제해주세요." }, 400);
+  }
+
+  await db.delete(projectPartners).where(eq(projectPartners.id, id));
   return successResponse(c, { id });
 });
 
