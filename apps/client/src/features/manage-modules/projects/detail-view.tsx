@@ -66,9 +66,9 @@ export function DetailView({ data, refetch }: DetailViewProps) {
 
   return (
     <>
-      <SheetBody className="lg:grid-cols-[420px_1fr]">
-        {/* 좌측 마스터 */}
-        <SheetScrollColumn className="flex flex-col">
+      <SheetBody className="lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)_minmax(0,2fr)]">
+        {/* 좌측: 기본정보 + 금액요약 */}
+        <SheetScrollColumn>
           <SheetContainer>
             <ProjectInfoSection data={data} />
           </SheetContainer>
@@ -84,8 +84,11 @@ export function DetailView({ data, refetch }: DetailViewProps) {
               />
             </SheetContainer>
           )}
+        </SheetScrollColumn>
 
-          <SheetContainer>
+        {/* 중앙: 요약 카드(가로 탭) + 선택 패널 */}
+        <SheetScrollColumn className="flex flex-col">
+          <SheetContainer className="py-3">
             <SummaryCards
               data={data}
               activePanel={activePanel}
@@ -93,17 +96,6 @@ export function DetailView({ data, refetch }: DetailViewProps) {
             />
           </SheetContainer>
 
-          <SheetContainer>
-            <MemoSection
-              parentId={data.id}
-              memos={data.memos}
-              hooks={projectMemoHooks}
-            />
-          </SheetContainer>
-        </SheetScrollColumn>
-
-        {/* 우측 디테일 */}
-        <SheetScrollColumn className="flex flex-col">
           {activePanel === "invoice" && data.taxType === "vat" && contractAmount > 0 && (
             <SheetContainer>
               <ProjectInvoiceSection
@@ -164,6 +156,17 @@ export function DetailView({ data, refetch }: DetailViewProps) {
               />
             </SheetContainer>
           )}
+        </SheetScrollColumn>
+
+        {/* 우측: 메모 */}
+        <SheetScrollColumn>
+          <SheetContainer>
+            <MemoSection
+              parentId={data.id}
+              memos={data.memos}
+              hooks={projectMemoHooks}
+            />
+          </SheetContainer>
         </SheetScrollColumn>
       </SheetBody>
 
