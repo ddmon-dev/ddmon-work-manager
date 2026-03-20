@@ -157,6 +157,13 @@ app.delete("/invoices/:id", async (c) => {
     .returning();
 
   if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  // 연결된 수금도 함께 소프트 삭제
+  await db
+    .update(projectCollections)
+    .set(softDeletePayload())
+    .where(and(eq(projectCollections.invoiceId, id), softDeleteFilter(projectCollections.deleted)));
+
   return successResponse(c, { id });
 });
 

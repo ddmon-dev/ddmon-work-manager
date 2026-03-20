@@ -238,7 +238,7 @@ function buildUnifiedTransactions(
     })),
   ];
 
-  return unified.sort((a, b) => a.date.localeCompare(b.date));
+  return unified.sort((a, b) => b.date.localeCompare(a.date));
 }
 
 // ── 거래 목록 ──────────────────────────────────────────────────
