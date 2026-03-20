@@ -17,7 +17,7 @@ import { PriceSummary } from "./project-price-summary";
 import { ProjectInvoiceSection } from "./project-invoice-section";
 import { ProjectPartnerSection } from "./project-partner-section";
 import { EstimateVersions } from "./project-estimate-versions";
-import { ProjectFinancialSection, TransactionForm } from "./project-financial-section";
+import { ProjectExpenseSection } from "./project-expense-section";
 import { ProjectGantt } from "../project-schedules/gantt/project-gantt";
 import { SummaryCards, type PanelType } from "./detail-summary-cards";
 import type { ProjectWithDetails } from "./types";
@@ -30,8 +30,7 @@ const projectMemoHooks = {
 
 function getDefaultPanel(data: ProjectWithDetails): PanelType {
   const contractAmount = data.contractAmount ? Number(data.contractAmount) : 0;
-  if (contractAmount > 0 && data.taxType === "vat") return "invoice";
-  if (contractAmount > 0) return "financial";
+  if (contractAmount > 0) return "finance";
   return "partner";
 }
 
@@ -66,7 +65,7 @@ export function DetailView({ data, refetch }: DetailViewProps) {
 
   return (
     <>
-      <SheetBody className="lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)_minmax(0,2fr)]">
+      <SheetBody className="lg:grid-cols-[minmax(0,2fr)_minmax(0,7fr)_minmax(0,3fr)]">
         {/* 좌측: 기본정보 + 금액요약 */}
         <SheetScrollColumn>
           <SheetContainer>
@@ -96,39 +95,28 @@ export function DetailView({ data, refetch }: DetailViewProps) {
             />
           </SheetContainer>
 
-          {activePanel === "invoice" && data.taxType === "vat" && contractAmount > 0 && (
-            <SheetContainer>
-              <ProjectInvoiceSection
-                projectId={data.id}
-                invoices={data.invoices ?? []}
-                collections={data.collections ?? []}
-                refetch={refetch}
-              />
-            </SheetContainer>
-          )}
-
-          {activePanel === "financial" && (
-            <>
-              <SheetContainer className="border-b-0!">
-                <ProjectFinancialSection
+          {activePanel === "finance" && contractAmount > 0 && (
+            <div className="grid grid-cols-2 divide-x">
+              <SheetContainer>
+                <ProjectInvoiceSection
                   projectId={data.id}
+                  invoices={data.invoices ?? []}
                   collections={data.collections ?? []}
-                  expenses={data.expenses ?? []}
-                  partnerPayments={data.partnerPayments ?? []}
-                  projectPartners={data.projectPartners ?? []}
+                  contractAmount={contractAmount}
                   taxType={data.taxType}
                   refetch={refetch}
                 />
               </SheetContainer>
-              <SheetContainer className="sticky bottom-0 border-t border-border-dark/50 bg-background/60 backdrop-blur-md">
-                <TransactionForm
+              <SheetContainer>
+                <ProjectExpenseSection
                   projectId={data.id}
+                  expenses={data.expenses ?? []}
+                  partnerPayments={data.partnerPayments ?? []}
                   projectPartners={data.projectPartners ?? []}
-                  taxType={data.taxType}
-                  onSuccess={refetch}
+                  refetch={refetch}
                 />
               </SheetContainer>
-            </>
+            </div>
           )}
 
           {activePanel === "partner" && (

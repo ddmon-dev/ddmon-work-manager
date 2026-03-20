@@ -1,66 +1,64 @@
 import { useState } from "react";
+import { useForm, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { format, parseISO } from "date-fns";
-import { PencilIcon, Trash2Icon, PlusIcon } from "lucide-react";
+import { PencilIcon, Trash2Icon, ChevronUpIcon } from "lucide-react";
 import { PAYMENT_TYPE_LABELS } from "@packages/types";
 import { formatCurrency } from "@/shared/utils/format";
 import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/shared/ui/native-select";
-import { DatePicker } from "@/shared/ui/date-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/shared/ui/popover";
 import { LoadingButton } from "@/shared/ui/loading-button";
 import { Badge } from "@/shared/ui/badge";
 import { useDialog } from "@/shared/ui/app-dialog";
 import { InlineEmpty } from "@/shared/ui/inline-empty";
+import { FormNumberInput, FormDatePicker, FormNativeSelect, FormTextInput } from "@/shared/ui/form";
 import { DetailSectionTitle } from "../_base/ui";
 import { useCreateInvoice, useUpdateInvoice, useDeleteInvoice, useCreateCollection, useUpdateCollection, useDeleteCollection } from "./api";
 import type { InvoiceDTO, CollectionDTO } from "./types";
 
-// ── 금액 입력 ────────────────────────────────────────────────
+// ── 스키마 ──────────────────────────────────────────────────
 
-function toDisplay(value: number | undefined): string {
-  if (value === undefined || isNaN(value)) return "";
-  return value.toLocaleString("ko-KR");
-}
+const PAYMENT_TYPE_OPTIONS = Object.entries(PAYMENT_TYPE_LABELS).map(([value, label]) => ({ value, label }));
 
-function parseRawInput(raw: string): number {
-  const cleaned = raw.replace(/,/g, "").replace(/[^0-9.-]/g, "");
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? 0 : num;
-}
+const invoiceFormSchema = z.object({
+  paymentType: z.string().default("deposit"),
+  description: z.string().default(""),
+  amount: z.number().optional(),
+  issueDate: z.date().default(() => new Date()),
+});
+type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
 
-function AmountInput({
-  value,
-  onChange,
-  placeholder,
-  className,
-}: {
-  value: number | undefined;
-  onChange: (v: number | undefined) => void;
-  placeholder?: string;
-  className?: string;
-}) {
-  const [display, setDisplay] = useState(() => toDisplay(value));
+const vatCollectionFormSchema = z.object({
+  amount: z.number().optional(),
+  paidDate: z.date().default(() => new Date()),
+  description: z.string().default(""),
+});
+type VatCollectionFormValues = z.infer<typeof vatCollectionFormSchema>;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/[^0-9.,\-]/g, "");
-    setDisplay(raw);
-    const num = parseRawInput(raw);
-    onChange(num || undefined);
-  };
+const withholdingCollectionFormSchema = z.object({
+  paymentType: z.string().default("deposit"),
+  amount: z.number().optional(),
+  paidDate: z.date().default(() => new Date()),
+  description: z.string().default(""),
+});
+type WithholdingCollectionFormValues = z.infer<typeof withholdingCollectionFormSchema>;
 
-  const handleBlur = () => setDisplay(toDisplay(value));
+// ── 진행바 ─────────────────────────────────────────────────────
 
+function ProgressBar({ current, total }: { current: number; total: number }) {
+  const pct = total > 0 ? Math.min((current / total) * 100, 100) : 0;
   return (
-    <div className={`relative flex items-center ${className ?? ""}`}>
-      <Input
-        value={display}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        placeholder={placeholder}
-        className="pr-8"
-      />
-      <span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">원</span>
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+        <div
+          className="h-full bg-primary rounded-full transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">
+        {pct.toFixed(0)}%
+      </span>
     </div>
   );
 }
@@ -84,111 +82,321 @@ interface ProjectInvoiceSectionProps {
   projectId: string;
   invoices: InvoiceDTO[];
   collections: CollectionDTO[];
+  contractAmount: number;
+  taxType: string | null;
   refetch: () => void;
 }
 
-export function ProjectInvoiceSection({ projectId, invoices, collections, refetch }: ProjectInvoiceSectionProps) {
-  const uncollectedCount = invoices.filter((i) => {
-    const { status } = getCollectionStatus(i, collections);
-    return status !== "collected";
-  }).length;
-  const uncollectedTotal = invoices.reduce((sum, i) => {
-    const { remainingAmount } = getCollectionStatus(i, collections);
-    return sum + Math.max(remainingAmount, 0);
-  }, 0);
+export function ProjectInvoiceSection({
+  projectId,
+  invoices,
+  collections,
+  contractAmount,
+  taxType,
+  refetch,
+}: ProjectInvoiceSectionProps) {
+  if (taxType === "withholding") {
+    return (
+      <WithholdingCollectionView
+        projectId={projectId}
+        collections={collections}
+        contractAmount={contractAmount}
+        refetch={refetch}
+      />
+    );
+  }
+
+  return (
+    <VatInvoiceView
+      projectId={projectId}
+      invoices={invoices}
+      collections={collections}
+      contractAmount={contractAmount}
+      refetch={refetch}
+    />
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// VAT 모드: 세금계산서 + 수금
+// ══════════════════════════════════════════════════════════════
+
+function VatInvoiceView({
+  projectId,
+  invoices,
+  collections,
+  contractAmount,
+  refetch,
+}: {
+  projectId: string;
+  invoices: InvoiceDTO[];
+  collections: CollectionDTO[];
+  contractAmount: number;
+  refetch: () => void;
+}) {
+  const totalWithVat = contractAmount * 1.1;
+  const issuedAmount = invoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
+  const remainingToIssue = totalWithVat - issuedAmount;
+
+  const totalCollected = collections
+    .filter((c) => c.invoiceId !== null)
+    .reduce((sum, c) => sum + Number(c.amount), 0);
 
   return (
     <div>
-      <DetailSectionTitle>세금계산서</DetailSectionTitle>
+      <DetailSectionTitle>세금계산서 / 수금</DetailSectionTitle>
+
+      {/* 발행 현황 요약 */}
+      <div className="rounded-lg border bg-muted/30 p-3 mb-3 space-y-1.5 text-xs">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">총 계약금액(VAT포함)</span>
+          <span className="font-semibold tabular-nums">{formatCurrency(totalWithVat)}원</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">발행 완료</span>
+          <span className="font-medium tabular-nums text-info">{formatCurrency(issuedAmount)}원</span>
+        </div>
+        {remainingToIssue > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">미발행</span>
+            <span className="font-medium tabular-nums text-warning">{formatCurrency(remainingToIssue)}원</span>
+          </div>
+        )}
+        <ProgressBar current={issuedAmount} total={totalWithVat} />
+        {invoices.length > 0 && (
+          <div className="flex justify-between pt-1 border-t border-border/50">
+            <span className="text-muted-foreground">수금 합계</span>
+            <span className="font-medium tabular-nums text-info">{formatCurrency(totalCollected)}원</span>
+          </div>
+        )}
+      </div>
+
       <InvoiceForm projectId={projectId} onSuccess={refetch} />
+
       {invoices.length === 0 ? (
         <InlineEmpty message="발행된 세금계산서가 없습니다." />
       ) : (
-        <>
-          <InvoiceList projectId={projectId} invoices={invoices} collections={collections} refetch={refetch} />
-          {uncollectedCount > 0 && (
-            <p className="text-xs text-muted-foreground mt-2">
-              미수금 {uncollectedCount}건 / {formatCurrency(uncollectedTotal)}원
-            </p>
-          )}
-        </>
+        <InvoiceList projectId={projectId} invoices={invoices} collections={collections} refetch={refetch} />
       )}
     </div>
   );
 }
 
-// ── 발행 폼 ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// 원천징수 모드: 수금 전용 뷰
+// ══════════════════════════════════════════════════════════════
 
-function InvoiceForm({ projectId, onSuccess }: { projectId: string; onSuccess: () => void }) {
-  const [paymentType, setPaymentType] = useState("deposit");
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState<number | undefined>(undefined);
-  const [issueDate, setIssueDate] = useState<Date>(new Date());
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const createInvoice = useCreateInvoice();
-
-  const handleSubmit = async () => {
-    if (!amount || !issueDate) return;
-    setIsSubmitting(true);
-    try {
-      await createInvoice.mutateAsync({
-        projectId,
-        paymentType: paymentType as "deposit" | "interim" | "balance" | "additional",
-        description: description.trim(),
-        amount,
-        issueDate: format(issueDate, "yyyy-MM-dd"),
-      });
-      setDescription("");
-      setAmount(undefined);
-      setIssueDate(new Date());
-      onSuccess();
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+function WithholdingCollectionView({
+  projectId,
+  collections,
+  contractAmount,
+  refetch,
+}: {
+  projectId: string;
+  collections: CollectionDTO[];
+  contractAmount: number;
+  refetch: () => void;
+}) {
+  const withholdingTax = contractAmount * 0.033;
+  const netAmount = contractAmount - withholdingTax;
+  const collectedAmount = collections.reduce((sum, c) => sum + Number(c.amount), 0);
+  const remainingAmount = netAmount - collectedAmount;
 
   return (
-    <div className="flex gap-2 items-start mb-3">
-      <NativeSelect value={paymentType} onChange={(e) => setPaymentType(e.target.value)}>
-        {Object.entries(PAYMENT_TYPE_LABELS).map(([value, label]) => (
-          <NativeSelectOption key={value} value={value}>
-            {label}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
-      <Input
-        className="flex-1"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="내용 (선택)"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-            e.preventDefault();
-            handleSubmit();
-          }
-        }}
-      />
-      <AmountInput
-        value={amount}
-        onChange={setAmount}
-        placeholder="VAT 포함"
-        className="w-32"
-      />
-      <DatePicker
-        mode="single"
-        value={issueDate}
-        onValueChange={(d) => d && setIssueDate(d)}
-        placeholder="발행일"
-      />
-      <LoadingButton rounded="full" isLoading={isSubmitting} onClick={handleSubmit}>
-        발행
-      </LoadingButton>
+    <div>
+      <DetailSectionTitle>수금</DetailSectionTitle>
+
+      <div className="rounded-lg border bg-muted/30 p-3 mb-3 space-y-1.5 text-xs">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">계약금액</span>
+          <span className="font-semibold tabular-nums">{formatCurrency(contractAmount)}원</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">원천세(3.3%)</span>
+          <span className="font-medium tabular-nums text-destructive">-{formatCurrency(withholdingTax)}원</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">실수령액</span>
+          <span className="font-semibold tabular-nums">{formatCurrency(netAmount)}원</span>
+        </div>
+        <ProgressBar current={collectedAmount} total={netAmount} />
+        <div className="flex justify-between pt-1 border-t border-border/50">
+          <span className="text-muted-foreground">수금 완료</span>
+          <span className="font-medium tabular-nums text-info">{formatCurrency(collectedAmount)}원</span>
+        </div>
+        {remainingAmount > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">잔금</span>
+            <span className="font-medium tabular-nums text-warning">{formatCurrency(remainingAmount)}원</span>
+          </div>
+        )}
+      </div>
+
+      <WithholdingCollectionForm projectId={projectId} onSuccess={refetch} />
+
+      {collections.length === 0 ? (
+        <InlineEmpty message="아직 수금 내역이 없습니다." />
+      ) : (
+        <WithholdingCollectionList projectId={projectId} collections={collections} refetch={refetch} />
+      )}
     </div>
   );
 }
 
-// ── 발행 목록 ────────────────────────────────────────────────────
+// ── 원천징수 수금 등록 폼 (RHF) ──────────────────────────────────
+
+function WithholdingCollectionForm({
+  projectId,
+  onSuccess,
+}: {
+  projectId: string;
+  onSuccess: () => void;
+}) {
+  const createCollection = useCreateCollection();
+
+  const form = useForm<WithholdingCollectionFormValues>({
+    resolver: zodResolver(withholdingCollectionFormSchema) as Resolver<WithholdingCollectionFormValues>,
+    defaultValues: { paymentType: "deposit", description: "", amount: undefined, paidDate: new Date() },
+  });
+
+  const onSubmit = async (values: WithholdingCollectionFormValues) => {
+    if (!values.amount) return;
+    await createCollection.mutateAsync({
+      projectId,
+      description: values.description.trim(),
+      amount: values.amount,
+      paidDate: format(values.paidDate, "yyyy-MM-dd"),
+      paymentType: values.paymentType as "deposit" | "interim" | "balance" | "additional",
+    });
+    form.reset({ paymentType: "deposit", description: "", amount: undefined, paidDate: new Date() });
+    onSuccess();
+  };
+
+  return (
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2 mb-3">
+      <div className="grid grid-cols-2 gap-2">
+        <FormNativeSelect control={form.control} name="paymentType" options={PAYMENT_TYPE_OPTIONS} disableError />
+        <FormNumberInput control={form.control} name="amount" placeholder="실수령액" thousandSeparator suffix="원" disableError />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <FormTextInput control={form.control} name="description" placeholder="내용 (선택)" disableError />
+        <div className="flex gap-2">
+          <FormDatePicker control={form.control} name="paidDate" mode="single" placeholder="수금일" disableError />
+          <LoadingButton type="submit" rounded="full" size="sm" isLoading={createCollection.isPending}>
+            추가
+          </LoadingButton>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+// ── 원천징수 수금 목록 ────────────────────────────────────────────
+
+function WithholdingCollectionList({
+  projectId,
+  collections,
+  refetch,
+}: {
+  projectId: string;
+  collections: CollectionDTO[];
+  refetch: () => void;
+}) {
+  const dialog = useDialog();
+  const deleteCollection = useDeleteCollection();
+
+  const handleDelete = (col: CollectionDTO) => {
+    dialog.confirm({
+      title: "수금 내역 삭제",
+      description: "이 수금 내역을 삭제하시겠습니까?",
+      variant: "destructive",
+      confirmText: "삭제",
+      onConfirm: async () => {
+        await deleteCollection.mutateAsync({ projectId, collectionId: col.id });
+        refetch();
+      },
+    });
+  };
+
+  const sorted = [...collections].sort((a, b) => a.paidDate.localeCompare(b.paidDate));
+
+  return (
+    <ul className="space-y-0 divide-y border rounded-lg">
+      {sorted.map((col) => (
+        <li key={col.id} className="group relative py-2.5 px-3 text-sm space-y-0.5 overflow-hidden">
+          <div className="flex items-center justify-between gap-x-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Badge variant="muted" className="text-[10px] px-1.5 py-0">
+                {PAYMENT_TYPE_LABELS[col.paymentType as keyof typeof PAYMENT_TYPE_LABELS]}
+              </Badge>
+              <span className="truncate text-xs">{col.description || "수금"}</span>
+            </div>
+            <span className="font-semibold shrink-0 tabular-nums text-info text-xs">
+              {formatCurrency(Number(col.amount))}원
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-x-2">
+            <span className="text-muted-foreground text-xs">{col.paidDate}</span>
+            <nav className="flex items-center -mb-1 -mr-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <EditCollectionButton projectId={projectId} collection={col} onSuccess={refetch} />
+              <Button type="button" size="icon-xs" variant="ghost" onClick={() => handleDelete(col)}>
+                <Trash2Icon className="size-3" />
+              </Button>
+            </nav>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 세금계산서 발행 폼 (VAT, RHF)
+// ══════════════════════════════════════════════════════════════
+
+function InvoiceForm({ projectId, onSuccess }: { projectId: string; onSuccess: () => void }) {
+  const createInvoice = useCreateInvoice();
+
+  const form = useForm<InvoiceFormValues>({
+    resolver: zodResolver(invoiceFormSchema) as Resolver<InvoiceFormValues>,
+    defaultValues: { paymentType: "deposit", description: "", amount: undefined, issueDate: new Date() },
+  });
+
+  const onSubmit = async (values: InvoiceFormValues) => {
+    if (!values.amount) return;
+    await createInvoice.mutateAsync({
+      projectId,
+      paymentType: values.paymentType as "deposit" | "interim" | "balance" | "additional",
+      description: values.description.trim(),
+      amount: values.amount,
+      issueDate: format(values.issueDate, "yyyy-MM-dd"),
+    });
+    form.reset({ paymentType: "deposit", description: "", amount: undefined, issueDate: new Date() });
+    onSuccess();
+  };
+
+  return (
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2 mb-3">
+      <div className="grid grid-cols-2 gap-2">
+        <FormNativeSelect control={form.control} name="paymentType" options={PAYMENT_TYPE_OPTIONS} disableError />
+        <FormNumberInput control={form.control} name="amount" placeholder="VAT 포함" thousandSeparator suffix="원" disableError />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <FormTextInput control={form.control} name="description" placeholder="내용 (선택)" disableError />
+        <div className="flex gap-2">
+          <FormDatePicker control={form.control} name="issueDate" mode="single" placeholder="발행일" disableError />
+          <LoadingButton type="submit" rounded="full" size="sm" isLoading={createInvoice.isPending}>
+            발행
+          </LoadingButton>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 세금계산서 목록 (VAT) — 수금 진행바 + 인라인 수금 폼
+// ══════════════════════════════════════════════════════════════
 
 function InvoiceList({
   projectId,
@@ -233,141 +441,141 @@ function InvoiceList({
 
   return (
     <ul className="space-y-0 divide-y border rounded-lg">
-      {invoices.map((inv) => {
-        const { status, collectedAmount, remainingAmount, invoiceCollections } = getCollectionStatus(inv, collections);
-
-        return (
-          <li key={inv.id} className="group relative py-3 px-4 text-sm space-y-1 overflow-hidden">
-            <div className="flex items-center justify-between gap-x-4">
-              <div className="flex items-center gap-2 min-w-0">
-                <Badge variant="muted" className="text-[10px] px-1.5 py-0">
-                  {PAYMENT_TYPE_LABELS[inv.paymentType as keyof typeof PAYMENT_TYPE_LABELS]}
-                </Badge>
-                <span className="truncate font-medium">{inv.description || "세금계산서"}</span>
-              </div>
-              <span className="font-semibold shrink-0 tabular-nums text-info">
-                {formatCurrency(Number(inv.amount))}원
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-x-2">
-              <div className="flex items-center gap-3">
-                <span className="text-muted-foreground text-xs">발행 {inv.issueDate}</span>
-                {status === "collected" && (
-                  <Badge variant="default" className="text-[10px] px-1.5 py-0">수금 완료</Badge>
-                )}
-                {status === "partial" && (
-                  <Badge variant="warning-light" className="text-[10px] px-1.5 py-0">
-                    부분 수금 {formatCurrency(collectedAmount)}원
-                  </Badge>
-                )}
-                {status === "uncollected" && (
-                  <Badge variant="warning-light" className="text-[10px] px-1.5 py-0">미수금</Badge>
-                )}
-              </div>
-              <nav className="flex items-center -mb-1 -mr-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                {status !== "collected" && (
-                  <AddCollectionButton
-                    projectId={projectId}
-                    invoice={inv}
-                    remainingAmount={remainingAmount}
-                    onSuccess={refetch}
-                  />
-                )}
-                <EditInvoiceButton
-                  projectId={projectId}
-                  invoice={inv}
-                  onSuccess={refetch}
-                />
-                <Button
-                  type="button"
-                  size="icon-xs"
-                  variant="ghost"
-                  onClick={() => handleDeleteInvoice(inv)}
-                >
-                  <Trash2Icon className="size-3" />
-                </Button>
-              </nav>
-            </div>
-
-            {/* 수금 건 인라인 표시 */}
-            {invoiceCollections.length > 0 && (
-              <div className="mt-2 pl-4 border-l-2 border-muted">
-                <p className="text-[10px] font-medium text-muted-foreground mb-1">수금 {invoiceCollections.length}건</p>
-                <ul className="space-y-1">
-                  {invoiceCollections.map((col) => (
-                    <li key={col.id} className="group/col flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <span>수금 {col.paidDate}</span>
-                        {col.description && <span className="truncate max-w-[120px]">{col.description}</span>}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="tabular-nums text-info">{formatCurrency(Number(col.amount))}원</span>
-                        <EditCollectionButton
-                          projectId={projectId}
-                          collection={col}
-                          onSuccess={refetch}
-                        />
-                        <Button
-                          type="button"
-                          size="icon-xs"
-                          variant="ghost"
-                          className="opacity-0 group-hover/col:opacity-100 transition-opacity"
-                          onClick={() => handleDeleteCollection(col)}
-                        >
-                          <Trash2Icon className="size-2.5" />
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </li>
-        );
-      })}
+      {invoices.map((inv) => (
+        <InvoiceCard
+          key={inv.id}
+          projectId={projectId}
+          invoice={inv}
+          collections={collections}
+          onDeleteInvoice={() => handleDeleteInvoice(inv)}
+          onDeleteCollection={handleDeleteCollection}
+          refetch={refetch}
+        />
+      ))}
     </ul>
   );
 }
 
-// ── 수금 등록 팝오버 ────────────────────────────────────────────
-
-function AddCollectionButton({
+function InvoiceCard({
   projectId,
-  invoice,
-  remainingAmount,
-  onSuccess,
+  invoice: inv,
+  collections,
+  onDeleteInvoice,
+  onDeleteCollection,
+  refetch,
 }: {
   projectId: string;
   invoice: InvoiceDTO;
-  remainingAmount: number;
-  onSuccess: () => void;
+  collections: CollectionDTO[];
+  onDeleteInvoice: () => void;
+  onDeleteCollection: (col: CollectionDTO) => void;
+  refetch: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [showCollectionForm, setShowCollectionForm] = useState(false);
+  const { status, collectedAmount, remainingAmount, invoiceCollections } = getCollectionStatus(inv, collections);
+  const invoiceAmount = Number(inv.amount);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon-xs">
-          <PlusIcon className="size-3" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-72">
-        <AddCollectionForm
-          projectId={projectId}
-          invoice={invoice}
-          remainingAmount={remainingAmount}
-          onSuccess={() => {
-            setOpen(false);
-            onSuccess();
-          }}
-          onCancel={() => setOpen(false)}
-        />
-      </PopoverContent>
-    </Popover>
+    <li className="group relative py-3 px-3 text-sm space-y-1.5 overflow-hidden">
+      <div className="flex items-center justify-between gap-x-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Badge variant="muted" className="text-[10px] px-1.5 py-0">
+            {PAYMENT_TYPE_LABELS[inv.paymentType as keyof typeof PAYMENT_TYPE_LABELS]}
+          </Badge>
+          <span className="truncate font-medium text-xs">{inv.description || "세금계산서"}</span>
+        </div>
+        <span className="font-semibold shrink-0 tabular-nums text-info text-xs">
+          {formatCurrency(invoiceAmount)}원
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between gap-x-2">
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground text-[11px]">발행 {inv.issueDate}</span>
+          {status === "collected" && (
+            <Badge variant="default" className="text-[10px] px-1.5 py-0">수금 완료</Badge>
+          )}
+          {status === "partial" && (
+            <Badge variant="warning-light" className="text-[10px] px-1.5 py-0">부분 수금</Badge>
+          )}
+          {status === "uncollected" && (
+            <Badge variant="warning-light" className="text-[10px] px-1.5 py-0">미수금</Badge>
+          )}
+        </div>
+        <nav className="flex items-center -mr-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <EditInvoiceButton projectId={projectId} invoice={inv} onSuccess={refetch} />
+          <Button type="button" size="icon-xs" variant="ghost" onClick={onDeleteInvoice}>
+            <Trash2Icon className="size-3" />
+          </Button>
+        </nav>
+      </div>
+
+      <div className="space-y-0.5">
+        <div className="flex justify-between text-[11px] text-muted-foreground">
+          <span>수금 {formatCurrency(collectedAmount)}원 / {formatCurrency(invoiceAmount)}원</span>
+        </div>
+        <ProgressBar current={collectedAmount} total={invoiceAmount} />
+      </div>
+
+      {invoiceCollections.length > 0 && (
+        <div className="pl-3 border-l-2 border-muted space-y-1">
+          {invoiceCollections.map((col) => (
+            <div key={col.id} className="group/col flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <span>{col.paidDate}</span>
+                {col.description && <span className="truncate max-w-[100px]">{col.description}</span>}
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="tabular-nums text-info">{formatCurrency(Number(col.amount))}원</span>
+                <EditCollectionButton projectId={projectId} collection={col} onSuccess={refetch} />
+                <Button
+                  type="button"
+                  size="icon-xs"
+                  variant="ghost"
+                  className="opacity-0 group-hover/col:opacity-100 transition-opacity"
+                  onClick={() => onDeleteCollection(col)}
+                >
+                  <Trash2Icon className="size-2.5" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {status !== "collected" && (
+        <div>
+          {!showCollectionForm ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              className="w-full text-xs"
+              onClick={() => setShowCollectionForm(true)}
+            >
+              수금 등록
+            </Button>
+          ) : (
+            <InlineCollectionForm
+              projectId={projectId}
+              invoice={inv}
+              remainingAmount={remainingAmount}
+              onSuccess={() => {
+                setShowCollectionForm(false);
+                refetch();
+              }}
+              onCancel={() => setShowCollectionForm(false)}
+            />
+          )}
+        </div>
+      )}
+    </li>
   );
 }
 
-function AddCollectionForm({
+// ── 인라인 수금 등록 폼 (RHF) ────────────────────────────────────
+
+function InlineCollectionForm({
   projectId,
   invoice,
   remainingAmount,
@@ -380,59 +588,57 @@ function AddCollectionForm({
   onSuccess: () => void;
   onCancel: () => void;
 }) {
-  const [amount, setAmount] = useState<number | undefined>(remainingAmount > 0 ? remainingAmount : undefined);
-  const [paidDate, setPaidDate] = useState<Date>(new Date());
-  const [description, setDescription] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const createCollection = useCreateCollection();
 
-  const handleSubmit = async () => {
-    if (!amount || !paidDate) return;
-    setIsSubmitting(true);
-    try {
-      await createCollection.mutateAsync({
-        projectId,
-        invoiceId: invoice.id,
-        description: description.trim(),
-        amount,
-        paidDate: format(paidDate, "yyyy-MM-dd"),
-        paymentType: invoice.paymentType as "deposit" | "interim" | "balance" | "additional",
-      });
-      onSuccess();
-    } finally {
-      setIsSubmitting(false);
-    }
+  const form = useForm<VatCollectionFormValues>({
+    resolver: zodResolver(vatCollectionFormSchema) as Resolver<VatCollectionFormValues>,
+    defaultValues: {
+      amount: remainingAmount > 0 ? remainingAmount : undefined,
+      paidDate: new Date(),
+      description: "",
+    },
+  });
+
+  const onSubmit = async (values: VatCollectionFormValues) => {
+    if (!values.amount) return;
+    await createCollection.mutateAsync({
+      projectId,
+      invoiceId: invoice.id,
+      description: values.description.trim(),
+      amount: values.amount,
+      paidDate: format(values.paidDate, "yyyy-MM-dd"),
+      paymentType: invoice.paymentType as "deposit" | "interim" | "balance" | "additional",
+    });
+    onSuccess();
   };
 
   return (
-    <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">잔여 미수금: {formatCurrency(remainingAmount)}원</p>
-      <AmountInput value={amount} onChange={setAmount} placeholder="수금 금액" />
-      <DatePicker
-        mode="single"
-        value={paidDate}
-        onValueChange={(d) => d && setPaidDate(d)}
-        placeholder="수금일"
-      />
-      <Input
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="메모 (선택)"
-      />
-      <div className="flex justify-end gap-1">
-        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
-          취소
-        </Button>
-        <LoadingButton size="sm" isLoading={isSubmitting} onClick={handleSubmit}>
-          수금 등록
+    <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-md border bg-muted/20 p-2.5 space-y-2">
+      <p className="text-[11px] text-muted-foreground flex justify-between">
+        <span>수금 등록</span>
+        <button type="button" onClick={onCancel} className="hover:text-foreground">
+          <ChevronUpIcon className="size-3" />
+        </button>
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <FormNumberInput control={form.control} name="amount" placeholder="수금 금액" thousandSeparator suffix="원" disableError />
+        <FormDatePicker control={form.control} name="paidDate" mode="single" placeholder="수금일" disableError />
+      </div>
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <FormTextInput control={form.control} name="description" placeholder="메모 (선택)" disableError />
+        </div>
+        <LoadingButton type="submit" size="sm" isLoading={createCollection.isPending}>
+          등록
         </LoadingButton>
       </div>
-    </div>
+    </form>
   );
 }
 
-// ── 수정 팝오버 ────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// 수정 팝오버 (세금계산서 / 수금) — RHF
+// ══════════════════════════════════════════════════════════════
 
 function EditInvoiceButton({
   projectId,
@@ -456,10 +662,7 @@ function EditInvoiceButton({
         <EditInvoiceForm
           projectId={projectId}
           invoice={invoice}
-          onSuccess={() => {
-            setOpen(false);
-            onSuccess();
-          }}
+          onSuccess={() => { setOpen(false); onSuccess(); }}
           onCancel={() => setOpen(false)}
         />
       </PopoverContent>
@@ -478,68 +681,46 @@ function EditInvoiceForm({
   onSuccess: () => void;
   onCancel: () => void;
 }) {
-  const [paymentType, setPaymentType] = useState(invoice.paymentType);
-  const [description, setDescription] = useState(invoice.description);
-  const [amount, setAmount] = useState<number | undefined>(Number(invoice.amount));
-  const [issueDate, setIssueDate] = useState<Date>(parseISO(invoice.issueDate));
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const updateInvoice = useUpdateInvoice();
 
-  const handleSubmit = async () => {
-    if (!amount || !issueDate) return;
-    setIsSubmitting(true);
-    try {
-      await updateInvoice.mutateAsync({
-        projectId,
-        invoiceId: invoice.id,
-        paymentType,
-        description: description.trim(),
-        amount,
-        issueDate: format(issueDate, "yyyy-MM-dd"),
-      });
-      onSuccess();
-    } finally {
-      setIsSubmitting(false);
-    }
+  const form = useForm<InvoiceFormValues>({
+    resolver: zodResolver(invoiceFormSchema) as Resolver<InvoiceFormValues>,
+    defaultValues: {
+      paymentType: invoice.paymentType,
+      description: invoice.description,
+      amount: Number(invoice.amount),
+      issueDate: parseISO(invoice.issueDate),
+    },
+  });
+
+  const onSubmit = async (values: InvoiceFormValues) => {
+    if (!values.amount) return;
+    await updateInvoice.mutateAsync({
+      projectId,
+      invoiceId: invoice.id,
+      paymentType: values.paymentType,
+      description: values.description.trim(),
+      amount: values.amount,
+      issueDate: format(values.issueDate, "yyyy-MM-dd"),
+    });
+    onSuccess();
   };
 
   return (
-    <div className="space-y-3">
-      <NativeSelect value={paymentType} onChange={(e) => setPaymentType(e.target.value)}>
-        {Object.entries(PAYMENT_TYPE_LABELS).map(([value, label]) => (
-          <NativeSelectOption key={value} value={value}>
-            {label}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
-      <Input
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="내용 (선택)"
-      />
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+      <FormNativeSelect control={form.control} name="paymentType" options={PAYMENT_TYPE_OPTIONS} disableError />
+      <FormTextInput control={form.control} name="description" placeholder="내용 (선택)" disableError />
       <div className="grid grid-cols-2 gap-2">
-        <AmountInput value={amount} onChange={setAmount} placeholder="VAT 포함" />
-        <DatePicker
-          mode="single"
-          value={issueDate}
-          onValueChange={(d) => d && setIssueDate(d)}
-          placeholder="발행일"
-        />
+        <FormNumberInput control={form.control} name="amount" placeholder="VAT 포함" thousandSeparator suffix="원" disableError />
+        <FormDatePicker control={form.control} name="issueDate" mode="single" placeholder="발행일" disableError />
       </div>
       <div className="flex justify-end gap-1">
-        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
-          취소
-        </Button>
-        <LoadingButton size="sm" isLoading={isSubmitting} onClick={handleSubmit}>
-          저장
-        </LoadingButton>
+        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>취소</Button>
+        <LoadingButton type="submit" size="sm" isLoading={updateInvoice.isPending}>저장</LoadingButton>
       </div>
-    </div>
+    </form>
   );
 }
-
-// ── 수금 수정 팝오버 ─────────────────────────────────────────────
 
 function EditCollectionButton({
   projectId,
@@ -567,10 +748,7 @@ function EditCollectionButton({
         <EditCollectionForm
           projectId={projectId}
           collection={collection}
-          onSuccess={() => {
-            setOpen(false);
-            onSuccess();
-          }}
+          onSuccess={() => { setOpen(false); onSuccess(); }}
           onCancel={() => setOpen(false)}
         />
       </PopoverContent>
@@ -589,53 +767,39 @@ function EditCollectionForm({
   onSuccess: () => void;
   onCancel: () => void;
 }) {
-  const [amount, setAmount] = useState<number | undefined>(Number(collection.amount));
-  const [paidDate, setPaidDate] = useState<Date>(parseISO(collection.paidDate));
-  const [description, setDescription] = useState(collection.description ?? "");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const updateCollection = useUpdateCollection();
 
-  const handleSubmit = async () => {
-    if (!amount || !paidDate) return;
-    setIsSubmitting(true);
-    try {
-      await updateCollection.mutateAsync({
-        projectId,
-        collectionId: collection.id,
-        description: description.trim() || undefined,
-        amount,
-        paidDate: format(paidDate, "yyyy-MM-dd"),
-        paymentType: collection.paymentType,
-      });
-      onSuccess();
-    } finally {
-      setIsSubmitting(false);
-    }
+  const form = useForm<VatCollectionFormValues>({
+    resolver: zodResolver(vatCollectionFormSchema) as Resolver<VatCollectionFormValues>,
+    defaultValues: {
+      amount: Number(collection.amount),
+      paidDate: parseISO(collection.paidDate),
+      description: collection.description ?? "",
+    },
+  });
+
+  const onSubmit = async (values: VatCollectionFormValues) => {
+    if (!values.amount) return;
+    await updateCollection.mutateAsync({
+      projectId,
+      collectionId: collection.id,
+      description: values.description.trim() || undefined,
+      amount: values.amount,
+      paidDate: format(values.paidDate, "yyyy-MM-dd"),
+      paymentType: collection.paymentType,
+    });
+    onSuccess();
   };
 
   return (
-    <div className="space-y-3">
-      <AmountInput value={amount} onChange={setAmount} placeholder="수금 금액" />
-      <DatePicker
-        mode="single"
-        value={paidDate}
-        onValueChange={(d) => d && setPaidDate(d)}
-        placeholder="수금일"
-      />
-      <Input
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="메모 (선택)"
-      />
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+      <FormNumberInput control={form.control} name="amount" placeholder="수금 금액" thousandSeparator suffix="원" disableError />
+      <FormDatePicker control={form.control} name="paidDate" mode="single" placeholder="수금일" disableError />
+      <FormTextInput control={form.control} name="description" placeholder="메모 (선택)" disableError />
       <div className="flex justify-end gap-1">
-        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
-          취소
-        </Button>
-        <LoadingButton size="sm" isLoading={isSubmitting} onClick={handleSubmit}>
-          저장
-        </LoadingButton>
+        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>취소</Button>
+        <LoadingButton type="submit" size="sm" isLoading={updateCollection.isPending}>저장</LoadingButton>
       </div>
-    </div>
+    </form>
   );
 }

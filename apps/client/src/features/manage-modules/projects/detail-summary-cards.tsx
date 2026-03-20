@@ -1,8 +1,8 @@
 import { cn } from "@/shared/utils/classnames";
-import { FileText, ArrowLeftRight, Users, FileSpreadsheet, FolderOpen } from "lucide-react";
+import { Landmark, Users, FileSpreadsheet, FolderOpen } from "lucide-react";
 import type { ProjectWithDetails } from "./types";
 
-export type PanelType = "invoice" | "financial" | "partner" | "estimate" | "file";
+export type PanelType = "finance" | "partner" | "estimate" | "file";
 
 interface SummaryCardsProps {
   data: ProjectWithDetails;
@@ -12,7 +12,6 @@ interface SummaryCardsProps {
 
 export function SummaryCards({ data, activePanel, onSelect }: SummaryCardsProps) {
   const contractAmount = data.contractAmount ? Number(data.contractAmount) : 0;
-  const isVat = data.taxType === "vat";
 
   const cards: {
     type: PanelType;
@@ -21,16 +20,10 @@ export function SummaryCards({ data, activePanel, onSelect }: SummaryCardsProps)
     show: boolean;
   }[] = [
     {
-      type: "invoice",
-      icon: <FileText className="size-3.5" />,
-      label: "세금계산서",
-      show: isVat && contractAmount > 0,
-    },
-    {
-      type: "financial",
-      icon: <ArrowLeftRight className="size-3.5" />,
-      label: "거래 내역",
-      show: true,
+      type: "finance",
+      icon: <Landmark className="size-3.5" />,
+      label: "재무",
+      show: contractAmount > 0,
     },
     {
       type: "partner",
