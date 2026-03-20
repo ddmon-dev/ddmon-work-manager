@@ -43,6 +43,11 @@ export const queryKeys = {
     list: (params: Params) => ["partners", "list", params] as const,
     detail: (id: string) => ["partners", "detail", id] as const,
   },
+  clientEnvironments: {
+    all: ["client-environments"] as const,
+    list: (params: Params) => ["client-environments", "list", params] as const,
+    detail: (id: string) => ["client-environments", "detail", id] as const,
+  },
   admins: {
     all: ["admins"] as const,
     list: (params: Params) => ["admins", "list", params] as const,
