@@ -25,7 +25,7 @@ export function SettlementModule() {
           {data && (
             <div className="flex items-center gap-2">
               <Badge variant="outline">
-                세금계산서 미발행 {data.summary.uninvoicedCount}건
+                미수금 {data.summary.uncollectedCount}건
               </Badge>
               <Badge variant="outline">
                 원천세 미신고 {data.summary.unreportedCount}건
@@ -37,7 +37,7 @@ export function SettlementModule() {
         {!isLoading && data ? (
           <>
             <InvoiceSection
-              payments={data.uninvoicedPayments}
+              invoices={data.uncollectedInvoices}
               year={year}
               month={month}
             />

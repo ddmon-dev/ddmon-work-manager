@@ -1,11 +1,11 @@
-export interface UninvoicedPayment {
+export interface UncollectedInvoice {
   id: string;
   projectId: string;
   projectName: string;
   clientName: string | null;
   paymentType: string;
   amount: string;
-  paidDate: string;
+  issueDate: string;
   description: string;
 }
 
@@ -20,12 +20,12 @@ export interface UnreportedPartnerPayment {
 }
 
 export interface SettlementSummary {
-  uninvoicedCount: number;
+  uncollectedCount: number;
   unreportedCount: number;
 }
 
 export interface SettlementData {
-  uninvoicedPayments: UninvoicedPayment[];
+  uncollectedInvoices: UncollectedInvoice[];
   unreportedPartnerPayments: UnreportedPartnerPayment[];
   summary: SettlementSummary;
 }

@@ -10,11 +10,11 @@ export function useSettlementData(year: number, month: number) {
   });
 }
 
-export function useBatchMarkInvoices(year: number, month: number) {
+export function useBatchMarkCollections(year: number, month: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { paymentIds: string[]; invoiceDate: string }) =>
-      api.patch("/settlement/invoices/batch", data),
+    mutationFn: (data: { invoiceIds: string[]; paidDate: string }) =>
+      api.patch("/settlement/collections/batch", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.settlement.byMonth(year, month) });
     },
