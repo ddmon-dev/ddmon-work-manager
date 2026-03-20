@@ -94,24 +94,24 @@
       "breakpoints": true
     },
     {
-      "idx": 13,
-      "version": "7",
-      "when": 1773930947785,
-      "tag": "0013_add_project_financials",
-      "breakpoints": true
-    },
-    {
       "idx": 14,
       "version": "7",
-      "when": 1774022400000,
-      "tag": "0014_add_project_invoices",
+      "when": 1773930947785,
+      "tag": "0014_add_project_financials",
       "breakpoints": true
     },
     {
       "idx": 15,
       "version": "7",
+      "when": 1774022400000,
+      "tag": "0015_add_project_invoices",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
       "when": 1774108800000,
-      "tag": "0015_add_project_collections",
+      "tag": "0016_add_project_collections",
       "breakpoints": true
     }
   ]
