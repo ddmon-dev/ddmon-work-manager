@@ -44,6 +44,21 @@ export const projects = pgTable("projects", {
   deleted: boolean("deleted").notNull().default(false),
 });
 
+export const projectInvoices = pgTable("project_invoices", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  paymentType: text("payment_type").notNull().default("deposit"), // deposit, interim, balance, additional
+  description: text("description").notNull().default(""),
+  amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
+  issueDate: date("issue_date").notNull(),
+  paidDate: date("paid_date"),
+  deleted: boolean("deleted").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const projectPayments = pgTable("project_payments", {
   id: uuid("id").primaryKey().defaultRandom(),
   projectId: uuid("project_id")
@@ -53,8 +68,6 @@ export const projectPayments = pgTable("project_payments", {
   amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
   paidDate: date("paid_date").notNull().default(new Date().toISOString().split("T")[0]),
   paymentType: text("payment_type").notNull().default("deposit"), // deposit, interim, balance, additional
-  invoiceIssued: boolean("invoice_issued").notNull().default(false),
-  invoiceDate: date("invoice_date"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deleted: boolean("deleted").notNull().default(false),

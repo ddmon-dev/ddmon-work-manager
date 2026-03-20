@@ -4,7 +4,7 @@ import { and, eq, sql, inArray } from "drizzle-orm";
 import { db } from "../db";
 import {
   projects,
-  projectPayments,
+  projectInvoices,
   partnerPayments,
   clients,
   partners,
@@ -29,33 +29,33 @@ app.get("/", async (c) => {
   const year = yearParsed.success ? yearParsed.data : currentDate.getFullYear();
   const month = monthParsed.success ? monthParsed.data : currentDate.getMonth() + 1;
 
-  const [uninvoicedPayments, unreportedPartnerPayments] = await Promise.all([
-    // 세금계산서 미발행: VAT 프로젝트의 수금 건
+  const [uncollectedInvoices, unreportedPartnerPayments] = await Promise.all([
+    // 미수금 세금계산서: VAT 프로젝트의 발행했지만 미수금인 건
     db
       .select({
-        id: projectPayments.id,
-        projectId: projectPayments.projectId,
+        id: projectInvoices.id,
+        projectId: projectInvoices.projectId,
         projectName: projects.name,
         clientName: clients.companyName,
-        paymentType: projectPayments.paymentType,
-        amount: projectPayments.amount,
-        paidDate: projectPayments.paidDate,
-        description: projectPayments.description,
+        paymentType: projectInvoices.paymentType,
+        amount: projectInvoices.amount,
+        issueDate: projectInvoices.issueDate,
+        description: projectInvoices.description,
       })
-      .from(projectPayments)
-      .innerJoin(projects, eq(projectPayments.projectId, projects.id))
+      .from(projectInvoices)
+      .innerJoin(projects, eq(projectInvoices.projectId, projects.id))
       .leftJoin(clients, eq(projects.clientId, clients.id))
       .where(
         and(
-          softDeleteFilter(projectPayments.deleted),
+          softDeleteFilter(projectInvoices.deleted),
           softDeleteFilter(projects.deleted),
           eq(projects.taxType, "vat"),
-          eq(projectPayments.invoiceIssued, false),
-          sql`EXTRACT(YEAR FROM ${projectPayments.paidDate}::date) = ${year}`,
-          sql`EXTRACT(MONTH FROM ${projectPayments.paidDate}::date) = ${month}`
+          sql`${projectInvoices.paidDate} IS NULL`,
+          sql`EXTRACT(YEAR FROM ${projectInvoices.issueDate}::date) = ${year}`,
+          sql`EXTRACT(MONTH FROM ${projectInvoices.issueDate}::date) = ${month}`
         )
       )
-      .orderBy(projectPayments.paidDate),
+      .orderBy(projectInvoices.issueDate),
 
     // 원천세 미신고: 파트너 지급 건
     db
@@ -84,23 +84,23 @@ app.get("/", async (c) => {
   ]);
 
   const summary = {
-    uninvoicedCount: uninvoicedPayments.length,
+    uncollectedCount: uncollectedInvoices.length,
     unreportedCount: unreportedPartnerPayments.length,
   };
 
   return successResponse(c, {
-    uninvoicedPayments,
+    uncollectedInvoices,
     unreportedPartnerPayments,
     summary,
   });
 });
 
-// PATCH /settlement/invoices/batch
-app.patch("/invoices/batch", async (c) => {
+// PATCH /settlement/collections/batch — 미수금 세금계산서 수금 완료 처리
+app.patch("/collections/batch", async (c) => {
   const body = await c.req.json();
   const schema = z.object({
-    paymentIds: z.array(z.string().uuid()).min(1),
-    invoiceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    invoiceIds: z.array(z.string().uuid()).min(1),
+    paidDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   });
 
   const parsed = schema.safeParse(body);
@@ -108,18 +108,17 @@ app.patch("/invoices/batch", async (c) => {
     return errorResponse(c, ERRORS.VALIDATION, 400);
   }
 
-  const { paymentIds, invoiceDate } = parsed.data;
+  const { invoiceIds, paidDate } = parsed.data;
 
   await db
-    .update(projectPayments)
+    .update(projectInvoices)
     .set({
-      invoiceIssued: true,
-      invoiceDate,
+      paidDate,
       updatedAt: new Date(),
     })
-    .where(inArray(projectPayments.id, paymentIds));
+    .where(inArray(projectInvoices.id, invoiceIds));
 
-  return successResponse(c, { updated: paymentIds.length });
+  return successResponse(c, { updated: invoiceIds.length });
 });
 
 // PATCH /settlement/withholdings/batch

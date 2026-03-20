@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { projects, projectPayments, projectMemos, projectPartners, projectScheduleLanes, projectExpenses, partnerPayments, user } from "../db/schema";
+import { projects, projectInvoices, projectPayments, projectMemos, projectPartners, projectScheduleLanes, projectExpenses, partnerPayments, user } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { projectWriteSchema, projectPartnerWriteSchema } from "@packages/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
@@ -40,6 +40,10 @@ app.get("/", async (c) => {
       where,
       with: {
         client: true,
+        invoices: {
+          where: softDeleteFilter(projectInvoices.deleted),
+          columns: { amount: true, paidDate: true },
+        },
         payments: {
           where: softDeleteFilter(projectPayments.deleted),
           columns: { amount: true },
@@ -52,12 +56,19 @@ app.get("/", async (c) => {
     db.select({ total: count() }).from(projects).where(where),
   ]);
 
-  // payments 합계 계산
-  const items = rows.map((p) => ({
-    ...p,
-    totalPaid: p.payments.reduce((acc, pay) => acc + Number(pay.amount), 0),
-    payments: undefined, // 목록에서는 상세 제거
-  }));
+  // 수금 합계: VAT→invoices(수금완료건), 원천징수→payments
+  const items = rows.map((p) => {
+    const invoicePaid = p.invoices
+      .filter((i) => i.paidDate !== null)
+      .reduce((acc, i) => acc + Number(i.amount), 0);
+    const paymentPaid = p.payments.reduce((acc, pay) => acc + Number(pay.amount), 0);
+    return {
+      ...p,
+      totalPaid: invoicePaid + paymentPaid,
+      invoices: undefined,
+      payments: undefined,
+    };
+  });
 
   return successResponse(c, { items, total: countRows[0].total, page, pageSize });
 });
@@ -87,18 +98,15 @@ app.patch("/payments/:id", async (c) => {
     amount: z.number().positive().optional(),
     paidDate: z.string().optional(),
     paymentType: z.enum(["deposit", "interim", "balance", "additional"]).optional(),
-    invoiceIssued: z.boolean().optional(),
-    invoiceDate: z.string().nullable().optional(),
   }).safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
-  const { amount, invoiceDate, ...rest } = parsed.data;
+  const { amount, ...rest } = parsed.data;
   const [updated] = await db
     .update(projectPayments)
     .set({
       ...rest,
       ...(amount !== undefined && { amount: String(amount) }),
-      ...(invoiceDate !== undefined && { invoiceDate }),
       updatedAt: new Date(),
     })
     .where(and(eq(projectPayments.id, id), softDeleteFilter(projectPayments.deleted)))
@@ -115,6 +123,47 @@ app.delete("/payments/:id", async (c) => {
     .update(projectPayments)
     .set(softDeletePayload())
     .where(and(eq(projectPayments.id, id), softDeleteFilter(projectPayments.deleted)))
+    .returning();
+
+  if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+  return successResponse(c, { id });
+});
+
+// PATCH /projects/invoices/:id — 세금계산서 수정
+app.patch("/invoices/:id", async (c) => {
+  const id = c.req.param("id");
+  const parsed = z.object({
+    paymentType: z.enum(["deposit", "interim", "balance", "additional"]).optional(),
+    description: z.string().optional(),
+    amount: z.number().positive().optional(),
+    issueDate: z.string().optional(),
+    paidDate: z.string().nullable().optional(),
+  }).safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  const { amount, paidDate, ...rest } = parsed.data;
+  const [updated] = await db
+    .update(projectInvoices)
+    .set({
+      ...rest,
+      ...(amount !== undefined && { amount: String(amount) }),
+      ...(paidDate !== undefined && { paidDate }),
+      updatedAt: new Date(),
+    })
+    .where(and(eq(projectInvoices.id, id), softDeleteFilter(projectInvoices.deleted)))
+    .returning();
+
+  if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+  return successResponse(c, updated);
+});
+
+// DELETE /projects/invoices/:id — 세금계산서 소프트 삭제
+app.delete("/invoices/:id", async (c) => {
+  const id = c.req.param("id");
+  const [deleted] = await db
+    .update(projectInvoices)
+    .set(softDeletePayload())
+    .where(and(eq(projectInvoices.id, id), softDeleteFilter(projectInvoices.deleted)))
     .returning();
 
   if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -272,6 +321,10 @@ app.get("/:id", async (c) => {
     where: and(eq(projects.id, id), softDeleteFilter(projects.deleted)),
     with: {
       client: true,
+      invoices: {
+        where: softDeleteFilter(projectInvoices.deleted),
+        orderBy: [desc(projectInvoices.issueDate)],
+      },
       payments: {
         where: softDeleteFilter(projectPayments.deleted),
         orderBy: [desc(projectPayments.paidDate)],
@@ -422,6 +475,30 @@ app.post("/:id/payments", async (c) => {
     .returning();
 
   return successResponse(c, payment, 201);
+});
+
+// POST /projects/:id/invoices — 세금계산서 발행
+app.post("/:id/invoices", async (c) => {
+  const projectId = c.req.param("id");
+  const parsed = z.object({
+    paymentType: z.enum(["deposit", "interim", "balance", "additional"]),
+    description: z.string().default(""),
+    amount: z.number().positive("금액은 양수여야 합니다."),
+    issueDate: z.string(),
+  }).safeParse(await c.req.json());
+  if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  const project = await db.query.projects.findFirst({
+    where: and(eq(projects.id, projectId), softDeleteFilter(projects.deleted)),
+  });
+  if (!project) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  const [invoice] = await db
+    .insert(projectInvoices)
+    .values({ projectId, ...parsed.data, amount: parsed.data.amount.toString() })
+    .returning();
+
+  return successResponse(c, invoice, 201);
 });
 
 // POST /projects/:id/expenses — 지출 등록

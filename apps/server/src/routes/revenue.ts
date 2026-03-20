@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, isNotNull } from "drizzle-orm";
 import { db } from "../db";
-import { projects, projectPayments, clients } from "../db/schema";
+import { projects, projectInvoices, projectPayments, clients } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { softDeleteFilter, getExpectedReceivable } from "../lib/query-helpers";
@@ -25,8 +25,8 @@ app.get("/", async (c) => {
   const currentYear = new Date().getFullYear();
   const prevYear = currentYear - 1;
 
-  // 1. 프로젝트 + 수금 병렬 조회
-  const [allProjects, allPayments] = await Promise.all([
+  // 1. 프로젝트 + 수금(invoices + payments) 병렬 조회
+  const [allProjects, allInvoices, allPayments] = await Promise.all([
     db
       .select({
         id: projects.id,
@@ -46,6 +46,21 @@ app.get("/", async (c) => {
           sql`${projects.status} != 'discarded'`
         )
       ),
+    // VAT 프로젝트의 수금 완료 세금계산서
+    db
+      .select({
+        projectId: projectInvoices.projectId,
+        amount: projectInvoices.amount,
+        paidDate: projectInvoices.paidDate,
+      })
+      .from(projectInvoices)
+      .where(
+        and(
+          softDeleteFilter(projectInvoices.deleted),
+          isNotNull(projectInvoices.paidDate)
+        )
+      ),
+    // 원천징수 프로젝트의 수금
     db
       .select({
         projectId: projectPayments.projectId,
@@ -103,7 +118,7 @@ app.get("/", async (c) => {
     }
   }
 
-  // 수금 집계
+  // 수금 집계 (invoices + payments 합산)
   let allPaymentTotal = 0;
   const paidByProjectId = new Map<string, number>();
 
@@ -122,7 +137,13 @@ app.get("/", async (c) => {
     }
   }
 
-  for (const pay of allPayments) {
+  // 수금 처리: invoices(VAT) + payments(원천징수)
+  const allPaidRecords = [
+    ...allInvoices.map((i) => ({ projectId: i.projectId, amount: i.amount, paidDate: i.paidDate! })),
+    ...allPayments.map((p) => ({ projectId: p.projectId, amount: p.amount, paidDate: p.paidDate })),
+  ];
+
+  for (const pay of allPaidRecords) {
     if (!validProjectIds.has(pay.projectId)) continue;
     const amount = Number(pay.amount);
     allPaymentTotal += amount;
