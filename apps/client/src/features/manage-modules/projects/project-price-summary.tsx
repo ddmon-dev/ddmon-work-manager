@@ -3,18 +3,29 @@ import { formatCurrency } from "@/shared/utils/format";
 import { calculateTaxBreakdown } from "@packages/utils";
 
 interface PriceSummaryProps {
-  payments: { amount: string }[];
+  collections: { amount: string }[];
+  expenses: { amount: string }[];
+  partnerPayments: { amount: string }[];
   contractAmount: number;
   taxType: string | null;
 }
 
-export function PriceSummary({ payments, contractAmount, taxType }: PriceSummaryProps) {
-  const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+export function PriceSummary({ collections, expenses, partnerPayments, contractAmount, taxType }: PriceSummaryProps) {
+  const totalPaid = collections.reduce((sum, c) => sum + Number(c.amount), 0);
+  const totalExpenses =
+    expenses.reduce((sum, e) => sum + Number(e.amount), 0) +
+    partnerPayments.reduce((sum, pp) => sum + Number(pp.amount), 0);
 
   const isWithholding = taxType === "withholding";
   const isVat = taxType === "vat";
 
   const { supplyAmount, taxAmount, taxLabel } = calculateTaxBreakdown(contractAmount, taxType ?? "");
+
+  // 순이익: 공급가액 기준 수금(부가세 제외) - 총 지출
+  // VAT: 입금액 중 공급가액 충당분만 수익으로 계산 (부가세는 세금이므로 제외)
+  // 원천징수: totalPaid가 이미 실수령액이므로 그대로 사용
+  const revenueForProfit = isVat ? Math.min(totalPaid, contractAmount) : totalPaid;
+  const netProfit = revenueForProfit - totalExpenses;
 
   // VAT: 공급가액/부가세 순차 충당 분리 표기
   if (isVat) {
@@ -35,13 +46,24 @@ export function PriceSummary({ payments, contractAmount, taxType }: PriceSummary
         </AmountRow>
         <AmountRow label="부가세" value={formatCurrency(taxAmount)}>
           <AmountDetails
-            showDivider={false}
+            showDivider={totalExpenses <= 0}
             items={[
               { label: "입금", value: formatCurrency(vatPaid), variant: "positive" },
               { label: "잔금", value: formatCurrency(vatRemaining) },
             ]}
           />
         </AmountRow>
+        {totalExpenses > 0 && (
+          <>
+            <Divider />
+            <AmountRow label="총 지출" value={formatCurrency(totalExpenses)} variant="negative" />
+            <AmountRow
+              label="순이익"
+              value={formatCurrency(Math.abs(netProfit))}
+              variant={netProfit >= 0 ? "positive" : "negative"}
+            />
+          </>
+        )}
       </div>
     );
   }
@@ -71,6 +93,17 @@ export function PriceSummary({ payments, contractAmount, taxType }: PriceSummary
         label="잔금"
         value={formatCurrency(Math.max(remaining, 0))}
       />
+      {totalExpenses > 0 && (
+        <>
+          <Divider />
+          <AmountRow label="총 지출" value={formatCurrency(totalExpenses)} variant="negative" />
+          <AmountRow
+            label="순이익"
+            value={formatCurrency(Math.abs(netProfit))}
+            variant={netProfit >= 0 ? "positive" : "negative"}
+          />
+        </>
+      )}
     </div>
   );
 }

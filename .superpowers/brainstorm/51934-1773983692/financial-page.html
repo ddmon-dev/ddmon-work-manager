@@ -1,0 +1,246 @@
+<h2>재무 통합 페이지 — 구조 설계</h2>
+<p class="subtitle">Revenue + Settlement → 하나의 "재무" 페이지</p>
+
+<div class="section">
+  <h3>페이지 구조</h3>
+  <div class="mockup">
+    <div class="mockup-header">재무 페이지 — /financial</div>
+    <div class="mockup-body" style="padding: 0; font-size: 12px;">
+
+      <!-- 헤더 -->
+      <div style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 18px; font-weight: 700;">재무</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <select style="font-size: 12px; padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+            <option>2026년</option>
+            <option>2025년</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- KPI 카드 -->
+      <div style="padding: 16px 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; border-bottom: 1px solid #e5e7eb;">
+        <div style="padding: 14px; border-radius: 8px; border: 1px solid #e5e7eb;">
+          <div style="font-size: 11px; color: #6b7280;">당년 매출</div>
+          <div style="font-size: 20px; font-weight: 700; margin-top: 2px;">32,500,000원</div>
+          <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">전년 28,000,000원</div>
+        </div>
+        <div style="padding: 14px; border-radius: 8px; border: 1px solid #e5e7eb;">
+          <div style="font-size: 11px; color: #6b7280;">수금액</div>
+          <div style="font-size: 20px; font-weight: 700; color: #3b82f6; margin-top: 2px;">25,300,000원</div>
+          <div style="font-size: 11px; color: #10b981; margin-top: 2px;">수금률 77.8%</div>
+        </div>
+        <div style="padding: 14px; border-radius: 8px; border: 1px solid #e5e7eb;">
+          <div style="font-size: 11px; color: #6b7280;">미수금</div>
+          <div style="font-size: 20px; font-weight: 700; color: #f59e0b; margin-top: 2px;">7,200,000원</div>
+          <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">누적 미수금 9,800,000원</div>
+        </div>
+        <div style="padding: 14px; border-radius: 8px; border: 1px solid #e5e7eb;">
+          <div style="font-size: 11px; color: #6b7280;">미처리</div>
+          <div style="font-size: 20px; font-weight: 700; color: #ef4444; margin-top: 2px;">5건</div>
+          <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">미수금 3건 · 미신고 2건</div>
+        </div>
+      </div>
+
+      <!-- 탭 네비게이션 -->
+      <div style="padding: 0 20px; border-bottom: 1px solid #e5e7eb; display: flex; gap: 0;">
+        <div style="padding: 10px 16px; font-weight: 600; font-size: 13px; border-bottom: 2px solid #111; color: #111;">통계</div>
+        <div style="padding: 10px 16px; font-size: 13px; color: #6b7280; cursor: pointer;">미수금 정산</div>
+        <div style="padding: 10px 16px; font-size: 13px; color: #6b7280; cursor: pointer;">원천세 관리</div>
+      </div>
+
+      <!-- 탭 내용: 통계 -->
+      <div style="padding: 20px;">
+        <!-- 수금현황 + 부가세현황 나란히 -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+            <div style="padding: 10px 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-weight: 600; font-size: 13px;">수금 현황</div>
+            <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
+              <thead><tr style="background: #f9fafb;">
+                <th style="padding: 6px 10px; text-align: left; font-weight: 500; color: #6b7280;">연도</th>
+                <th style="padding: 6px 10px; text-align: right; font-weight: 500; color: #6b7280;">매출</th>
+                <th style="padding: 6px 10px; text-align: right; font-weight: 500; color: #6b7280;">입금</th>
+                <th style="padding: 6px 10px; text-align: right; font-weight: 500; color: #6b7280;">수금률</th>
+              </tr></thead>
+              <tbody>
+                <tr style="border-top: 1px solid #f3f4f6;"><td style="padding: 6px 10px;">2025</td><td style="padding: 6px 10px; text-align: right;">28,000,000</td><td style="padding: 6px 10px; text-align: right; color: #3b82f6;">26,500,000</td><td style="padding: 6px 10px; text-align: right;">94.6%</td></tr>
+                <tr style="border-top: 1px solid #f3f4f6;"><td style="padding: 6px 10px;">2026</td><td style="padding: 6px 10px; text-align: right;">32,500,000</td><td style="padding: 6px 10px; text-align: right; color: #3b82f6;">25,300,000</td><td style="padding: 6px 10px; text-align: right;">77.8%</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+            <div style="padding: 10px 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-weight: 600; font-size: 13px;">부가세 현황</div>
+            <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
+              <thead><tr style="background: #f9fafb;">
+                <th style="padding: 6px 10px; text-align: left; font-weight: 500; color: #6b7280;">연도</th>
+                <th style="padding: 6px 10px; text-align: right; font-weight: 500; color: #6b7280;">발생</th>
+                <th style="padding: 6px 10px; text-align: right; font-weight: 500; color: #6b7280;">정산</th>
+                <th style="padding: 6px 10px; text-align: right; font-weight: 500; color: #6b7280;">미정산</th>
+              </tr></thead>
+              <tbody>
+                <tr style="border-top: 1px solid #f3f4f6;"><td style="padding: 6px 10px;">2025</td><td style="padding: 6px 10px; text-align: right;">2,800,000</td><td style="padding: 6px 10px; text-align: right;">2,650,000</td><td style="padding: 6px 10px; text-align: right;">150,000</td></tr>
+                <tr style="border-top: 1px solid #f3f4f6;"><td style="padding: 6px 10px;">2026</td><td style="padding: 6px 10px; text-align: right;">3,250,000</td><td style="padding: 6px 10px; text-align: right;">2,530,000</td><td style="padding: 6px 10px; text-align: right;">720,000</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 월별 차트 -->
+        <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+          <div style="padding: 10px 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-weight: 600; font-size: 13px;">2026년 월별 매출/수금</div>
+          <div style="padding: 20px; display: flex; align-items: end; gap: 16px; height: 160px;">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <div style="display: flex; gap: 2px; align-items: end; height: 100px;">
+                <div style="width: 16px; background: #6366f1; border-radius: 3px 3px 0 0; height: 80px;"></div>
+                <div style="width: 16px; background: #a5b4fc; border-radius: 3px 3px 0 0; height: 60px;"></div>
+              </div>
+              <span style="font-size: 10px; color: #6b7280;">1월</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <div style="display: flex; gap: 2px; align-items: end; height: 100px;">
+                <div style="width: 16px; background: #6366f1; border-radius: 3px 3px 0 0; height: 100px;"></div>
+                <div style="width: 16px; background: #a5b4fc; border-radius: 3px 3px 0 0; height: 45px;"></div>
+              </div>
+              <span style="font-size: 10px; color: #6b7280;">2월</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <div style="display: flex; gap: 2px; align-items: end; height: 100px;">
+                <div style="width: 16px; background: #6366f1; border-radius: 3px 3px 0 0; height: 50px;"></div>
+                <div style="width: 16px; background: #a5b4fc; border-radius: 3px 3px 0 0; height: 30px;"></div>
+              </div>
+              <span style="font-size: 10px; color: #6b7280;">3월</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+              <div style="display: flex; gap: 2px; align-items: end; height: 100px;">
+                <div style="width: 16px; background: #e5e7eb; border-radius: 3px 3px 0 0; height: 4px;"></div>
+                <div style="width: 16px; background: #e5e7eb; border-radius: 3px 3px 0 0; height: 4px;"></div>
+              </div>
+              <span style="font-size: 10px; color: #d1d5db;">4월</span>
+            </div>
+            <div style="flex: 1; text-align: center;"><span style="font-size: 10px; color: #d1d5db;">...</span></div>
+            <div style="flex: 1; text-align: center;"><span style="font-size: 10px; color: #d1d5db;">12월</span></div>
+          </div>
+          <div style="padding: 8px 20px; display: flex; gap: 16px; font-size: 10px; color: #6b7280;">
+            <span><span style="display: inline-block; width: 8px; height: 8px; background: #6366f1; border-radius: 2px;"></span> 매출액</span>
+            <span><span style="display: inline-block; width: 8px; height: 8px; background: #a5b4fc; border-radius: 2px;"></span> 수금액</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>"미수금 정산" 탭 클릭 시</h3>
+  <div class="mockup">
+    <div class="mockup-header">재무 페이지 — 미수금 정산 탭</div>
+    <div class="mockup-body" style="padding: 0; font-size: 12px;">
+
+      <!-- 탭 (미수금 정산 활성) -->
+      <div style="padding: 0 20px; border-bottom: 1px solid #e5e7eb; display: flex; gap: 0;">
+        <div style="padding: 10px 16px; font-size: 13px; color: #6b7280; cursor: pointer;">통계</div>
+        <div style="padding: 10px 16px; font-weight: 600; font-size: 13px; border-bottom: 2px solid #111; color: #111;">미수금 정산</div>
+        <div style="padding: 10px 16px; font-size: 13px; color: #6b7280; cursor: pointer;">원천세 관리</div>
+      </div>
+
+      <!-- 필터 바 -->
+      <div style="padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; background: #f9fafb;">
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <select style="font-size: 12px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px;"><option>전체</option><option>2026년 3월</option><option>2026년 2월</option></select>
+          <span style="color: #6b7280; font-size: 12px;">미수금 세금계산서 3건 · 7,200,000원</span>
+        </div>
+      </div>
+
+      <!-- 테이블 -->
+      <div style="padding: 0 20px 16px;">
+        <table style="width: 100%; font-size: 11px; border-collapse: collapse; margin-top: 12px;">
+          <thead><tr style="border-bottom: 1px solid #e5e7eb;">
+            <th style="padding: 8px 6px; text-align: left; width: 30px;"><input type="checkbox"></th>
+            <th style="padding: 8px 6px; text-align: left; font-weight: 500; color: #6b7280;">프로젝트</th>
+            <th style="padding: 8px 6px; text-align: left; font-weight: 500; color: #6b7280;">클라이언트</th>
+            <th style="padding: 8px 6px; text-align: left; font-weight: 500; color: #6b7280;">유형</th>
+            <th style="padding: 8px 6px; text-align: right; font-weight: 500; color: #6b7280;">발행액</th>
+            <th style="padding: 8px 6px; text-align: right; font-weight: 500; color: #6b7280;">잔여액</th>
+            <th style="padding: 8px 6px; text-align: left; font-weight: 500; color: #6b7280;">발행일</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+              <td style="padding: 8px 6px;"><input type="checkbox"></td>
+              <td style="padding: 8px 6px; font-weight: 500;">ABC 홈페이지</td>
+              <td style="padding: 8px 6px; color: #6b7280;">ABC Corp</td>
+              <td style="padding: 8px 6px;"><span style="background: #f3f4f6; padding: 0 4px; border-radius: 3px; font-size: 10px;">잔금</span></td>
+              <td style="padding: 8px 6px; text-align: right;">2,750,000원</td>
+              <td style="padding: 8px 6px; text-align: right; font-weight: 600;">2,750,000원</td>
+              <td style="padding: 8px 6px; color: #6b7280;">2026-02-15</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+              <td style="padding: 8px 6px;"><input type="checkbox" checked></td>
+              <td style="padding: 8px 6px; font-weight: 500;">XYZ 앱 개발</td>
+              <td style="padding: 8px 6px; color: #6b7280;">XYZ Inc</td>
+              <td style="padding: 8px 6px;"><span style="background: #f3f4f6; padding: 0 4px; border-radius: 3px; font-size: 10px;">계약금</span></td>
+              <td style="padding: 8px 6px; text-align: right;">3,300,000원</td>
+              <td style="padding: 8px 6px; text-align: right; font-weight: 600;">3,300,000원</td>
+              <td style="padding: 8px 6px; color: #6b7280;">2026-03-01</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- 일괄 처리 바 -->
+        <div style="margin-top: 12px; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f8fafc; display: flex; align-items: center; gap: 12px;">
+          <span style="font-weight: 500;">1건 선택</span>
+          <input type="date" value="2026-03-20" style="font-size: 12px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+          <button style="font-size: 12px; padding: 5px 14px; background: #111; color: white; border: none; border-radius: 6px;">수금 완료 처리</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>사이드바 네비게이션 변경</h3>
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">현재</div>
+      <div class="mockup-body" style="padding: 0; font-size: 12px;">
+        <div style="padding: 6px 12px; font-size: 10px; font-weight: 600; color: #999; text-transform: uppercase;">영업</div>
+        <div style="padding: 6px 12px;">견적서 관리</div>
+        <div style="padding: 6px 12px;">클라이언트 관리</div>
+        <div style="padding: 6px 12px;">파트너 관리</div>
+        <div style="padding: 6px 12px; color: #3b82f6;">매출/수금 통계</div>
+        <div style="padding: 6px 12px; color: #f59e0b;">정산</div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; font-size: 24px; color: #6b7280;">→</div>
+    <div class="mockup">
+      <div class="mockup-header">변경 후</div>
+      <div class="mockup-body" style="padding: 0; font-size: 12px;">
+        <div style="padding: 6px 12px; font-size: 10px; font-weight: 600; color: #999; text-transform: uppercase;">영업</div>
+        <div style="padding: 6px 12px;">견적서 관리</div>
+        <div style="padding: 6px 12px;">클라이언트 관리</div>
+        <div style="padding: 6px 12px;">파트너 관리</div>
+        <div style="padding: 6px 12px; font-weight: 500; background: rgba(99,102,241,0.08); border-left: 2px solid #6366f1;">재무</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="options">
+    <div class="option" data-choice="approve-financial" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>좋다, 이 구조로 진행</h3>
+        <p>KPI 카드 + 탭(통계/미수금 정산/원천세) 구조. 사이드바 메뉴 1개로 통합.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="adjust-financial" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>조정이 필요하다</h3>
+        <p>탭 구성이나 KPI 카드 등에 대해 더 논의하고 싶다.</p>
+      </div>
+    </div>
+  </div>
+</div>

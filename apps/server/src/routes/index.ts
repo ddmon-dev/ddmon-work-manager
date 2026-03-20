@@ -17,6 +17,7 @@ import partnersRouter from "./partners";
 import clientEnvironmentsRouter from "./client-environments";
 import filesRouter from "./files";
 import trashRouter from "./trash";
+import settlementRouter from "./settlement";
 import uploadsRouter from "./uploads";
 import type { AppVariables } from "../lib/types";
 
@@ -30,6 +31,7 @@ api.route("/estimates", estimatesRouter);
 api.route("/projects", projectsRouter);
 api.route("/project-schedules", projectSchedulesRouter);
 api.route("/revenue", revenueRouter);
+api.route("/settlement", settlementRouter);
 api.route("/schedules", schedulesRouter);
 api.route("/todos", todosRouter);
 api.route("/mindnotes", mindnotesRouter);

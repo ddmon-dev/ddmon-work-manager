@@ -7,7 +7,7 @@ import {
   estimateItemGroups,
   estimateItems,
 } from "./estimates";
-import { projects, projectPayments, projectMemos } from "./projects";
+import { projects, projectInvoices, projectCollections, projectMemos, projectExpenses, partnerPayments } from "./projects";
 import { projectScheduleLanes, projectSchedules } from "./project-schedules";
 import { todos, todoTimeBlocks } from "./todos";
 import { mindnotes } from "./mindnotes";
@@ -83,19 +83,37 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     fields: [projects.estimateNumber],
     references: [estimateSeries.estimateNumber],
   }),
-  payments: many(projectPayments),
+  invoices: many(projectInvoices),
+  collections: many(projectCollections),
+  expenses: many(projectExpenses),
+  partnerPayments: many(partnerPayments),
   memos: many(projectMemos),
   projectSchedules: many(projectSchedules),
   lanes: many(projectScheduleLanes),
   projectPartners: many(projectPartners),
 }));
 
-export const projectPaymentsRelations = relations(
-  projectPayments,
+export const projectInvoicesRelations = relations(
+  projectInvoices,
+  ({ one, many }) => ({
+    project: one(projects, {
+      fields: [projectInvoices.projectId],
+      references: [projects.id],
+    }),
+    collections: many(projectCollections),
+  })
+);
+
+export const projectCollectionsRelations = relations(
+  projectCollections,
   ({ one }) => ({
     project: one(projects, {
-      fields: [projectPayments.projectId],
+      fields: [projectCollections.projectId],
       references: [projects.id],
+    }),
+    invoice: one(projectInvoices, {
+      fields: [projectCollections.invoiceId],
+      references: [projectInvoices.id],
     }),
   })
 );
@@ -104,6 +122,24 @@ export const projectMemosRelations = relations(projectMemos, ({ one }) => ({
   project: one(projects, {
     fields: [projectMemos.parentId],
     references: [projects.id],
+  }),
+}));
+
+export const projectExpensesRelations = relations(projectExpenses, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectExpenses.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const partnerPaymentsRelations = relations(partnerPayments, ({ one }) => ({
+  project: one(projects, {
+    fields: [partnerPayments.projectId],
+    references: [projects.id],
+  }),
+  partner: one(partners, {
+    fields: [partnerPayments.partnerId],
+    references: [partners.id],
   }),
 }));
 
@@ -155,6 +191,7 @@ export const libraryDocumentsRelations = relations(libraryDocuments, ({ one }) =
 export const partnersRelations = relations(partners, ({ many }) => ({
   memos: many(partnerMemos),
   projectPartners: many(projectPartners),
+  partnerPayments: many(partnerPayments),
 }));
 
 export const partnerMemosRelations = relations(partnerMemos, ({ one }) => ({

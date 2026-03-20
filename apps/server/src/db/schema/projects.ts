@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { clients } from "./clients";
 import { estimateSeries } from "./estimates";
+import { partners } from "./partners";
 
 export const projects = pgTable("projects", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -43,14 +44,63 @@ export const projects = pgTable("projects", {
   deleted: boolean("deleted").notNull().default(false),
 });
 
-export const projectPayments = pgTable("project_payments", {
+export const projectInvoices = pgTable("project_invoices", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  paymentType: text("payment_type").notNull().default("deposit"), // deposit, interim, balance, additional
+  description: text("description").notNull().default(""),
+  amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
+  issueDate: date("issue_date").notNull(),
+  deleted: boolean("deleted").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const projectCollections = pgTable("project_collections", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  invoiceId: uuid("invoice_id")
+    .references(() => projectInvoices.id, { onDelete: "cascade" }),
+  amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
+  paidDate: date("paid_date").notNull(),
+  paymentType: text("payment_type").notNull().default("deposit"), // deposit, interim, balance, additional
+  description: text("description").notNull().default(""),
+  deleted: boolean("deleted").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const projectExpenses = pgTable("project_expenses", {
   id: uuid("id").primaryKey().defaultRandom(),
   projectId: uuid("project_id")
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
   description: text("description").notNull(),
   amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
-  paidDate: date("paid_date").notNull().default(new Date().toISOString().split("T")[0]),
+  expenseDate: date("expense_date").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deleted: boolean("deleted").notNull().default(false),
+});
+
+export const partnerPayments = pgTable("partner_payments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  partnerId: uuid("partner_id")
+    .notNull()
+    .references(() => partners.id, { onDelete: "restrict" }),
+  description: text("description").notNull(),
+  amount: numeric("amount", { precision: 15, scale: 2 }).notNull().default("0"),
+  paidDate: date("paid_date").notNull(),
+  taxType: text("tax_type").notNull().default("withholding"), // withholding, vat
+  withholdingReported: boolean("withholding_reported").notNull().default(false),
+  withholdingReportedDate: date("withholding_reported_date"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deleted: boolean("deleted").notNull().default(false),

@@ -1,0 +1,94 @@
+<h2>현재 재무 모듈 구조 진단</h2>
+<p class="subtitle">사이드바 네비게이션과 페이지 간 관계를 살펴봅시다</p>
+
+<div class="section">
+  <h3>현재 사이드바 구조</h3>
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">현재 네비게이션</div>
+      <div class="mockup-body" style="padding: 0;">
+        <div style="font-size: 13px;">
+          <div style="padding: 8px 16px; font-weight: 600; color: #666; font-size: 11px; text-transform: uppercase;">프로젝트</div>
+          <div style="padding: 8px 16px; border-left: 2px solid transparent;">프로젝트 관리</div>
+          <div style="padding: 8px 16px; border-left: 2px solid transparent;">프로젝트 일정</div>
+          <div style="padding: 8px 16px; font-weight: 600; color: #666; font-size: 11px; text-transform: uppercase; margin-top: 12px;">영업</div>
+          <div style="padding: 8px 16px; border-left: 2px solid transparent;">견적서 관리</div>
+          <div style="padding: 8px 16px; border-left: 2px solid transparent;">클라이언트 관리</div>
+          <div style="padding: 8px 16px; border-left: 2px solid transparent;">파트너 관리</div>
+          <div style="padding: 8px 16px; border-left: 2px solid #3b82f6; background: rgba(59,130,246,0.08); font-weight: 500;">매출/수금 통계</div>
+          <div style="padding: 8px 16px; border-left: 2px solid #f59e0b; background: rgba(245,158,11,0.08); font-weight: 500;">정산</div>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="padding: 16px; border-radius: 8px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3);">
+        <div style="font-weight: 600; color: #3b82f6; margin-bottom: 8px;">매출/수금 통계 (Revenue)</div>
+        <ul style="font-size: 13px; margin: 0; padding-left: 16px; color: #666;">
+          <li>전년/당년 수금 현황 표</li>
+          <li>부가세 현황 표</li>
+          <li>월별 매출/수금 막대그래프</li>
+          <li>미수금 프로젝트 목록</li>
+        </ul>
+        <div style="margin-top: 8px; font-size: 12px; color: #ef4444;">읽기 전용 — 액션 불가</div>
+      </div>
+      <div style="padding: 16px; border-radius: 8px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);">
+        <div style="font-weight: 600; color: #f59e0b; margin-bottom: 8px;">정산 (Settlement)</div>
+        <ul style="font-size: 13px; margin: 0; padding-left: 16px; color: #666;">
+          <li>미수금 세금계산서 테이블 + 일괄 수금</li>
+          <li>원천세 미신고 테이블 + 일괄 신고</li>
+        </ul>
+        <div style="margin-top: 8px; font-size: 12px; color: #ef4444;">월별 필터만 — 큰 그림 없음</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>핵심 문제</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+    <div style="padding: 16px; border-radius: 8px; border: 1px solid #ef4444; background: rgba(239,68,68,0.05);">
+      <div style="font-weight: 600; margin-bottom: 4px;">1. 역할 분리가 모호</div>
+      <p style="font-size: 13px; color: #666; margin: 0;">"매출 통계"와 "정산" 모두 미수금을 다루지만, 하나는 보기만, 하나는 처리만. 사용자가 어디로 가야 할지 헷갈림.</p>
+    </div>
+    <div style="padding: 16px; border-radius: 8px; border: 1px solid #ef4444; background: rgba(239,68,68,0.05);">
+      <div style="font-weight: 600; margin-bottom: 4px;">2. 동선 단절</div>
+      <p style="font-size: 13px; color: #666; margin: 0;">Revenue에서 미수금 프로젝트를 보고 → Settlement로 이동 → 같은 데이터를 다시 찾아야 함. 두 페이지 간 연결 없음.</p>
+    </div>
+    <div style="padding: 16px; border-radius: 8px; border: 1px solid #ef4444; background: rgba(239,68,68,0.05);">
+      <div style="font-weight: 600; margin-bottom: 4px;">3. 프로젝트 상세 과부하</div>
+      <p style="font-size: 13px; color: #666; margin: 0;">좌측 컬럼에 기본정보 + 금액요약 + 세금계산서 + 거래내역 + 거래폼이 세로로 쌓여 스크롤 과다. 재무 정보만으로 화면 점유.</p>
+    </div>
+    <div style="padding: 16px; border-radius: 8px; border: 1px solid #ef4444; background: rgba(239,68,68,0.05);">
+      <div style="font-weight: 600; margin-bottom: 4px;">4. 정보 계층 부재</div>
+      <p style="font-size: 13px; color: #666; margin: 0;">전체 매출 → 프로젝트별 → 개별 거래의 드릴다운 구조가 없음. 각 레벨이 독립적으로 존재.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>이 문제를 어떻게 접근할까요?</h3>
+  <p class="subtitle">아래에서 선호하는 방향을 선택해주세요</p>
+  <div class="options">
+    <div class="option" data-choice="merge" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>통합: Revenue + Settlement → 하나의 "재무" 페이지</h3>
+        <p>탭/섹션으로 통계 + 정산 액션을 한 곳에서. 사이드바 메뉴 1개로 줄임. 통계를 보다가 바로 미수금 처리 가능.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="hub-spoke" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>허브-스포크: "재무 대시보드" 중심 + 정산 액션 인라인</h3>
+        <p>대시보드에서 KPI 카드(매출/미수금/수금률) → 미수금 클릭 시 바로 인라인 정산. 별도 정산 페이지 제거.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="keep-separate" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>유지하되 개선: 2페이지 유지 + 상호 링크 강화</h3>
+        <p>Revenue에서 미수금 클릭 → Settlement 해당 건으로 이동. 각 페이지 역할 명확히 재정의. 네비게이션 그룹 변경.</p>
+      </div>
+    </div>
+  </div>
+</div>

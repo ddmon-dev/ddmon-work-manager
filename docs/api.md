@@ -122,13 +122,22 @@ requireAuth → requireSuperAdmin (선택적)
 |--------|------|------|
 | GET | `/projects` | 목록 (페이지네이션, 검색: name, projectNumber, clientName) |
 | POST | `/projects` | 생성 (프로젝트 번호 자동 생성) |
-| GET | `/projects/:id` | 상세 (payments/memos/projectPartners 포함) |
+| GET | `/projects/:id` | 상세 (invoices/collections/expenses/partnerPayments/memos/projectPartners 포함) |
 | PATCH | `/projects/:id` | 수정 |
 | DELETE | `/projects/:id` | 소프트 삭제 |
 | PATCH | `/projects/:id/status` | 상태 변경 |
-| POST | `/projects/:id/payments` | 입금 내역 생성 |
-| PATCH | `/projects/payments/:id` | 입금 내역 수정 |
-| DELETE | `/projects/payments/:id` | 입금 내역 소프트 삭제 |
+| POST | `/projects/:id/invoices` | 세금계산서 발행 (`paymentType`, `description`, `amount`, `issueDate`) |
+| PATCH | `/projects/invoices/:id` | 세금계산서 수정 (`paymentType?`, `description?`, `amount?`, `issueDate?`) |
+| DELETE | `/projects/invoices/:id` | 세금계산서 소프트 삭제 |
+| POST | `/projects/:id/collections` | 수금 등록 (`invoiceId?`, `description`, `amount`, `paidDate`, `paymentType`) |
+| PATCH | `/projects/collections/:id` | 수금 수정 |
+| DELETE | `/projects/collections/:id` | 수금 소프트 삭제 |
+| POST | `/projects/:id/expenses` | 지출 생성 (`description`, `amount`, `expenseDate`) |
+| PATCH | `/projects/expenses/:id` | 지출 수정 |
+| DELETE | `/projects/expenses/:id` | 지출 소프트 삭제 |
+| POST | `/projects/:id/partner-payments` | 파트너 지급 생성 (`partnerId`, `description`, `amount`, `paidDate`) |
+| PATCH | `/projects/partner-payments/:id` | 파트너 지급 수정 (`withholdingReported`, `withholdingReportedDate` 포함) |
+| DELETE | `/projects/partner-payments/:id` | 파트너 지급 소프트 삭제 |
 | POST | `/projects/:id/memos` | 메모 생성 |
 | PATCH | `/projects/memos/:id` | 메모 수정 |
 | DELETE | `/projects/memos/:id` | 메모 소프트 삭제 |
@@ -244,6 +253,20 @@ userId 필터링: 모든 메모 API는 `user.id`로 자동 필터링 (사용자�
 **집계 기준:**
 - 연도별 요약 카드: 매출액·수금액 모두 **프로젝트 계약일 연도** 기준으로 집계
 - 월별 차트: 매출액은 계약일, 수금액은 **실제 입금일** 기준 (현금 흐름 반영)
+
+### Settlement (`/api/settlement`)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/settlement` | 월별 미처리 건 조회 (`?year=&month=`) |
+| PATCH | `/settlement/collections/batch` | 미수금 세금계산서 일괄 수금 완료 (`{ invoiceIds, paidDate }`) |
+| PATCH | `/settlement/withholdings/batch` | 원천세 일괄 신고 마크 (`{ partnerPaymentIds, reportedDate }`) |
+
+**GET 응답**: `{ uncollectedInvoices, unreportedPartnerPayments, summary: { uncollectedCount, unreportedCount } }`
+
+- 미수금 세금계산서: `project_invoices LEFT JOIN project_collections` → `SUM(collections.amount) < invoice.amount` AND `tax_type='vat'` AND 발행일 해당 월. 응답에 `collectedAmount`, `remainingAmount` 포함
+- 원천세 미신고: `partner_payments` WHERE `withholding_reported=false` AND 해당 월
+- 일괄 수금 완료: 각 invoice의 잔여 미수금 금액으로 `project_collections` INSERT
 
 ### Library Boards (`/api/library-boards`)
 

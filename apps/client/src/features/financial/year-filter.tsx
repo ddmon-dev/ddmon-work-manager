@@ -1,4 +1,3 @@
-import { useQueryParams } from "@/shared/hooks/use-query-params";
 import {
   Select,
   SelectContent,
@@ -10,16 +9,14 @@ import {
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i);
 
-export function YearFilter() {
-  const { get, set } = useQueryParams();
-  const currentYear = get("year") ?? String(CURRENT_YEAR);
+interface YearFilterProps {
+  value: number;
+  onChange: (year: number) => void;
+}
 
-  function handleChange(value: string) {
-    set({ year: value });
-  }
-
+export function YearFilter({ value, onChange }: YearFilterProps) {
   return (
-    <Select value={currentYear} onValueChange={handleChange}>
+    <Select value={String(value)} onValueChange={(v) => onChange(Number(v))}>
       <SelectTrigger className="w-[100px]">
         <SelectValue />
       </SelectTrigger>

@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "../db";
-import { projects, projectPayments, clients } from "../db/schema";
+import { projects, projectCollections, clients } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { softDeleteFilter, getExpectedReceivable } from "../lib/query-helpers";
@@ -25,8 +25,8 @@ app.get("/", async (c) => {
   const currentYear = new Date().getFullYear();
   const prevYear = currentYear - 1;
 
-  // 1. 프로젝트 + 수금 병렬 조회
-  const [allProjects, allPayments] = await Promise.all([
+  // 1. 프로젝트 + 수금(collections) 병렬 조회
+  const [allProjects, allCollections] = await Promise.all([
     db
       .select({
         id: projects.id,
@@ -46,14 +46,15 @@ app.get("/", async (c) => {
           sql`${projects.status} != 'discarded'`
         )
       ),
+    // 통합 수금: project_collections 단일 소스
     db
       .select({
-        projectId: projectPayments.projectId,
-        amount: projectPayments.amount,
-        paidDate: projectPayments.paidDate,
+        projectId: projectCollections.projectId,
+        amount: projectCollections.amount,
+        paidDate: projectCollections.paidDate,
       })
-      .from(projectPayments)
-      .where(softDeleteFilter(projectPayments.deleted)),
+      .from(projectCollections)
+      .where(softDeleteFilter(projectCollections.deleted)),
   ]);
 
   const validProjectIds = new Set(allProjects.map((p) => p.id));
@@ -103,7 +104,7 @@ app.get("/", async (c) => {
     }
   }
 
-  // 수금 집계
+  // 수금 집계 (collections 단일 소스)
   let allPaymentTotal = 0;
   const paidByProjectId = new Map<string, number>();
 
@@ -122,16 +123,17 @@ app.get("/", async (c) => {
     }
   }
 
-  for (const pay of allPayments) {
-    if (!validProjectIds.has(pay.projectId)) continue;
-    const amount = Number(pay.amount);
+  // 수금 처리: collections 단일 소스
+  for (const col of allCollections) {
+    if (!validProjectIds.has(col.projectId)) continue;
+    const amount = Number(col.amount);
     allPaymentTotal += amount;
 
-    const current = paidByProjectId.get(pay.projectId) ?? 0;
-    paidByProjectId.set(pay.projectId, current + amount);
+    const current = paidByProjectId.get(col.projectId) ?? 0;
+    paidByProjectId.set(col.projectId, current + amount);
 
     // 수금은 프로젝트 계약연도 기준으로 집계
-    const contractYear = projectContractYearMap.get(pay.projectId);
+    const contractYear = projectContractYearMap.get(col.projectId);
     if (contractYear !== undefined) {
       const bucket = yearBuckets.get(contractYear);
       if (bucket) {
@@ -139,7 +141,7 @@ app.get("/", async (c) => {
       }
     }
 
-    const paidDate = new Date(pay.paidDate);
+    const paidDate = new Date(col.paidDate);
     if (paidDate.getFullYear() === chartYear) {
       monthlyPayment[paidDate.getMonth()] += amount;
     }

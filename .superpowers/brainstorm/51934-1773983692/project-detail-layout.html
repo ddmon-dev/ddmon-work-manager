@@ -1,0 +1,127 @@
+<h2>프로젝트 상세 — 재무 영역 레이아웃 개선안</h2>
+<p class="subtitle">현재 좌측 컬럼 과부하 문제를 해결하는 방법</p>
+
+<div class="section">
+  <h3>현재 구조 (문제)</h3>
+  <div class="mockup">
+    <div class="mockup-header">프로젝트 상세 — 현재 좌측 컬럼</div>
+    <div class="mockup-body" style="padding: 0; max-height: 400px; overflow-y: auto;">
+      <div style="font-size: 12px;">
+        <!-- 기본정보 -->
+        <div style="padding: 16px; border-bottom: 1px solid #e5e7eb;">
+          <div style="font-weight: 700; margin-bottom: 8px; color: #374151;">기본정보</div>
+          <div style="display: grid; grid-template-columns: 80px 1fr; gap: 4px 8px; color: #6b7280;">
+            <span>프로젝트번호</span><span style="color: #111;">P-2026-001</span>
+            <span>클라이언트</span><span style="color: #111;">ABC Corp</span>
+            <span>상태</span><span><span style="background: #dbeafe; color: #1d4ed8; padding: 1px 6px; border-radius: 4px; font-size: 11px;">진행</span></span>
+            <span>작업단계</span><span style="color: #111;">작업중</span>
+            <span>계약일</span><span style="color: #111;">2026-01-15</span>
+            <span>공급가액</span><span style="color: #111;">5,000,000원</span>
+            <span>세금유형</span><span style="color: #111;">부가세(10%)</span>
+          </div>
+        </div>
+        <!-- 금액요약 -->
+        <div style="padding: 16px; border-bottom: 1px solid #e5e7eb;">
+          <div style="font-weight: 700; margin-bottom: 8px; color: #374151;">금액 요약</div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>공급가액</span><span style="font-weight: 600;">5,000,000원</span></div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px; padding-left: 16px; color: #6b7280; font-size: 11px;"><span>입금</span><span style="color: #3b82f6;">2,750,000원</span></div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px; padding-left: 16px; color: #6b7280; font-size: 11px;"><span>잔금</span><span>2,250,000원</span></div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>부가세</span><span style="font-weight: 600;">500,000원</span></div>
+          <div style="display: flex; justify-content: space-between; padding-left: 16px; color: #6b7280; font-size: 11px;"><span>입금</span><span style="color: #3b82f6;">0원</span></div>
+        </div>
+        <!-- 세금계산서 -->
+        <div style="padding: 16px; border-bottom: 1px solid #e5e7eb;">
+          <div style="font-weight: 700; margin-bottom: 8px; color: #374151;">세금계산서</div>
+          <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+            <select style="font-size: 11px; padding: 4px; border: 1px solid #d1d5db; border-radius: 4px;"><option>계약금</option></select>
+            <input placeholder="내용" style="flex: 1; font-size: 11px; padding: 4px; border: 1px solid #d1d5db; border-radius: 4px;">
+            <input placeholder="VAT포함" style="width: 80px; font-size: 11px; padding: 4px; border: 1px solid #d1d5db; border-radius: 4px;">
+            <button style="font-size: 11px; padding: 4px 8px; background: #111; color: white; border: none; border-radius: 12px;">발행</button>
+          </div>
+          <div style="border: 1px solid #e5e7eb; border-radius: 6px;">
+            <div style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
+              <div style="display: flex; justify-content: space-between;"><span><span style="background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 10px;">계약금</span> 세금계산서</span><span style="color: #3b82f6; font-weight: 600;">2,750,000원</span></div>
+              <div style="display: flex; justify-content: space-between; color: #6b7280; font-size: 11px; margin-top: 2px;"><span>발행 2026-01-20</span><span style="background: #dcfce7; color: #166534; padding: 0 4px; border-radius: 3px; font-size: 10px;">수금 완료</span></div>
+              <div style="margin-top: 6px; padding-left: 12px; border-left: 2px solid #e5e7eb; font-size: 11px; color: #6b7280;">
+                <div style="font-size: 10px; font-weight: 500; margin-bottom: 2px;">수금 1건</div>
+                <div style="display: flex; justify-content: space-between;"><span>수금 2026-01-25</span><span style="color: #3b82f6;">2,750,000원</span></div>
+              </div>
+            </div>
+            <div style="padding: 8px 12px;">
+              <div style="display: flex; justify-content: space-between;"><span><span style="background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 10px;">잔금</span> 세금계산서</span><span style="color: #3b82f6; font-weight: 600;">2,750,000원</span></div>
+              <div style="display: flex; justify-content: space-between; color: #6b7280; font-size: 11px; margin-top: 2px;"><span>발행 2026-02-15</span><span style="background: #fef3c7; color: #92400e; padding: 0 4px; border-radius: 3px; font-size: 10px;">미수금</span></div>
+            </div>
+          </div>
+          <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">미수금 1건 / 2,750,000원</div>
+        </div>
+        <!-- 거래 내역 -->
+        <div style="padding: 16px; border-bottom: 1px solid #e5e7eb;">
+          <div style="font-weight: 700; margin-bottom: 8px; color: #374151;">거래 내역</div>
+          <div style="border: 1px solid #e5e7eb; border-radius: 6px;">
+            <div style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #ef4444;"></span><span style="color: #6b7280; font-size: 11px;">지출</span><span>서버 호스팅 비용</span></div>
+                <span style="color: #ef4444; font-weight: 600;">-50,000원</span>
+              </div>
+              <div style="color: #6b7280; font-size: 11px;">2026-02-01</div>
+            </div>
+            <div style="padding: 8px 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #f97316;"></span><span style="color: #6b7280; font-size: 11px;">파트너지급</span><span style="background: #fff7ed; color: #9a3412; padding: 0 4px; border-radius: 3px; font-size: 10px;">김파트너</span><span>2월 작업분</span></div>
+                <span style="color: #ef4444; font-weight: 600;">-1,000,000원</span>
+              </div>
+              <div style="display: flex; gap: 8px; color: #6b7280; font-size: 11px;">
+                <span>2026-02-28</span>
+                <label style="display: flex; align-items: center; gap: 3px;"><input type="checkbox"> 원천세 신고</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- 거래 입력 폼 (sticky) -->
+        <div style="padding: 16px; background: rgba(255,255,255,0.9); border-top: 1px solid #e5e7eb; position: sticky; bottom: 0;">
+          <div style="display: flex; gap: 4px; margin-bottom: 6px;">
+            <button style="font-size: 11px; padding: 3px 8px; background: #111; color: white; border: none; border-radius: 4px;">지출</button>
+            <button style="font-size: 11px; padding: 3px 8px; background: #f3f4f6; border: none; border-radius: 4px;">파트너지급</button>
+          </div>
+          <div style="display: flex; gap: 4px;">
+            <input placeholder="내용" style="flex: 1; font-size: 11px; padding: 4px; border: 1px solid #d1d5db; border-radius: 4px;">
+            <input placeholder="금액" style="width: 80px; font-size: 11px; padding: 4px; border: 1px solid #d1d5db; border-radius: 4px;">
+            <button style="font-size: 11px; padding: 4px 8px; background: #111; color: white; border: none; border-radius: 12px;">추가</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="text-align: center; padding: 8px; color: #ef4444; font-size: 13px; font-weight: 500;">
+    이 전체가 좌측 한 컬럼에 세로로 쌓여 있음 — 스크롤 과다
+  </div>
+</div>
+
+<div class="section">
+  <h3>개선안 선택</h3>
+  <p class="subtitle">재무 영역의 정보 밀도를 줄이는 방법</p>
+
+  <div class="options">
+    <div class="option" data-choice="tabs" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>탭 분리: 기본정보 | 재무</h3>
+        <p>좌측 컬럼 상단에 탭을 두어 <strong>"기본정보"</strong>와 <strong>"재무"</strong>를 전환. 기본정보 탭에는 프로젝트 정보만, 재무 탭에는 금액요약 + 세금계산서 + 거래내역 + 입력폼. <strong>한 번에 하나만 보여서 깔끔하지만, 탭 전환 필요.</strong></p>
+      </div>
+    </div>
+    <div class="option" data-choice="collapse" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>접이식 섹션 (Collapsible)</h3>
+        <p>세금계산서, 거래내역을 <strong>접을 수 있는 아코디언</strong>으로. 금액요약은 항상 표시, 나머지는 필요할 때 펼침. <strong>전체 맥락을 한 눈에 보되, 디테일은 숨김.</strong></p>
+      </div>
+    </div>
+    <div class="option" data-choice="compact" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>요약 카드 + 팝업 상세</h3>
+        <p>금액요약을 <strong>컴팩트 카드</strong>로 표시하고, 세금계산서/거래내역은 <strong>"N건" 배지 클릭 시 팝오버나 드로어</strong>로 열림. 거래 입력도 팝오버. <strong>좌측 컬럼이 가장 짧아지지만, 깊이가 생김.</strong></p>
+      </div>
+    </div>
+  </div>
+</div>

@@ -62,6 +62,10 @@ export const queryKeys = {
     all: ["revenue"] as const,
     byYear: (year: number) => ["revenue", year] as const,
   },
+  settlement: {
+    all: ["settlement"] as const,
+    byMonth: (year: number, month: number) => ["settlement", year, month] as const,
+  },
   businessInfo: {
     single: ["business-info"] as const,
   },

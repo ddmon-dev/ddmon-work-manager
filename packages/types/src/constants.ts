@@ -12,6 +12,24 @@ export const TAX_TYPE_LABELS: Record<TaxType, string> = {
   vat: '부가세(10%)',
 } as const;
 
+// ── 수금 종류 ──────────────────────────────────────────────────────
+
+export const PAYMENT_TYPE = {
+  DEPOSIT: "deposit",
+  INTERIM: "interim",
+  BALANCE: "balance",
+  ADDITIONAL: "additional",
+} as const;
+
+export type PaymentType = (typeof PAYMENT_TYPE)[keyof typeof PAYMENT_TYPE];
+
+export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
+  deposit: "계약금",
+  interim: "중도금",
+  balance: "잔금",
+  additional: "추가금",
+} as const;
+
 // ── 할인 ──────────────────────────────────────────────────────
 
 export const DISCOUNT_TYPE = {
