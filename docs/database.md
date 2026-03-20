@@ -28,7 +28,8 @@ Admins = Better Auth user 테이블 (별도 admins 테이블 없음).
 | `estimate_item_groups` | 견적서 아이템 그룹 | uuid | CASCADE |
 | `estimate_items` | 견적서 아이템 | uuid | CASCADE |
 | `projects` | 프로젝트 | uuid | 소프트 |
-| `project_payments` | 입금 내역 | uuid | 소프트 |
+| `project_invoices` | 세금계산서 (VAT 프로젝트) | uuid | 소프트 |
+| `project_payments` | 입금 내역 (원천징수 프로젝트) | uuid | 소프트 |
 | `project_expenses` | 프로젝트 지출 내역 | uuid | 소프트 |
 | `partner_payments` | 파트너 지급 내역 | uuid | 소프트 |
 | `project_memos` | 프로젝트 메모 | uuid | 소프트 |
@@ -63,7 +64,8 @@ partners ─────┬── partner_memos (1:N, CASCADE)
               ├── project_partners (1:N, RESTRICT)
               └── partner_payments (1:N, RESTRICT)
 
-projects ─────┬── project_payments (1:N, CASCADE)
+projects ─────┬── project_invoices (1:N, CASCADE)
+              ├── project_payments (1:N, CASCADE)
               ├── project_expenses (1:N, CASCADE)
               ├── partner_payments (1:N, CASCADE)
               ├── project_memos (1:N, CASCADE)
@@ -117,7 +119,7 @@ files ─── files (self-ref, folderId → RESTRICT)
 `deleted` boolean 컬럼 + `updated_at` 타임스탬프.
 모든 SELECT에서 `softDeleteFilter(table.deleted)` 적용 필수.
 
-대상: clients, client_memos, estimates, projects, project_payments, project_expenses, partner_payments, project_memos, partners, partner_memos, user, library_boards, library_documents, files
+대상: clients, client_memos, estimates, projects, project_invoices, project_payments, project_expenses, partner_payments, project_memos, partners, partner_memos, user, library_boards, library_documents, files
 
 ### 하드 삭제
 

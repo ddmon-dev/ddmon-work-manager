@@ -122,12 +122,15 @@ requireAuth → requireSuperAdmin (선택적)
 |--------|------|------|
 | GET | `/projects` | 목록 (페이지네이션, 검색: name, projectNumber, clientName) |
 | POST | `/projects` | 생성 (프로젝트 번호 자동 생성) |
-| GET | `/projects/:id` | 상세 (payments/expenses/partnerPayments/memos/projectPartners 포함) |
+| GET | `/projects/:id` | 상세 (invoices/payments/expenses/partnerPayments/memos/projectPartners 포함) |
 | PATCH | `/projects/:id` | 수정 |
 | DELETE | `/projects/:id` | 소프트 삭제 |
 | PATCH | `/projects/:id/status` | 상태 변경 |
-| POST | `/projects/:id/payments` | 입금 내역 생성 (`paymentType` 필수) |
-| PATCH | `/projects/payments/:id` | 입금 내역 수정 (`paymentType?`, `invoiceIssued?`, `invoiceDate?` 포함) |
+| POST | `/projects/:id/invoices` | 세금계산서 발행 (`paymentType`, `description`, `amount`, `issueDate`) |
+| PATCH | `/projects/invoices/:id` | 세금계산서 수정 (`paymentType?`, `description?`, `amount?`, `issueDate?`, `paidDate?` nullable) |
+| DELETE | `/projects/invoices/:id` | 세금계산서 소프트 삭제 |
+| POST | `/projects/:id/payments` | 입금 내역 생성 (`paymentType` 필수, 원천징수 프로젝트용) |
+| PATCH | `/projects/payments/:id` | 입금 내역 수정 (`paymentType?`) |
 | DELETE | `/projects/payments/:id` | 입금 내역 소프트 삭제 |
 | POST | `/projects/:id/expenses` | 지출 생성 (`description`, `amount`, `expenseDate`) |
 | PATCH | `/projects/expenses/:id` | 지출 수정 |
@@ -256,12 +259,12 @@ userId 필터링: 모든 메모 API는 `user.id`로 자동 필터링 (사용자�
 | Method | Path | 설명 |
 |--------|------|------|
 | GET | `/settlement` | 월별 미처리 건 조회 (`?year=&month=`) |
-| PATCH | `/settlement/invoices/batch` | 세금계산서 일괄 발행 마크 (`{ paymentIds, invoiceDate }`) |
+| PATCH | `/settlement/collections/batch` | 미수금 세금계산서 일괄 수금 완료 (`{ invoiceIds, paidDate }`) |
 | PATCH | `/settlement/withholdings/batch` | 원천세 일괄 신고 마크 (`{ partnerPaymentIds, reportedDate }`) |
 
-**GET 응답**: `{ uninvoicedPayments, unreportedPartnerPayments, summary: { uninvoicedCount, unreportedCount } }`
+**GET 응답**: `{ uncollectedInvoices, unreportedPartnerPayments, summary: { uncollectedCount, unreportedCount } }`
 
-- 세금계산서 미발행: `project_payments` WHERE `tax_type='vat'` AND `invoice_issued=false` AND 해당 월
+- 미수금 세금계산서: `project_invoices` WHERE `paid_date IS NULL` AND `tax_type='vat'` AND 발행일 해당 월
 - 원천세 미신고: `partner_payments` WHERE `withholding_reported=false` AND 해당 월
 
 ### Library Boards (`/api/library-boards`)
