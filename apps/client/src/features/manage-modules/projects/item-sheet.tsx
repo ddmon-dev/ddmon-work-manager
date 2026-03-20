@@ -3,7 +3,7 @@ import { queryKeys } from "@/shared/lib/query-keys";
 import { fetchProject } from "./api";
 import { CONFIG } from "./config";
 import { WriteForm } from "./write-form";
-import { DetailView, ProjectDetailHeader } from "./detail-view";
+import { DetailView } from "./detail-view";
 import type { ProjectWithDetails } from "./types";
 
 export function ItemSheet() {
@@ -13,7 +13,7 @@ export function ItemSheet() {
       fetchFn={fetchProject}
       formComponent={WriteForm}
       viewComponent={DetailView}
-      viewHeader={ProjectDetailHeader}
+      hideViewHeader
       moduleName={CONFIG.moduleName}
       size={{ view: "full", modify: "lg", create: "lg" }}
     />

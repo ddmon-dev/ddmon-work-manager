@@ -183,6 +183,7 @@ interface ManageSheetProps<T> {
   formComponent?: React.ComponentType<{ id?: string; prevValues: T | null }>;
   viewComponent?: React.ComponentType<{ data: T; refetch: () => void }>;
   viewHeader?: React.ComponentType;
+  hideViewHeader?: boolean;
   size?: SizeKey | string | Partial<Record<ManageSheetMode, SizeKey | string>>;
   moduleName?: string;
 }
@@ -193,6 +194,7 @@ export function ManageSheet<T>({
   formComponent: FormComponent,
   viewComponent: ViewComponent,
   viewHeader: ViewHeader,
+  hideViewHeader,
   moduleName,
   size = "md",
 }: ManageSheetProps<T>) {
@@ -270,28 +272,39 @@ export function ManageSheet<T>({
       >
         <ManageSheetDataContext.Provider value={dataContextValue}>
           {!error && mode && (
-            <SheetHeader>
-              {mode === "view" && ViewHeader ? (
-                <>
-                  <SheetTitle className="sr-only">
-                    {VARIANTS[mode].title(moduleName)}
-                  </SheetTitle>
-                  <SheetDescription className="sr-only">
-                    {VARIANTS[mode].description}
-                  </SheetDescription>
-                  <ViewHeader />
-                </>
-              ) : (
-                <>
-                  <SheetTitle className="text-lg">
-                    {VARIANTS[mode].title(moduleName)}
-                  </SheetTitle>
-                  <SheetDescription className="text-sm">
-                    {VARIANTS[mode].description}
-                  </SheetDescription>
-                </>
-              )}
-            </SheetHeader>
+            hideViewHeader && mode === "view" ? (
+              <>
+                <SheetTitle className="sr-only">
+                  {VARIANTS[mode].title(moduleName)}
+                </SheetTitle>
+                <SheetDescription className="sr-only">
+                  {VARIANTS[mode].description}
+                </SheetDescription>
+              </>
+            ) : (
+              <SheetHeader>
+                {mode === "view" && ViewHeader ? (
+                  <>
+                    <SheetTitle className="sr-only">
+                      {VARIANTS[mode].title(moduleName)}
+                    </SheetTitle>
+                    <SheetDescription className="sr-only">
+                      {VARIANTS[mode].description}
+                    </SheetDescription>
+                    <ViewHeader />
+                  </>
+                ) : (
+                  <>
+                    <SheetTitle className="text-lg">
+                      {VARIANTS[mode].title(moduleName)}
+                    </SheetTitle>
+                    <SheetDescription className="text-sm">
+                      {VARIANTS[mode].description}
+                    </SheetDescription>
+                  </>
+                )}
+              </SheetHeader>
+            )
           )}
           {renderContent()}
         </ManageSheetDataContext.Provider>

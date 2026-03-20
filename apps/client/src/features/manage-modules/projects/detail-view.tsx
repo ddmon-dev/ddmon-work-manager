@@ -5,7 +5,6 @@ import {
   ManageSheetClose,
   ManageSheetModeChange,
   MemoSection,
-  useManageSheetData,
 } from "../_base/ui";
 import {
   useCreateProjectMemo,
@@ -34,24 +33,6 @@ function getDefaultPanel(data: ProjectWithDetails): PanelType {
   return "partner";
 }
 
-// ── 헤더 ────────────────────────────────────────────────────
-
-export function ProjectDetailHeader() {
-  const { prevValues: data } = useManageSheetData<ProjectWithDetails>();
-  if (!data) return null;
-
-  return (
-    <div>
-      <h2 className="text-xl font-semibold tracking-tight">{data.name}</h2>
-      {data.description && (
-        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-          {data.description}
-        </p>
-      )}
-    </div>
-  );
-}
-
 // ── 상세 보기 ────────────────────────────────────────────────
 
 interface DetailViewProps {
@@ -66,8 +47,15 @@ export function DetailView({ data, refetch }: DetailViewProps) {
   return (
     <>
       <SheetBody className="lg:grid-cols-[minmax(0,2fr)_minmax(0,7fr)_minmax(0,3fr)]">
-        {/* 좌측: 기본정보 + 금액요약 */}
+        {/* 좌측: 프로젝트 제목 (sticky) + 기본정보 + 금액요약 */}
         <SheetScrollColumn>
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 md:px-8 py-3">
+            <h2 className="text-lg font-semibold tracking-tight truncate">{data.name}</h2>
+            {data.description && (
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{data.description}</p>
+            )}
+          </div>
+
           <SheetContainer>
             <ProjectInfoSection data={data} />
           </SheetContainer>
