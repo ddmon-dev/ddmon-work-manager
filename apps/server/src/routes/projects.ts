@@ -150,6 +150,17 @@ app.patch("/invoices/:id", async (c) => {
 // DELETE /projects/invoices/:id — 세금계산서 소프트 삭제
 app.delete("/invoices/:id", async (c) => {
   const id = c.req.param("id");
+
+  // 활성 수금이 있으면 삭제 차단
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(projectCollections)
+    .where(and(eq(projectCollections.invoiceId, id), softDeleteFilter(projectCollections.deleted)));
+
+  if (total > 0) {
+    return errorResponse(c, { code: "HAS_COLLECTIONS", message: "수금 내역이 존재하는 세금계산서는 삭제할 수 없습니다. 수금 내역을 먼저 삭제해주세요." }, 400);
+  }
+
   const [deleted] = await db
     .update(projectInvoices)
     .set(softDeletePayload())
@@ -157,13 +168,6 @@ app.delete("/invoices/:id", async (c) => {
     .returning();
 
   if (!deleted) return errorResponse(c, ERRORS.NOT_FOUND, 404);
-
-  // 연결된 수금도 함께 소프트 삭제
-  await db
-    .update(projectCollections)
-    .set(softDeletePayload())
-    .where(and(eq(projectCollections.invoiceId, id), softDeleteFilter(projectCollections.deleted)));
-
   return successResponse(c, { id });
 });
 

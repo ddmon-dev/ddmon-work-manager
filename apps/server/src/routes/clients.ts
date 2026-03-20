@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { clients, clientMemos, user } from "../db/schema";
+import { clients, clientMemos, projects, estimates, user } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { clientWriteSchema } from "@packages/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
@@ -125,6 +125,23 @@ app.patch("/:id", async (c) => {
 // DELETE /clients/:id — 소프트 삭제
 app.delete("/:id", async (c) => {
   const id = c.req.param("id");
+
+  // 활성 프로젝트 존재 여부 확인
+  const [{ total: projectCount }] = await db
+    .select({ total: count() })
+    .from(projects)
+    .where(and(eq(projects.clientId, id), softDeleteFilter(projects.deleted)));
+
+  // 활성 견적서 존재 여부 확인
+  const [{ total: estimateCount }] = await db
+    .select({ total: count() })
+    .from(estimates)
+    .where(and(eq(estimates.clientId, id), softDeleteFilter(estimates.deleted)));
+
+  if (projectCount > 0 || estimateCount > 0) {
+    return errorResponse(c, { code: "HAS_REFERENCES", message: "프로젝트 또는 견적서가 존재하는 클라이언트는 삭제할 수 없습니다." }, 400);
+  }
+
   const [deleted] = await db
     .update(clients)
     .set(softDeletePayload())
