@@ -156,11 +156,23 @@ files ─── files (self-ref, folderId → RESTRICT)
 - `bank_name`, `bank_account`, `account_holder`: 정산 계좌 정보
 - `specialties`: text[] — 전문분야 (PARTNER_SPECIALTIES 상수 + 기타)
 
-### 프로젝트 입금 내역 (project_payments)
+### 세금계산서 (project_invoices) — VAT 프로젝트 전용
+
+- `project_id`: NOT NULL FK → projects(id) ON DELETE CASCADE
+- `payment_type`: `"deposit"` | `"interim"` | `"balance"` | `"additional"` — 기본값 `"deposit"`
+- `description`: 내용 (기본 빈 문자열)
+- `amount`: 세금계산서 발행 금액 `numeric(15,2)` (VAT 포함)
+- `issue_date`: 발행일 (NOT NULL)
+- `paid_date`: 수금일 (nullable). **NULL이면 미수금**
+- `deleted`: 소프트 삭제 플래그
+
+> **알려진 한계**: 현재 `amount`(발행 금액)만 있고 실제 수금 금액 필드가 없다. 세금계산서 금액과 실제 입금 금액이 다른 경우(부분 수금, 오입금 등)를 추적할 수 없다. `paidAmount` 컬럼 추가가 필요하며, 설계 논의 후 반영 예정.
+
+### 프로젝트 수금 내역 (project_payments) — 원천징수 프로젝트 전용
 
 - `payment_type`: `"deposit"` (계약금) | `"interim"` (중도금) | `"balance"` (잔금) | `"additional"` (추가금) — 기본값 `"deposit"`
-- `invoice_issued`: boolean — 세금계산서 발행 여부 (기본 false)
-- `invoice_date`: date nullable — 세금계산서 발행일
+- `amount`: 실수령 금액 `numeric(15,2)`
+- `paid_date`: 수금일 (NOT NULL)
 
 ### 프로젝트 지출 내역 (project_expenses)
 
@@ -180,6 +192,8 @@ files ─── files (self-ref, folderId → RESTRICT)
 - `withholding_reported`: boolean — 원천세 신고 여부 (기본 false)
 - `withholding_reported_date`: date nullable — 원천세 신고일
 - `deleted`: 소프트 삭제 플래그
+
+> **향후 확장 고려**: 현재 원천세(프리랜서) 파트너만 지원. 향후 사업자 파트너(VAT) 추가 시 매입 세금계산서 수취 추적 구조가 필요하다. 범용 세무처리 구조로의 확장을 염두에 두되, 현재는 원천세만 커버한다.
 
 ### 프로젝트 파트너 (project_partners)
 
@@ -245,7 +259,7 @@ files ─── files (self-ref, folderId → RESTRICT)
 
 ## 마이그레이션 관리
 
-마이그레이션 파일: `0000_initial` ~ 최신 (순차 증가). 0000~0003은 초기 스키마, 0004는 프로젝트 일정, 0006은 라이브러리/드라이브 테이블 추가, 0007~0008은 파일 즐겨찾기, 0011은 파트너 관리, 이후는 프로젝트 재무 관리 (project_expenses, partner_payments 추가, project_payments 컬럼 확장).
+마이그레이션 파일: `0000_initial` ~ 최신 (순차 증가). 0000~0003은 초기 스키마, 0004는 프로젝트 일정, 0006은 라이브러리/드라이브 테이블 추가, 0007~0008은 파일 즐겨찾기, 0011은 파트너 관리, 0013은 프로젝트 재무 관리 (project_expenses, partner_payments 추가), 0014는 세금계산서 분리 (project_invoices 신규 + project_payments에서 invoice 컬럼 제거 + VAT 데이터 이관).
 
 ### 스키마 변경 절차
 
