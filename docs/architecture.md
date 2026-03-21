@@ -217,7 +217,7 @@ shared/ui/file-browser/
 
 ### 폼 패턴
 
-React Hook Form + Zod + `@hookform/resolvers`.
+React Hook Form + Zod + `@hookform/resolvers`. 폼 UI 개발 시 가능한 한 RHF 패턴을 사용한다.
 
 ```typescript
 const form = useForm<T>({

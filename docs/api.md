@@ -62,6 +62,9 @@ requireAuth → requireSuperAdmin (선택적)
 | `UNEXPECTED_ERROR` | 500 | 예기치 않은 오류 |
 | `PARTNER_HAS_ASSIGNMENTS` | 409 | 프로젝트에 배치된 파트너 삭제 불가 |
 | `DUPLICATE_ASSIGNMENT` | 409 | 이미 배치된 파트너 |
+| `HAS_REFERENCES` | 400 | 참조 데이터가 있어 삭제 불가 (클라이언트) |
+| `HAS_COLLECTIONS` | 400 | 수금 내역이 있어 삭제 불가 (세금계산서) |
+| `HAS_ACTIVE_PAYMENTS` | 400 | 활성 지급내역이 있어 해제 불가 (파트너 배치) |
 
 헬퍼: `errorResponse(c, ERRORS.XXX, status, detail?)` — detail이 있으면 기본 메시지 대체
 
@@ -387,6 +390,19 @@ where(softDeleteFilter(table.deleted))
 예외: schedules, todos, todo_time_blocks, mindnotes → 하드 삭제 (`db.delete()`)
 
 헬퍼: `apps/server/src/lib/query-helpers.ts` — `softDeleteFilter`, `softDeletePayload`, `searchFilter`, `getBilledAmount`, `reorderSchema`, `executeReorder`
+
+### 삭제 시 참조 무결성 보호
+
+참조 데이터가 있는 엔티티는 삭제 전에 참조 체크를 수행하여 데이터 무결성을 보장한다.
+
+| 삭제 대상 | 참조 체크 | 에러 코드 |
+|----------|----------|----------|
+| clients | 활성 프로젝트 또는 견적서 존재 시 차단 | `HAS_REFERENCES` |
+| estimates (계열) | 연결된 활성 프로젝트 존재 시 차단 | — |
+| partners | 프로젝트 배치(project_partners) 존재 시 차단 | `PARTNER_HAS_ASSIGNMENTS` |
+| projectPartners (배치 해제) | 활성 partner_payments 존재 시 차단 | `HAS_ACTIVE_PAYMENTS` |
+| projectInvoices (세금계산서) | 활성 수금(collections) 존재 시 차단 | `HAS_COLLECTIONS` |
+| admins | superAdmin 삭제 차단 | — |
 
 ### author 변환
 
