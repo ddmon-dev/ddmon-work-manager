@@ -88,7 +88,7 @@ requireAuth → requireSuperAdmin (선택적)
 | POST | `/clients` | 생성 |
 | GET | `/clients/:id` | 상세 (메모 포함, author → "name(username)" 변환) |
 | PATCH | `/clients/:id` | 수정 |
-| DELETE | `/clients/:id` | 소프트 삭제 |
+| DELETE | `/clients/:id` | 소프트 삭제 (활성 프로젝트/견적서 있으면 차단) |
 | POST | `/clients/:id/memos` | 메모 생성 |
 | PATCH | `/clients/memos/:id` | 메모 수정 |
 | DELETE | `/clients/memos/:id` | 메모 소프트 삭제 |
@@ -131,7 +131,7 @@ requireAuth → requireSuperAdmin (선택적)
 | PATCH | `/projects/:id/status` | 상태 변경 |
 | POST | `/projects/:id/invoices` | 세금계산서 발행 (`paymentType`, `description`, `amount`, `issueDate`) |
 | PATCH | `/projects/invoices/:id` | 세금계산서 수정 (`paymentType?`, `description?`, `amount?`, `issueDate?`) |
-| DELETE | `/projects/invoices/:id` | 세금계산서 소프트 삭제 |
+| DELETE | `/projects/invoices/:id` | 세금계산서 소프트 삭제 (활성 수금 있으면 차단) |
 | POST | `/projects/:id/collections` | 수금 등록 (`invoiceId?`, `description`, `amount`, `paidDate`, `paymentType`) |
 | PATCH | `/projects/collections/:id` | 수금 수정 |
 | DELETE | `/projects/collections/:id` | 수금 소프트 삭제 |
@@ -147,7 +147,7 @@ requireAuth → requireSuperAdmin (선택적)
 | GET | `/projects/:id/partners` | 프로젝트 파트너 목록 |
 | POST | `/projects/:id/partners` | 파트너 배치 (중복 409) |
 | PATCH | `/projects/partners/:id` | 파트너 배치 수정 |
-| DELETE | `/projects/partners/:id` | 파트너 배치 해제 (하드 삭제) |
+| DELETE | `/projects/partners/:id` | 파트너 배치 해제 (하드 삭제, 활성 지급내역 있으면 차단) |
 
 ### Project Schedules (`/api/project-schedules`)
 
