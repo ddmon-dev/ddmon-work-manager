@@ -27,7 +27,7 @@ export function CopyButton({ value, className, children }: CopyButtonProps) {
       <span
         role="button"
         tabIndex={0}
-        className={cn("inline-flex items-center gap-1.5 min-w-0 cursor-pointer", className)}
+        className={cn("inline-flex items-center gap-2.5 min-w-0 cursor-pointer", className)}
         onClick={handleCopy}
         onKeyDown={(e) => e.key === "Enter" && handleCopy()}
       >
