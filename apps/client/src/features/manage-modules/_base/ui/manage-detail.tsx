@@ -1,4 +1,5 @@
 import { cn } from "@/shared/utils/classnames";
+import { CopyButton } from "@/shared/ui/copy-button";
 
 interface DetailSectionTitleProps {
   children: React.ReactNode;
@@ -21,6 +22,7 @@ interface DetailInfoRowProps {
   labelClassName?: string;
   valueClassName?: string;
   vertical?: boolean;
+  copyable?: boolean;
 }
 
 export function DetailInfoRow({
@@ -30,7 +32,11 @@ export function DetailInfoRow({
   labelClassName,
   valueClassName,
   vertical,
+  copyable,
 }: DetailInfoRowProps) {
+  const displayValue = value ?? "-";
+  const hasValue = value !== null && value !== undefined && value !== "";
+
   return (
     <div
       className={cn(
@@ -39,11 +45,14 @@ export function DetailInfoRow({
         className
       )}
     >
-      <span className={cn("text-muted-foreground shrink-0", labelClassName)}>
+      <span className={cn("text-muted-foreground shrink-0 truncate", labelClassName)}>
         {label}
       </span>
-      <span className={cn("text-right text-balance", valueClassName)}>
-        {value ?? "-"}
+      <span className={cn("text-right truncate flex items-center gap-1 min-w-0", valueClassName)}>
+        <span className="truncate">{displayValue}</span>
+        {copyable && hasValue && (
+          <CopyButton value={String(value)} className="shrink-0" />
+        )}
       </span>
     </div>
   );

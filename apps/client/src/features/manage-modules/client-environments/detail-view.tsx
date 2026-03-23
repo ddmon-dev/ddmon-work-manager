@@ -36,8 +36,8 @@ export function DetailView({ data }: DetailViewProps) {
         <SheetScrollColumn>
           {/* 기본 정보 */}
           <SheetContainer>
-            <DetailInfoRow label="사이트/서비스명" value={data.name} />
-            <DetailInfoRow label="고객사" value={data.customerName} />
+            <DetailInfoRow label="사이트/서비스명" value={data.name} copyable />
+            <DetailInfoRow label="고객사" value={data.customerName} copyable />
             <DetailInfoRow label="등록일" value={format(new Date(data.createdAt), "yyyy-MM-dd HH:mm")} />
             <DetailInfoRow label="수정일" value={format(new Date(data.updatedAt), "yyyy-MM-dd HH:mm")} />
             {data.notes && <DetailInfoRow label="비고" value={data.notes} vertical />}
@@ -47,9 +47,9 @@ export function DetailView({ data }: DetailViewProps) {
           {hosting && (
             <SheetContainer>
               <SectionTitle>호스팅</SectionTitle>
-              <DetailInfoRow label="호스팅 업체" value={hosting.provider} />
-              <DetailInfoRow label="아이디" value={hosting.username} />
-              <DetailInfoRow label="비밀번호" value={hosting.password} />
+              <DetailInfoRow label="호스팅 업체" value={hosting.provider} copyable />
+              <DetailInfoRow label="아이디" value={hosting.username} copyable />
+              <DetailInfoRow label="비밀번호" value={hosting.password} copyable />
             </SheetContainer>
           )}
 
@@ -57,9 +57,9 @@ export function DetailView({ data }: DetailViewProps) {
           {domain && (
             <SheetContainer>
               <SectionTitle>도메인</SectionTitle>
-              <DetailInfoRow label="등록 업체" value={domain.registrar} />
-              <DetailInfoRow label="아이디" value={domain.username} />
-              <DetailInfoRow label="비밀번호" value={domain.password} />
+              <DetailInfoRow label="등록 업체" value={domain.registrar} copyable />
+              <DetailInfoRow label="아이디" value={domain.username} copyable />
+              <DetailInfoRow label="비밀번호" value={domain.password} copyable />
             </SheetContainer>
           )}
 
@@ -67,10 +67,10 @@ export function DetailView({ data }: DetailViewProps) {
           {ftp && (
             <SheetContainer>
               <SectionTitle>FTP</SectionTitle>
-              <DetailInfoRow label="호스트" value={ftp.host} />
-              <DetailInfoRow label="포트" value={ftp.port?.toString()} />
-              <DetailInfoRow label="아이디" value={ftp.username} />
-              <DetailInfoRow label="비밀번호" value={ftp.password} />
+              <DetailInfoRow label="호스트" value={ftp.host} copyable />
+              <DetailInfoRow label="포트" value={ftp.port?.toString()} copyable />
+              <DetailInfoRow label="아이디" value={ftp.username} copyable />
+              <DetailInfoRow label="비밀번호" value={ftp.password} copyable />
             </SheetContainer>
           )}
 
@@ -82,7 +82,7 @@ export function DetailView({ data }: DetailViewProps) {
                 <div key={i} className="mb-3 last:mb-0">
                   <h5 className="text-xs font-medium text-muted-foreground mb-1">{group.category}</h5>
                   {group.items.map((item, j) => (
-                    <DetailInfoRow key={j} label={item.label} value={item.value} />
+                    <DetailInfoRow key={j} label={item.label} value={item.value} copyable />
                   ))}
                 </div>
               ))}
