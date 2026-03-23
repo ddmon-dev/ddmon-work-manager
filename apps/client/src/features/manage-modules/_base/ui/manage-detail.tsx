@@ -45,11 +45,11 @@ export function DetailInfoRow({
         className
       )}
     >
-      <span className={cn("text-muted-foreground shrink-0 truncate max-w-[40%]", labelClassName)}>
+      <span className={cn("text-muted-foreground shrink-0 truncate", labelClassName)}>
         {label}
       </span>
-      <span className={cn("text-right truncate flex items-center gap-1 min-w-0 max-w-[60%]", valueClassName)}>
-        <span className="truncate">{displayValue}</span>
+      <span className={cn("text-right truncate flex items-center gap-1 min-w-0", valueClassName)}>
+        <span className="truncate max-w-48">{displayValue}</span>
         {copyable && hasValue && (
           <CopyButton value={String(value)} className="shrink-0" />
         )}
