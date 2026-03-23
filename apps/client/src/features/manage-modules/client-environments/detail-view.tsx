@@ -37,8 +37,8 @@ export function DetailView({ data }: DetailViewProps) {
         <SheetScrollColumn>
           {/* 기본 정보 */}
           <SheetContainer>
-            <DetailInfoRow label="사이트/서비스명" value={data.name} copyable />
-            <DetailInfoRow label="고객사" value={data.customerName} copyable />
+            <DetailInfoRow label="사이트/서비스명" value={data.name} />
+            <DetailInfoRow label="고객사" value={data.customerName} />
             <DetailInfoRow label="등록일" value={format(new Date(data.createdAt), "yyyy-MM-dd HH:mm")} />
             <DetailInfoRow label="수정일" value={format(new Date(data.updatedAt), "yyyy-MM-dd HH:mm")} />
             {data.notes && <DetailInfoRow label="비고" value={data.notes} vertical />}
