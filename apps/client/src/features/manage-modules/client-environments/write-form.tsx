@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, useFieldArray, FormProvider, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, Plus, Trash2 } from "lucide-react";
 import { clientEnvironmentWriteSchema, type ClientEnvironmentWriteInput } from "@packages/schemas";
 import { FieldGroup } from "@/shared/ui/field";
 import { FormTextInput, FormNumberInput, FormTextarea, FormFieldArray } from "@/shared/ui/form";
@@ -17,14 +17,13 @@ import {
   ManageFormSubmit,
   ManageSheetClose,
   ManageSheetModeChange,
-  ClientSelect,
 } from "../_base/ui";
 import { useFormGuard } from "../_base/hooks";
 import { useCreateClientEnvironment, useUpdateClientEnvironment } from "./api";
 import type { ClientEnvironmentWithMemos } from "./types";
 
 const formDefaultValues: ClientEnvironmentWriteInput = {
-  clientId: "",
+  customerName: "",
   name: "",
   hosting: { provider: "", username: "", password: "" },
   domain: { registrar: "", username: "", password: "" },
@@ -46,7 +45,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
   const toFormValues = (data: ClientEnvironmentWithMemos | null): ClientEnvironmentWriteInput =>
     data
       ? {
-          clientId: data.clientId,
+          customerName: data.customerName,
           name: data.name,
           hosting: {
             provider: data.hosting?.provider ?? "",
@@ -98,7 +97,12 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
             {/* 기본 정보 */}
             <SheetContainer>
               <FieldGroup>
-                <ClientSelect />
+                <FormTextInput
+                  control={form.control}
+                  name="customerName"
+                  label="고객사명"
+                  placeholder="고객사명을 입력해주세요."
+                />
                 <FormTextInput
                   control={form.control}
                   name="name"
@@ -149,15 +153,11 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                 name="customFields"
                 label="커스텀 필드"
                 min={0}
-                addButtonText="필드 추가"
-                defaultValue={{ category: "", label: "", value: "" }}
+                addButtonText="카테고리 추가"
+                defaultValue={{ category: "", items: [{ label: "", value: "" }] }}
               >
                 {({ index, control }) => (
-                  <div className="grid grid-cols-3 gap-2">
-                    <FormTextInput control={control} name={`customFields.${index}.category`} label="" placeholder="카테고리" />
-                    <FormTextInput control={control} name={`customFields.${index}.label`} label="" placeholder="항목명" />
-                    <FormTextInput control={control} name={`customFields.${index}.value`} label="" placeholder="값" />
-                  </div>
+                  <CustomFieldCategoryRow index={index} control={control} />
                 )}
               </FormFieldArray>
             </SheetContainer>
@@ -184,6 +184,64 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
         </form>
       </SheetBody>
     </FormProvider>
+  );
+}
+
+function CustomFieldCategoryRow({ index, control }: { index: number; control: Control<any> }) {
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: `customFields.${index}.items`,
+  });
+
+  return (
+    <div className="space-y-2">
+      <FormTextInput
+        control={control}
+        name={`customFields.${index}.category`}
+        label=""
+        placeholder="카테고리명 (예: 서버, DB, API)"
+      />
+      <div className="pl-4 space-y-2 border-l-2 border-muted">
+        {fields.map((field, itemIndex) => (
+          <div key={field.id} className="flex items-start gap-1">
+            <div className="grid grid-cols-2 gap-2 flex-1">
+              <FormTextInput
+                control={control}
+                name={`customFields.${index}.items.${itemIndex}.label`}
+                label=""
+                placeholder="항목명"
+              />
+              <FormTextInput
+                control={control}
+                name={`customFields.${index}.items.${itemIndex}.value`}
+                label=""
+                placeholder="값"
+              />
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              onClick={() => remove(itemIndex)}
+              disabled={fields.length <= 1}
+              className="shrink-0"
+            >
+              <Trash2 />
+            </Button>
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => append({ label: "", value: "" })}
+          className="w-full"
+        >
+          <Plus className="size-3" />
+          항목 추가
+        </Button>
+      </div>
+    </div>
   );
 }
 

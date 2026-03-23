@@ -13,7 +13,7 @@ export const listColumns: ColumnDef<ClientEnvironmentDTO>[] = [
     },
   },
   {
-    accessorKey: "clientName",
+    accessorKey: "customerName",
     header: "고객사",
     size: 150,
     meta: {

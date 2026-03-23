@@ -2,9 +2,10 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { clientEnvironments, clientEnvironmentMemos, clients, user } from "../db/schema";
+import { clientEnvironments, clientEnvironmentMemos, user } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { clientEnvironmentWriteSchema } from "@packages/schemas";
+import type { CustomFieldCategory } from "@packages/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { searchFilter, softDeleteFilter, softDeletePayload } from "../lib/query-helpers";
@@ -29,15 +30,50 @@ function sanitizeJsonbFields(data: Record<string, unknown>) {
       result[key] = nullifyEmpty(result[key] as Record<string, unknown> | undefined | null);
     }
   }
-  // customFields: 빈 배열 → null
+  // customFields: 빈 카테고리/항목 정리 (2중 구조)
   if ("customFields" in result) {
     const cf = result.customFields;
-    result.customFields = Array.isArray(cf) && cf.length > 0 ? cf : null;
+    if (Array.isArray(cf) && cf.length > 0) {
+      const cleaned = (cf as CustomFieldCategory[])
+        .map((cat) => ({
+          ...cat,
+          items: cat.items?.filter((item) => item.label || item.value) ?? [],
+        }))
+        .filter((cat) => cat.category && cat.items.length > 0);
+      result.customFields = cleaned.length > 0 ? cleaned : null;
+    } else {
+      result.customFields = null;
+    }
   }
   return result;
 }
 
-// GET / — 목록 (페이지네이션, 검색, client JOIN)
+/** 평면 커스텀 필드를 카테고리별 그룹으로 변환 (기존 데이터 호환) */
+function migrateCustomFields(fields: unknown): CustomFieldCategory[] | null {
+  if (!Array.isArray(fields) || fields.length === 0) return null;
+
+  // 이미 2중 구조인지 확인
+  if (fields[0] && "items" in fields[0] && Array.isArray(fields[0].items)) {
+    return fields as CustomFieldCategory[];
+  }
+
+  // 평면 구조를 카테고리별로 그룹핑
+  const grouped = new Map<string, { label: string; value: string }[]>();
+  for (const field of fields) {
+    const { category, label, value } = field as { category: string; label: string; value: string };
+    if (!grouped.has(category)) {
+      grouped.set(category, []);
+    }
+    grouped.get(category)!.push({ label, value });
+  }
+
+  return Array.from(grouped.entries()).map(([category, items]) => ({
+    category,
+    items,
+  }));
+}
+
+// GET / — 목록 (페이지네이션, 검색)
 app.get("/", async (c) => {
   const { page, pageSize, search } = parsePagination(c.req.query());
   const offset = calcOffset(page, pageSize);
@@ -45,7 +81,7 @@ app.get("/", async (c) => {
   const where = and(
     softDeleteFilter(clientEnvironments.deleted),
     search
-      ? searchFilter([clientEnvironments.name, clients.companyName], search)
+      ? searchFilter([clientEnvironments.name, clientEnvironments.customerName], search)
       : undefined
   );
 
@@ -53,7 +89,7 @@ app.get("/", async (c) => {
     db
       .select({
         id: clientEnvironments.id,
-        clientId: clientEnvironments.clientId,
+        customerName: clientEnvironments.customerName,
         name: clientEnvironments.name,
         hosting: clientEnvironments.hosting,
         domain: clientEnvironments.domain,
@@ -62,10 +98,8 @@ app.get("/", async (c) => {
         notes: clientEnvironments.notes,
         createdAt: clientEnvironments.createdAt,
         updatedAt: clientEnvironments.updatedAt,
-        clientName: clients.companyName,
       })
       .from(clientEnvironments)
-      .leftJoin(clients, eq(clientEnvironments.clientId, clients.id))
       .where(where)
       .orderBy(desc(clientEnvironments.createdAt))
       .limit(pageSize)
@@ -73,7 +107,6 @@ app.get("/", async (c) => {
     db
       .select({ total: count() })
       .from(clientEnvironments)
-      .leftJoin(clients, eq(clientEnvironments.clientId, clients.id))
       .where(where),
   ]);
 
@@ -111,13 +144,12 @@ app.delete("/memos/:id", async (c) => {
   return successResponse(c, { id });
 });
 
-// GET /:id — 상세 (client + memos)
+// GET /:id — 상세 (memos)
 app.get("/:id", async (c) => {
   const id = c.req.param("id");
   const env = await db.query.clientEnvironments.findFirst({
     where: and(eq(clientEnvironments.id, id), softDeleteFilter(clientEnvironments.deleted)),
     with: {
-      client: true,
       memos: {
         where: softDeleteFilter(clientEnvironmentMemos.deleted),
         orderBy: [desc(clientEnvironmentMemos.createdAt)],
@@ -135,7 +167,7 @@ app.get("/:id", async (c) => {
 
   return successResponse(c, {
     ...env,
-    clientName: env.client.companyName,
+    customFields: migrateCustomFields(env.customFields),
     memos: env.memos.map((m) => ({ ...m, author: m.author ? (authorMap[m.author] ?? m.author) : null })),
   });
 });

@@ -1,11 +1,8 @@
 import { pgTable, uuid, text, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
-import { clients } from "./clients";
 
 export const clientEnvironments = pgTable("client_environments", {
   id: uuid("id").primaryKey().defaultRandom(),
-  clientId: uuid("client_id")
-    .notNull()
-    .references(() => clients.id, { onDelete: "restrict" }),
+  customerName: text("customer_name").notNull(),
   name: text("name").notNull(),
   hosting: jsonb("hosting"),
   domain: jsonb("domain"),

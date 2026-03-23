@@ -37,7 +37,7 @@ export function DetailView({ data }: DetailViewProps) {
           {/* 기본 정보 */}
           <SheetContainer>
             <DetailInfoRow label="사이트/서비스명" value={data.name} />
-            <DetailInfoRow label="고객사" value={data.clientName} />
+            <DetailInfoRow label="고객사" value={data.customerName} />
             <DetailInfoRow label="등록일" value={format(new Date(data.createdAt), "yyyy-MM-dd HH:mm")} />
             <DetailInfoRow label="수정일" value={format(new Date(data.updatedAt), "yyyy-MM-dd HH:mm")} />
             {data.notes && <DetailInfoRow label="비고" value={data.notes} vertical />}
@@ -78,12 +78,13 @@ export function DetailView({ data }: DetailViewProps) {
           {customFields && customFields.length > 0 && (
             <SheetContainer>
               <SectionTitle>커스텀 필드</SectionTitle>
-              {customFields.map((field, i) => (
-                <DetailInfoRow
-                  key={i}
-                  label={`${field.category} / ${field.label}`}
-                  value={field.value}
-                />
+              {customFields.map((group, i) => (
+                <div key={i} className="mb-3 last:mb-0">
+                  <h5 className="text-xs font-medium text-muted-foreground mb-1">{group.category}</h5>
+                  {group.items.map((item, j) => (
+                    <DetailInfoRow key={j} label={item.label} value={item.value} />
+                  ))}
+                </div>
               ))}
             </SheetContainer>
           )}

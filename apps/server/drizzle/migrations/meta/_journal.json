@@ -120,6 +120,20 @@
       "when": 1774108800000,
       "tag": "0016_add_project_collections",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1774273949661,
+      "tag": "0017_alter_client_environments_optional_client",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1774274772149,
+      "tag": "0018_drop_client_id_from_client_environments",
+      "breakpoints": true
     }
   ]
 }

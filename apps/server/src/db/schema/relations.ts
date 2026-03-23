@@ -20,7 +20,6 @@ export const clientsRelations = relations(clients, ({ many }) => ({
   memos: many(clientMemos),
   estimates: many(estimates),
   projects: many(projects),
-  environments: many(clientEnvironments),
 }));
 
 export const clientMemosRelations = relations(clientMemos, ({ one }) => ({
@@ -212,11 +211,7 @@ export const projectPartnersRelations = relations(projectPartners, ({ one }) => 
   }),
 }));
 
-export const clientEnvironmentsRelations = relations(clientEnvironments, ({ one, many }) => ({
-  client: one(clients, {
-    fields: [clientEnvironments.clientId],
-    references: [clients.id],
-  }),
+export const clientEnvironmentsRelations = relations(clientEnvironments, ({ many }) => ({
   memos: many(clientEnvironmentMemos),
 }));
 

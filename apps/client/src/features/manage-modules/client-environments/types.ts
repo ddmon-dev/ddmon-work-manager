@@ -3,7 +3,7 @@ import type { HostingData, DomainData, FtpData, CustomField } from "@packages/sc
 
 export interface ClientEnvironmentDTO {
   id: string;
-  clientId: string;
+  customerName: string;
   name: string;
   hosting: HostingData | null;
   domain: DomainData | null;
@@ -12,7 +12,6 @@ export interface ClientEnvironmentDTO {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
-  clientName: string;
 }
 
 export interface ClientEnvironmentWithMemos extends ClientEnvironmentDTO {
