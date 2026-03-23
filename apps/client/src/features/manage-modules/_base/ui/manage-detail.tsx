@@ -34,7 +34,7 @@ export function DetailInfoRow({
   vertical,
   copyable,
 }: DetailInfoRowProps) {
-  const displayValue = value ?? "-";
+  const displayValue = value || "-";
   const hasValue = value !== null && value !== undefined && value !== "";
 
   return (
