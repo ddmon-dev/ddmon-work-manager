@@ -182,6 +182,7 @@ npm run build    # 클라이언트(dist/) + 서버(tsup) 빌드
 
 | 명령어 | 스크립트 | 설명 |
 |--------|---------|------|
+| `npm run deploy` | — | main push → 운영 pull → npm install → rebuild (개발 디렉토리에서 실행) |
 | `npm run production:start` | `start-production.sh` | Docker 시작 → 마이그레이션 → 서버 기동 |
 | `npm run production:stop` | `stop-production.sh` | DB 백업 → 서버 종료 → Docker 중지 |
 | `npm run production:rebuild` | `rebuild.sh` | 서버만 종료 → 리빌드 → 재시작 (Docker 유지) |
@@ -199,7 +200,8 @@ npm run build    # 클라이언트(dist/) + 서버(tsup) 빌드
 | 시나리오 | 명령어 |
 |---------|--------|
 | 초기 배포 | `npm run production:install` (빌드 자동 포함) |
-| 유지보수 (코드/DB 변경) | `npm run production:rebuild` |
+| 개발→운영 배포 | `npm run deploy` (개발 디렉토리에서 실행) |
+| 운영 직접 rebuild | `npm run production:rebuild` |
 | 완전 종료 | `npm run production:stop` |
 | 서비스 제거 | `npm run production:uninstall` |
 
