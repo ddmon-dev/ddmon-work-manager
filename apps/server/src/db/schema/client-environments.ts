@@ -6,7 +6,7 @@ export const clientEnvironments = pgTable("client_environments", {
   name: text("name").notNull(),
   hosting: jsonb("hosting"),
   domain: jsonb("domain"),
-  ftp: jsonb("ftp"),
+  remoteAccess: jsonb("remote_access"),
   customFields: jsonb("custom_fields"),
   notes: text("notes"),
   author: text("author"),

@@ -27,7 +27,7 @@ const formDefaultValues: ClientEnvironmentWriteInput = {
   name: "",
   hosting: { provider: "", username: "", password: "" },
   domain: { registrar: "", username: "", password: "" },
-  ftp: { host: "", port: 21, username: "", password: "" },
+  remoteAccess: { host: "", port: 22, username: "", password: "" },
   customFields: [],
   notes: "",
 };
@@ -57,11 +57,11 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
             username: data.domain?.username ?? "",
             password: data.domain?.password ?? "",
           },
-          ftp: {
-            host: data.ftp?.host ?? "",
-            port: data.ftp?.port ?? 21,
-            username: data.ftp?.username ?? "",
-            password: data.ftp?.password ?? "",
+          remoteAccess: {
+            host: data.remoteAccess?.host ?? "",
+            port: data.remoteAccess?.port ?? 22,
+            username: data.remoteAccess?.username ?? "",
+            password: data.remoteAccess?.password ?? "",
           },
           customFields: data.customFields ?? [],
           notes: data.notes ?? "",
@@ -134,14 +134,14 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
               </CollapsibleSection>
             </SheetContainer>
 
-            {/* FTP */}
+            {/* FTP / SSH */}
             <SheetContainer>
-              <CollapsibleSection title="FTP">
+              <CollapsibleSection title="FTP / SSH">
                 <FieldGroup>
-                  <FormTextInput control={form.control} name="ftp.host" label="호스트" optional />
-                  <FormNumberInput control={form.control} name="ftp.port" label="포트" placeholder="21" optional />
-                  <FormTextInput control={form.control} name="ftp.username" label="아이디" optional />
-                  <FormTextInput control={form.control} name="ftp.password" label="비밀번호" optional />
+                  <FormTextInput control={form.control} name="remoteAccess.host" label="호스트" optional />
+                  <FormNumberInput control={form.control} name="remoteAccess.port" label="포트" placeholder="22" optional />
+                  <FormTextInput control={form.control} name="remoteAccess.username" label="아이디" optional />
+                  <FormTextInput control={form.control} name="remoteAccess.password" label="비밀번호" optional />
                 </FieldGroup>
               </CollapsibleSection>
             </SheetContainer>

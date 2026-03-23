@@ -12,7 +12,7 @@ import {
   useDeleteClientEnvironmentMemo,
 } from "./api";
 import type { ClientEnvironmentWithMemos } from "./types";
-import type { HostingData, DomainData, FtpData, CustomField } from "@packages/schemas";
+import type { HostingData, DomainData, RemoteAccessData, CustomField } from "@packages/schemas";
 
 const memoHooks = {
   useCreateMemo: useCreateClientEnvironmentMemo,
@@ -27,8 +27,8 @@ interface DetailViewProps {
 export function DetailView({ data }: DetailViewProps) {
   const hosting = data.hosting as HostingData | null;
   const domain = data.domain as DomainData | null;
-  const rawFtp = data.ftp as FtpData | null;
-  const ftp = rawFtp && (rawFtp.host || rawFtp.username || rawFtp.password) ? rawFtp : null;
+  const rawAccess = data.remoteAccess as RemoteAccessData | null;
+  const remoteAccess = rawAccess && (rawAccess.host || rawAccess.username || rawAccess.password) ? rawAccess : null;
   const customFields = data.customFields as CustomField[] | null;
 
   return (
@@ -64,14 +64,14 @@ export function DetailView({ data }: DetailViewProps) {
             </SheetContainer>
           )}
 
-          {/* FTP */}
-          {ftp && (
+          {/* FTP / SSH */}
+          {remoteAccess && (
             <SheetContainer>
-              <SectionTitle>FTP</SectionTitle>
-              <DetailInfoRow label="호스트" value={ftp.host} copyable />
-              <DetailInfoRow label="포트" value={ftp.port?.toString()} copyable />
-              <DetailInfoRow label="아이디" value={ftp.username} copyable />
-              <DetailInfoRow label="비밀번호" value={ftp.password} copyable />
+              <SectionTitle>FTP / SSH</SectionTitle>
+              <DetailInfoRow label="호스트" value={remoteAccess.host} copyable />
+              <DetailInfoRow label="포트" value={remoteAccess.port?.toString()} copyable />
+              <DetailInfoRow label="아이디" value={remoteAccess.username} copyable />
+              <DetailInfoRow label="비밀번호" value={remoteAccess.password} copyable />
             </SheetContainer>
           )}
 

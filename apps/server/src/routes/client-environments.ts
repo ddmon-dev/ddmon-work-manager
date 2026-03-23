@@ -23,7 +23,7 @@ function nullifyEmpty(obj: Record<string, unknown> | undefined | null) {
 }
 
 function sanitizeJsonbFields(data: Record<string, unknown>) {
-  const jsonbKeys = ["hosting", "domain", "ftp"] as const;
+  const jsonbKeys = ["hosting", "domain", "remoteAccess"] as const;
   const result = { ...data };
   for (const key of jsonbKeys) {
     if (key in result) {
@@ -93,7 +93,7 @@ app.get("/", async (c) => {
         name: clientEnvironments.name,
         hosting: clientEnvironments.hosting,
         domain: clientEnvironments.domain,
-        ftp: clientEnvironments.ftp,
+        remoteAccess: clientEnvironments.remoteAccess,
         customFields: clientEnvironments.customFields,
         notes: clientEnvironments.notes,
         createdAt: clientEnvironments.createdAt,

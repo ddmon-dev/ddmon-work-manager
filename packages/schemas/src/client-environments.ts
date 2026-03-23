@@ -14,7 +14,7 @@ export const domainSchema = z.object({
   password: z.string().optional(),
 });
 
-export const ftpSchema = z.object({
+export const remoteAccessSchema = z.object({
   host: z.string().optional(),
   port: z.number().int().positive().optional(),
   username: z.string().optional(),
@@ -38,7 +38,7 @@ export const clientEnvironmentWriteSchema = z.object({
   name: z.string().min(1, "사이트/서비스명을 입력해주세요."),
   hosting: hostingSchema.optional(),
   domain: domainSchema.optional(),
-  ftp: ftpSchema.optional(),
+  remoteAccess: remoteAccessSchema.optional(),
   customFields: z.array(customFieldCategorySchema).optional(),
   notes: z.string().optional(),
 });
@@ -46,7 +46,7 @@ export const clientEnvironmentWriteSchema = z.object({
 export type ClientEnvironmentWriteInput = z.infer<typeof clientEnvironmentWriteSchema>;
 export type HostingData = z.infer<typeof hostingSchema>;
 export type DomainData = z.infer<typeof domainSchema>;
-export type FtpData = z.infer<typeof ftpSchema>;
+export type RemoteAccessData = z.infer<typeof remoteAccessSchema>;
 export type CustomFieldItem = z.infer<typeof customFieldItemSchema>;
 export type CustomFieldCategory = z.infer<typeof customFieldCategorySchema>;
 export type CustomField = CustomFieldCategory;

@@ -1,5 +1,5 @@
 import type { MemoItem } from "../_base/types";
-import type { HostingData, DomainData, FtpData, CustomField } from "@packages/schemas";
+import type { HostingData, DomainData, RemoteAccessData, CustomField } from "@packages/schemas";
 
 export interface ClientEnvironmentDTO {
   id: string;
@@ -7,7 +7,7 @@ export interface ClientEnvironmentDTO {
   name: string;
   hosting: HostingData | null;
   domain: DomainData | null;
-  ftp: FtpData | null;
+  remoteAccess: RemoteAccessData | null;
   customFields: CustomField[] | null;
   notes: string | null;
   createdAt: string;
