@@ -14,10 +14,10 @@ import type { AppVariables } from "../lib/types";
 const app = new Hono<{ Variables: AppVariables }>();
 app.use("*", requireAuth);
 
-/** JSONB 빈 객체 → null 변환 */
+/** JSONB 빈 객체 → null 변환 (문자열 필드 기준, 숫자만 있으면 빈 객체로 취급) */
 function nullifyEmpty(obj: Record<string, unknown> | undefined | null) {
   if (!obj) return null;
-  return Object.values(obj).some((v) => v !== undefined && v !== null && v !== "")
+  return Object.values(obj).some((v) => v !== undefined && v !== null && v !== "" && typeof v === "string")
     ? obj
     : null;
 }

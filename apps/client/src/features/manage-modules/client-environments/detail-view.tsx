@@ -27,7 +27,8 @@ interface DetailViewProps {
 export function DetailView({ data }: DetailViewProps) {
   const hosting = data.hosting as HostingData | null;
   const domain = data.domain as DomainData | null;
-  const ftp = data.ftp as FtpData | null;
+  const rawFtp = data.ftp as FtpData | null;
+  const ftp = rawFtp && (rawFtp.host || rawFtp.username || rawFtp.password) ? rawFtp : null;
   const customFields = data.customFields as CustomField[] | null;
 
   return (
