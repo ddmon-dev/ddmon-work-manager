@@ -38,8 +38,13 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="flex items-center gap-2 py-1.5">
       <span className="text-muted-foreground w-20 shrink-0 text-sm">{label}</span>
-      <span className="text-sm">{value || "-"}</span>
-      {value && <CopyButton value={value} />}
+      {value ? (
+        <CopyButton value={value} className="text-sm">
+          {value}
+        </CopyButton>
+      ) : (
+        <span className="text-sm">-</span>
+      )}
     </div>
   );
 }
