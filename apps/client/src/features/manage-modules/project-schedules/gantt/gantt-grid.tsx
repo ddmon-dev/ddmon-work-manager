@@ -206,7 +206,7 @@ const GridLines = memo(function GridLines({ days, rowCount, projectBoundaryRows 
           key={`row-${i}`}
           className={cn(
             "absolute left-0 right-0 border-b",
-            (i === rowCount - 1 || projectBoundaryRows?.has(i)) ? "border-border" : "border-border/50",
+            (i === rowCount - 1 || projectBoundaryRows?.has(i)) ? "border-foreground/30" : "border-border/50",
           )}
           style={{ top: (i + 1) * ROW_HEIGHT - 1 }}
         />

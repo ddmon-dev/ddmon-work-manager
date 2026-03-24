@@ -355,7 +355,7 @@ function OverviewGantt({ projects: serverProjects, defaultExpanded }: { projects
                     )}
                     <div
                       className={cn(
-                        "flex border-b border-border cursor-pointer hover:bg-foreground/[0.02] bg-background select-none",
+                        "flex border-b border-foreground/30 cursor-pointer hover:bg-foreground/[0.02] bg-background select-none",
                         isDragging && "opacity-50"
                       )}
                       style={{ height: block.rowSpan * ROW_HEIGHT }}
@@ -386,7 +386,7 @@ function OverviewGantt({ projects: serverProjects, defaultExpanded }: { projects
               {rows.map((row, rowIdx) => {
                 const isLastRow = rowIdx === rows.length - 1;
                 const isProjectBoundary = isLastRow || rows[rowIdx + 1]?.project.id !== row.project.id;
-                const borderClass = isProjectBoundary ? "border-border" : "border-border/50";
+                const borderClass = isProjectBoundary ? "border-foreground/30" : "border-border/50";
 
                 if (row.type === "collapsed") {
                   return (
