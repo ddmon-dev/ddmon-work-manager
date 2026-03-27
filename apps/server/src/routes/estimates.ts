@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { and, asc, countDistinct, desc, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
+import { and, asc, count, countDistinct, desc, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { db } from "../db";
 import { clients, estimateSeries, estimates, estimateItemGroups, estimateItems, projects, businessInfo } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
@@ -207,6 +207,38 @@ app.patch("/series/:estimateNumber/final", async (c) => {
 
   if (!updated) return errorResponse(c, ERRORS.NOT_FOUND, 404);
   return successResponse(c, updated);
+});
+
+// DELETE /estimates/:id — 개별 버전 소프트 삭제
+app.delete("/:id", async (c) => {
+  const id = c.req.param("id");
+
+  const target = await db.query.estimates.findFirst({
+    where: and(eq(estimates.id, id), softDeleteFilter(estimates.deleted)),
+    columns: { id: true, estimateNumber: true },
+  });
+  if (!target) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
+  const series = await db.query.estimateSeries.findFirst({
+    where: eq(estimateSeries.estimateNumber, target.estimateNumber),
+  });
+
+  if (series?.finalEstimateId === id) {
+    return errorResponse(c, ERRORS.VALIDATION, 400, "계약 버전은 삭제할 수 없습니다. 먼저 계약 지정을 해제해주세요.");
+  }
+
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(estimates)
+    .where(and(eq(estimates.estimateNumber, target.estimateNumber), softDeleteFilter(estimates.deleted)));
+
+  if (total <= 1) {
+    return errorResponse(c, ERRORS.VALIDATION, 400, "마지막 남은 버전은 삭제할 수 없습니다. 견적서 전체 삭제를 이용해주세요.");
+  }
+
+  await db.update(estimates).set(softDeletePayload()).where(eq(estimates.id, id));
+
+  return successResponse(c, { id });
 });
 
 // DELETE /estimates/series/:estimateNumber — 계열 전체 소프트 삭제

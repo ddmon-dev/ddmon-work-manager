@@ -180,6 +180,19 @@ export function useUpdateFinalVersion() {
   });
 }
 
+export function useDeleteEstimateVersion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/estimates/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.estimates.all });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || CRUD_ERRORS.DELETE_FAILED("견적서 버전"));
+    },
+  });
+}
+
 export function useDeleteEstimateSeries() {
   const queryClient = useQueryClient();
   return useMutation({
