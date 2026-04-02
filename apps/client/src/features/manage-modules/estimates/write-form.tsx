@@ -39,6 +39,7 @@ import {
   type EstimateDocumentData,
   generateEstimateDocumentPdfBlob,
 } from "./pdf/estimate-document";
+import { getDownloadFileName } from "./pdf/get-download-file-name";
 
 // 로컬 폼 스키마: 서버 스키마 확장 (날짜를 Date 객체로 override, clientName 추가)
 const formSchema = estimateWriteSchema.extend({
@@ -446,9 +447,11 @@ function EstimateFormPdfPreview({
 
   const generateBlob = () => generateEstimateDocumentPdfBlob(documentData);
 
-  const fileName = prevValues
-    ? `견적서_${prevValues.estimateNumber}.pdf`
-    : "견적서.pdf";
+  const fileName = getDownloadFileName({
+    bizName: documentData.bizName,
+    title: documentData.title,
+    issuedDate: documentData.issuedDate,
+  });
 
   return (
     <PdfPreview

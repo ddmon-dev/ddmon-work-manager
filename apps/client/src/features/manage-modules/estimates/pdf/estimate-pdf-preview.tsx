@@ -1,5 +1,6 @@
 import { PdfPreview } from '@/shared/ui/pdf-preview';
 import { generateEstimatePdfBlob } from './estimate-document';
+import { getDownloadFileName } from './get-download-file-name';
 import type { EstimateWithDetails } from '../types';
 
 interface Props {
@@ -14,7 +15,12 @@ export function EstimatePdfPreview({ estimate }: Props) {
   return (
     <PdfPreview
       generateBlob={generateBlob}
-      downloadFileName={`견적서_${estimate.estimateNumber}${estimate.version > 1 ? `_v${estimate.version}` : ''}.pdf`}
+      downloadFileName={getDownloadFileName({
+        bizName: estimate.publisherInfo?.bizName,
+        title: estimate.title,
+        issuedDate: estimate.issuedDate,
+        version: estimate.version,
+      })}
       dependencyKey={dependencyKey}
     />
   );
