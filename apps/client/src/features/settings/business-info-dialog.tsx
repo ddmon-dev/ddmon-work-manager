@@ -17,6 +17,7 @@ import { useBusinessInfo, useUpdateBusinessInfo } from "./api";
 
 const schema = z.object({
   name: z.string().min(1, "상호명을 입력해주세요."),
+  nameEn: z.string().optional(),
   ceo: z.string().min(1, "대표자명을 입력해주세요."),
   bizNumber: z.string().min(1, "사업자번호를 입력해주세요."),
   address: z.string().min(1, "주소를 입력해주세요."),
@@ -58,6 +59,7 @@ export function BusinessInfoDialog({ open, onOpenChange }: BusinessInfoDialogPro
     resolver: zodResolver(schema),
     defaultValues: {
       name: "",
+      nameEn: "",
       ceo: "",
       bizNumber: "",
       address: "",
@@ -77,6 +79,7 @@ export function BusinessInfoDialog({ open, onOpenChange }: BusinessInfoDialogPro
     if (isEditing && bizInfo) {
       reset({
         name: bizInfo.name ?? "",
+        nameEn: bizInfo.nameEn ?? "",
         ceo: bizInfo.ceo ?? "",
         bizNumber: bizInfo.bizNumber ?? "",
         address: bizInfo.address ?? "",
@@ -103,6 +106,7 @@ export function BusinessInfoDialog({ open, onOpenChange }: BusinessInfoDialogPro
           <form onSubmit={handleSubmit(onSubmit)}>
             <FieldGroup className="py-2">
               <FormTextInput control={control} name="name" label="상호명" placeholder="회사명" />
+              <FormTextInput control={control} name="nameEn" label="영문 상호명" placeholder="Company Name" />
               <FormTextInput control={control} name="ceo" label="대표자명" placeholder="홍길동" />
               <FormBizNumberInput
                 control={control}
@@ -141,7 +145,12 @@ export function BusinessInfoDialog({ open, onOpenChange }: BusinessInfoDialogPro
         </DialogHeader>
         <div className="py-2 space-y-4">
           <div>
-            <InfoRow label="상호명" value={bizInfo?.name} />
+            <InfoRow
+              label="상호명"
+              value={bizInfo?.name && bizInfo?.nameEn
+                ? `${bizInfo.name}(${bizInfo.nameEn})`
+                : bizInfo?.name}
+            />
             <InfoRow label="대표자명" value={bizInfo?.ceo} />
             <InfoRow label="사업자번호" value={bizInfo?.bizNumber} />
             <InfoRow label="주소" value={bizInfo?.address} />

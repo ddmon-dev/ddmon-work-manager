@@ -424,6 +424,7 @@ function EstimateFormPdfPreview({
     issuerPhone: user?.phone ?? undefined,
     issuerEmail: user?.email || undefined,
     bizName: bizInfo?.name ?? undefined,
+    bizNameEn: bizInfo?.nameEn ?? undefined,
     ceo: bizInfo?.ceo ?? undefined,
     bizNumber: bizInfo?.bizNumber ?? undefined,
     bizAddress: bizInfo?.address ?? undefined,

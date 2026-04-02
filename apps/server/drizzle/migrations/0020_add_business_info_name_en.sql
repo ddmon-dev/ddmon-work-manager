@@ -1,0 +1,1 @@
+ALTER TABLE "business_info" ADD COLUMN "name_en" text;

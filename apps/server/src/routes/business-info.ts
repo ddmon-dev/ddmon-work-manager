@@ -11,6 +11,7 @@ app.use("*", requireAuth);
 
 const businessInfoWriteSchema = z.object({
   name: z.string().optional(),
+  nameEn: z.string().optional(),
   ceo: z.string().optional(),
   bizNumber: z.string().optional(),
   address: z.string().optional(),

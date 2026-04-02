@@ -436,6 +436,7 @@ app.post("/", async (c) => {
   const [bizInfo] = await db.select().from(businessInfo).limit(1);
   const publisherInfo = {
     bizName: bizInfo?.name ?? undefined,
+    bizNameEn: bizInfo?.nameEn ?? undefined,
     ceo: bizInfo?.ceo ?? undefined,
     bizNumber: bizInfo?.bizNumber ?? undefined,
     address: bizInfo?.address ?? undefined,
@@ -536,6 +537,7 @@ app.patch("/:id", async (c) => {
   const [bizInfo] = await db.select().from(businessInfo).limit(1);
   const publisherInfo = {
     bizName: bizInfo?.name ?? undefined,
+    bizNameEn: bizInfo?.nameEn ?? undefined,
     ceo: bizInfo?.ceo ?? undefined,
     bizNumber: bizInfo?.bizNumber ?? undefined,
     address: bizInfo?.address ?? undefined,

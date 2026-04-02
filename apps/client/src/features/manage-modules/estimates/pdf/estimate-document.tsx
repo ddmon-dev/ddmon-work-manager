@@ -31,6 +31,7 @@ export interface EstimateDocumentData {
   issuerEmail?: string;
   // 사업자 정보
   bizName?: string;
+  bizNameEn?: string;
   ceo?: string;
   bizNumber?: string;
   bizAddress?: string;
@@ -524,7 +525,7 @@ export function EstimateDocument({ data }: { data: EstimateDocumentData }) {
           <View style={{ gap: 2 }}>
             {(data.bizName || data.ceo || data.bizNumber) && (
               <Text style={s.footerText}>
-                {[data.bizName, data.ceo && `대표 ${data.ceo}`, data.bizNumber && formatBizNumber(data.bizNumber)]
+                {[data.bizName && data.bizNameEn ? `${data.bizName}(${data.bizNameEn})` : data.bizName, data.ceo && `대표 ${data.ceo}`, data.bizNumber && formatBizNumber(data.bizNumber)]
                   .filter(Boolean)
                   .join(' \u00B7 ')}
               </Text>
@@ -566,6 +567,7 @@ export function toDocumentData(estimate: EstimateWithDetails): EstimateDocumentD
     issuerPhone: pub?.phone || undefined,
     issuerEmail: pub?.email || undefined,
     bizName: pub?.bizName || undefined,
+    bizNameEn: pub?.bizNameEn || undefined,
     ceo: pub?.ceo || undefined,
     bizNumber: pub?.bizNumber || undefined,
     bizAddress: pub?.address || undefined,

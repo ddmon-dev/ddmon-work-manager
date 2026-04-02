@@ -59,6 +59,7 @@ export interface EstimateListItem {
 
 export interface PublisherInfo {
   bizName?: string;
+  bizNameEn?: string;
   ceo?: string;
   bizNumber?: string;
   address?: string;
