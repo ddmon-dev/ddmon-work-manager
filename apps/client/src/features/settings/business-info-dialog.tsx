@@ -145,12 +145,8 @@ export function BusinessInfoDialog({ open, onOpenChange }: BusinessInfoDialogPro
         </DialogHeader>
         <div className="py-2 space-y-4">
           <div>
-            <InfoRow
-              label="상호명"
-              value={bizInfo?.name && bizInfo?.nameEn
-                ? `${bizInfo.name}(${bizInfo.nameEn})`
-                : bizInfo?.name}
-            />
+            <InfoRow label="상호명" value={bizInfo?.name} />
+            <InfoRow label="영문 상호명" value={bizInfo?.nameEn} />
             <InfoRow label="대표자명" value={bizInfo?.ceo} />
             <InfoRow label="사업자번호" value={bizInfo?.bizNumber} />
             <InfoRow label="주소" value={bizInfo?.address} />
