@@ -4,19 +4,17 @@ interface Params {
   bizName?: string;
   title: string;
   issuedDate?: string | null;
-  version?: number;
 }
 
 export function getDownloadFileName({
   bizName,
   title,
   issuedDate,
-  version,
 }: Params): string {
-  const bizPrefix = bizName ? `[${bizName}]` : "";
+  const bizPrefix = bizName ? `[${bizName}]_` : "";
+  const safeTitle = title.replace(/\s+/g, "_");
   const dateStr = issuedDate
     ? issuedDate.replace(/-/g, "")
     : format(new Date(), "yyyyMMdd");
-  const versionSuffix = version && version > 1 ? `_v${version}` : "";
-  return `${bizPrefix}견적서_${title}_${dateStr}${versionSuffix}.pdf`;
+  return `${bizPrefix}견적서_${safeTitle}_${dateStr}.pdf`;
 }

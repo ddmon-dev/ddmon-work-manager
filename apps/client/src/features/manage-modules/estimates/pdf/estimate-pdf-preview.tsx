@@ -19,7 +19,6 @@ export function EstimatePdfPreview({ estimate }: Props) {
         bizName: estimate.publisherInfo?.bizName,
         title: estimate.title,
         issuedDate: estimate.issuedDate,
-        version: estimate.version,
       })}
       dependencyKey={dependencyKey}
     />
