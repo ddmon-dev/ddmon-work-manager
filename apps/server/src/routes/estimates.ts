@@ -461,10 +461,7 @@ app.post("/", async (c) => {
       // 기존 계열에 개정본 추가
       estimateNumber = existingNumber;
       const latest = await tx.query.estimates.findFirst({
-        where: and(
-          eq(estimates.estimateNumber, estimateNumber),
-          softDeleteFilter(estimates.deleted)
-        ),
+        where: eq(estimates.estimateNumber, estimateNumber),
         orderBy: [desc(estimates.version)],
       });
       version = (latest?.version ?? 0) + 1;
