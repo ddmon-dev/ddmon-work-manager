@@ -12,7 +12,7 @@ export const requireAuthOrSkill = createMiddleware<{ Variables: AppVariables }>(
   const providedKey = c.req.header("X-Skill-Key");
 
   if (providedKey) {
-    const expectedKey = process.env.SKILL_API_KEY;
+    const expectedKey = process.env.WORK_MANAGER_PLUGIN_KEY;
     if (!expectedKey) {
       return c.json({ error: "Unauthorized", message: "Skill auth not configured" }, 401);
     }
