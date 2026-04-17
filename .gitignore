@@ -32,6 +32,8 @@ coverage/
 .serena/
 .agents/
 .playwright-mcp/
+.superpowers/
+skills-lock.json
 
 # IDE
 .idea/
@@ -48,4 +50,3 @@ Thumbs.db
 
 # typescript build
 *.tsbuildinfo
-.superpowers/
