@@ -53,6 +53,8 @@ export interface EstimateListItem {
   updatedAt: string;
   clientId: string;
   clientCompanyName: string;
+  billingClientId?: string | null;
+  billingClientCompanyName?: string | null;
   seriesStatus: EstimateStatus;
   finalEstimateId?: string | null;
 }
@@ -88,6 +90,8 @@ export interface EstimateWithDetails {
   publisherInfo?: PublisherInfo | null;
   clientId: string;
   client: { id: string; companyName: string };
+  billingClientId?: string | null;
+  billingClient?: { id: string; companyName: string } | null;
   groups: EstimateGroupDTO[];
   versions: EstimateVersion[];
   series: EstimateSeries;

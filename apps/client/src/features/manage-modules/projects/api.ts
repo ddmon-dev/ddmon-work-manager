@@ -74,6 +74,7 @@ export function useAvailableEstimates(
 
 export interface EstimateProjectInfo {
   clientId: string;
+  billingClientId: string | null;
   title: string;
   description: string | null;
   totalAmount: string;

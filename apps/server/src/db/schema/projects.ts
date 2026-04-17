@@ -17,6 +17,8 @@ export const projects = pgTable("projects", {
   clientId: uuid("client_id")
     .notNull()
     .references(() => clients.id, { onDelete: "restrict" }),
+  billingClientId: uuid("billing_client_id")
+    .references(() => clients.id, { onDelete: "restrict" }),
   // 독립 엔티티: 견적서 없이도 프로젝트 생성 가능 (nullable)
   estimateNumber: text("estimate_number").references(
     () => estimateSeries.estimateNumber,

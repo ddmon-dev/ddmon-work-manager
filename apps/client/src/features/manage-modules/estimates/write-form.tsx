@@ -41,9 +41,10 @@ import {
 } from "./pdf/estimate-document";
 import { getDownloadFileName } from "./pdf/get-download-file-name";
 
-// 로컬 폼 스키마: 서버 스키마 확장 (날짜를 Date 객체로 override, clientName 추가)
+// 로컬 폼 스키마: 서버 스키마 확장 (날짜를 Date 객체로 override, clientName/billingClientName 추가)
 const formSchema = estimateWriteSchema.extend({
   clientName: z.string(),
+  billingClientName: z.string().optional(),
   issuedDate: z.date().nullable().optional(),
   validUntil: z.date().nullable().optional(),
 });
@@ -52,6 +53,8 @@ type FormValues = z.infer<typeof formSchema>;
 const formDefaultValues: FormValues = {
   clientId: "",
   clientName: "",
+  billingClientId: null,
+  billingClientName: "",
   title: "",
   description: "",
   versionLabel: "초안",
@@ -76,6 +79,8 @@ function toFormValues(data: EstimateWithDetails): FormValues {
   return {
     clientId: data.clientId,
     clientName: data.client?.companyName ?? "",
+    billingClientId: data.billingClientId ?? null,
+    billingClientName: data.billingClient?.companyName ?? "",
     title: data.title,
     description: data.description ?? "",
     versionLabel: data.versionLabel ?? "",
@@ -123,6 +128,16 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
   useFormGuard(form);
 
   const discountType = useWatch({ control: form.control, name: "discountType" });
+  const watchedClientId = useWatch({ control: form.control, name: "clientId" });
+
+  // clientId 변경 시, billingClientId가 동일하면 초기화
+  useEffect(() => {
+    if (watchedClientId && form.getValues("billingClientId") === watchedClientId) {
+      form.setValue("billingClientId", null);
+      form.setValue("billingClientName", "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedClientId]);
 
   useEffect(() => {
     if (prevValues) {
@@ -158,9 +173,10 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
   async function onSubmit(values: FormValues) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { clientName, ...serverValues } = values;
+      const { clientName, billingClientName, ...serverValues } = values;
       const submitData = {
         ...serverValues,
+        billingClientId: serverValues.billingClientId || null,
         issuedDate: values.issuedDate
           ? format(values.issuedDate, "yyyy-MM-dd")
           : undefined,
@@ -205,6 +221,14 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                   <ClientSelect
                     disabled={!!id && !isDuplicate}
                     onValueChange={(_, label) => form.setValue("clientName", label)}
+                  />
+                  <ClientSelect
+                    name="billingClientId"
+                    label="청구 클라이언트"
+                    placeholder="소통 클라이언트와 동일"
+                    optional
+                    excludeId={watchedClientId}
+                    onValueChange={(_, label) => form.setValue("billingClientName", label)}
                   />
                   <FormTextInput
                     control={form.control}
@@ -410,7 +434,7 @@ function EstimateFormPdfPreview({
   const documentData: EstimateDocumentData = {
     title: values.title || "(제목 없음)",
     description: values.description || undefined,
-    clientName: values.clientName || undefined,
+    clientName: values.billingClientName || values.clientName || undefined,
     estimateNumber: prevValues?.estimateNumber,
     version: prevValues?.version,
     versionLabel: values.versionLabel || undefined,

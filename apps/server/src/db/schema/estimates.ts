@@ -45,6 +45,8 @@ export const estimates = pgTable(
     clientId: uuid("client_id")
       .notNull()
       .references(() => clients.id, { onDelete: "restrict" }),
+    billingClientId: uuid("billing_client_id")
+      .references(() => clients.id, { onDelete: "restrict" }),
     estimateNumber: text("estimate_number")
       .notNull()
       .references(() => estimateSeries.estimateNumber),

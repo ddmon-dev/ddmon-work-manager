@@ -115,6 +115,12 @@ export function DetailView({ data, refetch }: DetailViewProps) {
                 </span>
                 <span className="text-border">|</span>
                 <span>{data.client?.companyName}</span>
+                {data.billingClient && data.billingClient.id !== data.clientId && (
+                  <>
+                    <span className="text-border">|</span>
+                    <span>청구: {data.billingClient.companyName}</span>
+                  </>
+                )}
               </div>
             </div>
           </SheetContainer>

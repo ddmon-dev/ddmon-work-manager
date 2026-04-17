@@ -40,6 +40,7 @@ app.get("/", async (c) => {
       where,
       with: {
         client: true,
+        billingClient: { columns: { id: true, companyName: true } },
         collections: {
           where: softDeleteFilter(projectCollections.deleted),
           columns: { amount: true },
@@ -337,6 +338,7 @@ app.get("/:id", async (c) => {
     where: and(eq(projects.id, id), softDeleteFilter(projects.deleted)),
     with: {
       client: true,
+      billingClient: { columns: { id: true, companyName: true } },
       invoices: {
         where: softDeleteFilter(projectInvoices.deleted),
         orderBy: [desc(projectInvoices.issueDate)],
@@ -384,6 +386,11 @@ app.post("/", async (c) => {
   const parsed = projectWriteSchema.safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
+  // billingClientId === clientId 정규화
+  if (parsed.data.billingClientId === parsed.data.clientId) {
+    parsed.data.billingClientId = null;
+  }
+
   const project = await db.transaction(async (tx) => {
     const projectNumber = await generateProjectNumber(tx);
     const [created] = await tx
@@ -412,6 +419,17 @@ app.patch("/:id", async (c) => {
   const id = c.req.param("id");
   const parsed = projectWriteSchema.partial().safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+
+  // billingClientId === clientId 정규화 (PATCH: 기존 clientId 참조)
+  if (parsed.data.billingClientId) {
+    const existing = await db.query.projects.findFirst({
+      where: eq(projects.id, id),
+      columns: { clientId: true },
+    });
+    if (existing && parsed.data.billingClientId === (parsed.data.clientId ?? existing.clientId)) {
+      parsed.data.billingClientId = null;
+    }
+  }
 
   const { contractAmount, ...rest } = parsed.data;
   const setValues = {

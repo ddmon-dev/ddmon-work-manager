@@ -40,9 +40,21 @@ export const listColumns: ColumnDef<EstimateListItem>[] = [
   },
   {
     accessorKey: "clientCompanyName",
-    header: "고객명",
+    header: "고객명(청구처)",
     size: 180,
     meta: { className: "text-left" },
+    cell: ({ row }) => {
+      const { clientCompanyName, billingClientCompanyName } = row.original;
+      if (billingClientCompanyName && billingClientCompanyName !== clientCompanyName) {
+        return (
+          <span>
+            {clientCompanyName}
+            <span className="text-muted-foreground">({billingClientCompanyName})</span>
+          </span>
+        );
+      }
+      return clientCompanyName;
+    },
   },
   {
     id: "supplyAmount",

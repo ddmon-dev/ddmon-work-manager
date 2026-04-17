@@ -66,6 +66,8 @@ export interface ProjectDTO {
   projectNumber: string;
   clientId: string;
   client: ProjectClientInfo;
+  billingClientId?: string | null;
+  billingClient?: ProjectClientInfo | null;
   estimateNumber: string | null;
   name: string;
   description: string | null;

@@ -148,6 +148,13 @@
       "when": 1775140001737,
       "tag": "0020_add_business_info_name_en",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1776399413639,
+      "tag": "0021_add_billing_client_id",
+      "breakpoints": true
     }
   ]
 }

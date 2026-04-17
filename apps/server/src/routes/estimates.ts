@@ -52,7 +52,8 @@ app.get("/", async (c) => {
     ? or(
         ilike(estimates.estimateNumber, `%${search}%`),
         ilike(estimates.title, `%${search}%`),
-        ilike(clients.companyName, `%${search}%`)
+        ilike(clients.companyName, `%${search}%`),
+        sql`bc.company_name ILIKE ${`%${search}%`}`
       )
     : undefined;
 
@@ -78,11 +79,14 @@ app.get("/", async (c) => {
       updatedAt: estimates.updatedAt,
       clientId: estimates.clientId,
       clientCompanyName: clients.companyName,
+      billingClientId: estimates.billingClientId,
+      billingClientCompanyName: sql<string | null>`bc.company_name`.as("billing_client_company_name"),
       seriesStatus: estimateSeries.status,
       finalEstimateId: estimateSeries.finalEstimateId,
     })
     .from(estimates)
     .innerJoin(clients, eq(estimates.clientId, clients.id))
+    .leftJoin(sql`clients as bc`, sql`bc.id = ${estimates.billingClientId}`)
     .innerJoin(estimateSeries, eq(estimates.estimateNumber, estimateSeries.estimateNumber))
     .where(whereCondition)
     .orderBy(
@@ -98,6 +102,7 @@ app.get("/", async (c) => {
       .select({ total: countDistinct(estimates.estimateNumber) })
       .from(estimates)
       .innerJoin(clients, eq(estimates.clientId, clients.id))
+      .leftJoin(sql`clients as bc`, sql`bc.id = ${estimates.billingClientId}`)
       .innerJoin(estimateSeries, eq(estimates.estimateNumber, estimateSeries.estimateNumber))
       .where(whereCondition),
   ]);
@@ -275,10 +280,11 @@ app.get("/series/:estimateNumber/project-info", async (c) => {
 
   // 최종 버전 우선, 없으면 최신 버전
   const targetId = series.finalEstimateId;
+  const estimateColumns = { clientId: true, billingClientId: true, title: true, description: true, totalAmount: true, taxType: true } as const;
   const estimate = targetId
     ? await db.query.estimates.findFirst({
         where: and(eq(estimates.id, targetId), softDeleteFilter(estimates.deleted)),
-        columns: { clientId: true, title: true, description: true, totalAmount: true, taxType: true },
+        columns: estimateColumns,
       })
     : await db.query.estimates.findFirst({
         where: and(
@@ -286,7 +292,7 @@ app.get("/series/:estimateNumber/project-info", async (c) => {
           softDeleteFilter(estimates.deleted)
         ),
         orderBy: [desc(estimates.version)],
-        columns: { clientId: true, title: true, description: true, totalAmount: true, taxType: true },
+        columns: estimateColumns,
       });
 
   if (!estimate) return errorResponse(c, ERRORS.NOT_FOUND, 404);
@@ -300,6 +306,7 @@ app.get("/series/:estimateNumber/project-info", async (c) => {
 
   return successResponse(c, {
     clientId: estimate.clientId,
+    billingClientId: estimate.billingClientId ?? null,
     title: estimate.title,
     description: estimate.description ?? null,
     totalAmount: estimate.totalAmount,
@@ -370,6 +377,7 @@ app.get("/:id", async (c) => {
     where: and(eq(estimates.id, id), softDeleteFilter(estimates.deleted)),
     with: {
       client: true,
+      billingClient: { columns: { id: true, companyName: true } },
       groups: {
         orderBy: [asc(estimateItemGroups.sortOrder)],
         with: {
@@ -471,6 +479,7 @@ app.post("/", async (c) => {
       .insert(estimates)
       .values({
         clientId: estimateData.clientId,
+        billingClientId: estimateData.billingClientId === estimateData.clientId ? null : (estimateData.billingClientId ?? null),
         estimateNumber,
         title: estimateData.title,
         description: estimateData.description,
@@ -545,6 +554,11 @@ app.patch("/:id", async (c) => {
     phone: user.phone ?? undefined,
     email: user.email ?? undefined,
   };
+
+  // billingClientId === clientId 정규화
+  if (estimateData.billingClientId && estimateData.billingClientId === (estimateData.clientId ?? existing.clientId)) {
+    estimateData.billingClientId = null;
+  }
 
   const updated = await db.transaction(async (tx) => {
     const [estimate] = await tx

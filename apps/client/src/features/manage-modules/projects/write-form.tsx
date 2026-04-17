@@ -42,6 +42,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 const formDefaultValues: FormValues = {
   clientId: "",
+  billingClientId: null,
   estimateNumber: undefined,
   name: "",
   description: "",
@@ -57,6 +58,7 @@ const formDefaultValues: FormValues = {
 function toFormValues(data: ProjectWithDetails): FormValues {
   return {
     clientId: data.clientId,
+    billingClientId: data.billingClientId ?? null,
     estimateNumber: data.estimateNumber ?? undefined,
     name: data.name,
     description: data.description ?? "",
@@ -102,6 +104,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
     form.setValue("estimateNumber", createFrom);
     fetchEstimateProjectInfo(createFrom).then((info) => {
       form.setValue("clientId", info.clientId);
+      if (info.billingClientId) form.setValue("billingClientId", info.billingClientId);
       form.setValue("name", info.title);
       if (info.description) form.setValue("description", info.description);
       if (info.supplyAmount) form.setValue("contractAmount", info.supplyAmount);
@@ -119,9 +122,13 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
   );
 
   // 클라이언트 변경 시 견적서 초기화 (생성 모드, create_from이 아닌 경우만)
+  // + billingClientId가 새 clientId와 동일하면 초기화
   useEffect(() => {
     if (id || createFrom) return;
     form.setValue("estimateNumber", undefined);
+    if (watchedClientId && form.getValues("billingClientId") === watchedClientId) {
+      form.setValue("billingClientId", null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedClientId]);
 
@@ -156,6 +163,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
   async function onSubmit(values: FormValues) {
     const submitData: ProjectWriteInput = {
       ...values,
+      billingClientId: values.billingClientId || null,
       contractDate: format(values.contractDate, "yyyy-MM-dd"),
       completedDate: values.completedDate
         ? format(values.completedDate, "yyyy-MM-dd")
@@ -183,6 +191,13 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
                 <ClientSelect
                   disabled={!!id}
                   description={id ? "프로젝트 생성 후 변경할 수 없습니다." : undefined}
+                />
+                <ClientSelect
+                  name="billingClientId"
+                  label="청구 클라이언트"
+                  placeholder="소통 클라이언트와 동일"
+                  optional
+                  excludeId={watchedClientId}
                 />
                 {!id && watchedClientId && availableEstimates?.length === 0 ? (
                   <Field>

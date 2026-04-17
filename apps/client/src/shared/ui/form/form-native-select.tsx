@@ -9,12 +9,14 @@ export interface FormNativeSelectProps<
 > extends FormBaseProps<V, N> {
   options: ReadonlyArray<{ value: string; label: string }>;
   disabled?: boolean;
+  clearable?: boolean;
+  placeholder?: string;
 }
 
 export function FormNativeSelect<
   V extends FieldValues = FieldValues,
   N extends FieldPath<V> = FieldPath<V>,
->({ control, name, label, description, orientation, optional, disableError, options, disabled }: FormNativeSelectProps<V, N>) {
+>({ control, name, label, description, orientation, optional, disableError, options, disabled, clearable, placeholder }: FormNativeSelectProps<V, N>) {
   return (
     <FormField
       control={control}
@@ -29,10 +31,13 @@ export function FormNativeSelect<
         <NativeSelect
           id={id}
           value={value ?? ""}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange(clearable && e.target.value === "" ? null : e.target.value)}
           aria-invalid={fieldState.invalid}
           disabled={disabled}
         >
+          {clearable && (
+            <NativeSelectOption value="">{placeholder ?? "선택해주세요."}</NativeSelectOption>
+          )}
           {options.map((opt) => (
             <NativeSelectOption key={opt.value} value={opt.value}>
               {opt.label}

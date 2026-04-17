@@ -13,6 +13,9 @@ export function ProjectInfoSection({ data }: ProjectInfoSectionProps) {
     <>
       <DetailInfoRow label="프로젝트 번호" value={data.projectNumber} />
       <DetailInfoRow label="고객" value={data.client?.companyName} />
+      {data.billingClient && data.billingClient.id !== data.clientId && (
+        <DetailInfoRow label="청구 클라이언트" value={data.billingClient.companyName} />
+      )}
       {data.estimateNumber && (
         <DetailInfoRow label="견적서 번호" value={data.estimateNumber} />
       )}

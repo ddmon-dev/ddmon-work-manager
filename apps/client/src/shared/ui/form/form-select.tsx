@@ -21,8 +21,11 @@ export type FormSelectProps<
   options: SelectOption[];
   placeholder?: string;
   disabled?: boolean;
+  clearable?: boolean;
   onValueChange?: (value: string) => void;
 };
+
+const CLEAR_VALUE = "__clear__";
 
 export function FormSelect<
   V extends FieldValues = FieldValues,
@@ -38,6 +41,7 @@ export function FormSelect<
   options,
   placeholder,
   disabled,
+  clearable,
   onValueChange,
 }: FormSelectProps<V, N>) {
   return (
@@ -53,13 +57,26 @@ export function FormSelect<
       {({ value, onChange, fieldState, id }) => (
         <Select
           value={value ?? ""}
-          onValueChange={(v) => { onChange(v); onValueChange?.(v); }}
+          onValueChange={(v) => {
+            if (v === CLEAR_VALUE) {
+              onChange(null);
+              onValueChange?.("");
+            } else {
+              onChange(v);
+              onValueChange?.(v);
+            }
+          }}
           disabled={disabled}
         >
           <SelectTrigger id={id} aria-invalid={fieldState.invalid}>
             <SelectValue placeholder={placeholder ?? "선택해주세요."} />
           </SelectTrigger>
           <SelectContent>
+            {clearable && (
+              <SelectItem value={CLEAR_VALUE} className="text-muted-foreground">
+                {placeholder ?? "선택해주세요."}
+              </SelectItem>
+            )}
             {options.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}

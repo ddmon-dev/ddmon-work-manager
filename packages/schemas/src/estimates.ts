@@ -18,6 +18,7 @@ export const estimateGroupWriteSchema = z.object({
 
 export const estimateWriteSchema = z.object({
   clientId: z.string().uuid("유효한 클라이언트 ID가 필요합니다."),
+  billingClientId: z.string().uuid().nullable().optional(),
   title: z.string().min(1, "제목을 입력해주세요."),
   description: z.string().optional(),
   versionLabel: z.string().optional(),

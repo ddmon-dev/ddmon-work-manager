@@ -3,32 +3,47 @@ import { useClientList } from "../../clients/api";
 import { FormSelect } from "@/shared/ui/form";
 
 interface ClientSelectProps {
+  name?: string;
+  label?: string;
+  placeholder?: string;
   disabled?: boolean;
   description?: string;
   optional?: boolean;
+  excludeId?: string;
   onValueChange?: (value: string, label: string) => void;
 }
 
-export function ClientSelect({ disabled, description, optional, onValueChange }: ClientSelectProps) {
+export function ClientSelect({
+  name = "clientId",
+  label = "클라이언트",
+  placeholder = "클라이언트를 선택해주세요.",
+  disabled,
+  description,
+  optional,
+  excludeId,
+  onValueChange,
+}: ClientSelectProps) {
   const { control } = useFormContext();
   const { data } = useClientList({ pageSize: 200 });
-  const options = data?.items.map((c) => ({ value: c.id, label: c.companyName })) ?? [];
+  const options = (data?.items.map((c) => ({ value: c.id, label: c.companyName })) ?? [])
+    .filter((o) => !excludeId || o.value !== excludeId);
 
   return (
     <FormSelect
       control={control}
-      name="clientId"
-      label="클라이언트"
-      placeholder="클라이언트를 선택해주세요."
+      name={name}
+      label={label}
+      placeholder={placeholder}
       description={description}
       options={options}
       optional={optional}
+      clearable={optional}
       disabled={disabled}
       onValueChange={
         onValueChange
           ? (value: string) => {
               const matched = options.find((o) => o.value === value);
-              if (matched) onValueChange(matched.value, matched.label);
+              onValueChange(matched?.value ?? "", matched?.label ?? "");
             }
           : undefined
       }

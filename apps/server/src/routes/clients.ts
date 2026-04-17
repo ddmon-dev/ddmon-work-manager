@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, or } from "drizzle-orm";
 import { db } from "../db";
 import { clients, clientMemos, projects, estimates, user } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
@@ -126,17 +126,23 @@ app.patch("/:id", async (c) => {
 app.delete("/:id", async (c) => {
   const id = c.req.param("id");
 
-  // 활성 프로젝트 존재 여부 확인
+  // 활성 프로젝트 존재 여부 확인 (clientId 또는 billingClientId)
   const [{ total: projectCount }] = await db
     .select({ total: count() })
     .from(projects)
-    .where(and(eq(projects.clientId, id), softDeleteFilter(projects.deleted)));
+    .where(and(
+      or(eq(projects.clientId, id), eq(projects.billingClientId, id)),
+      softDeleteFilter(projects.deleted),
+    ));
 
-  // 활성 견적서 존재 여부 확인
+  // 활성 견적서 존재 여부 확인 (clientId 또는 billingClientId)
   const [{ total: estimateCount }] = await db
     .select({ total: count() })
     .from(estimates)
-    .where(and(eq(estimates.clientId, id), softDeleteFilter(estimates.deleted)));
+    .where(and(
+      or(eq(estimates.clientId, id), eq(estimates.billingClientId, id)),
+      softDeleteFilter(estimates.deleted),
+    ));
 
   if (projectCount > 0 || estimateCount > 0) {
     return errorResponse(c, { code: "HAS_REFERENCES", message: "프로젝트 또는 견적서가 존재하는 클라이언트는 삭제할 수 없습니다." }, 400);

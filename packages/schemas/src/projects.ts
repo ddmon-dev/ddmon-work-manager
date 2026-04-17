@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const projectWriteSchema = z.object({
   clientId: z.string().uuid("유효한 클라이언트 ID가 필요합니다."),
+  billingClientId: z.string().uuid().nullable().optional(),
   estimateNumber: z.string().nullable().optional(),
   name: z.string().min(1, "프로젝트명을 입력해주세요."),
   description: z.string().optional(),

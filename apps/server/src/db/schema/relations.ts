@@ -18,8 +18,10 @@ import { clientEnvironments, clientEnvironmentMemos } from "./client-environment
 
 export const clientsRelations = relations(clients, ({ many }) => ({
   memos: many(clientMemos),
-  estimates: many(estimates),
-  projects: many(projects),
+  estimates: many(estimates, { relationName: "estimateClient" }),
+  projects: many(projects, { relationName: "projectClient" }),
+  billingEstimates: many(estimates, { relationName: "estimateBillingClient" }),
+  billingProjects: many(projects, { relationName: "projectBillingClient" }),
 }));
 
 export const clientMemosRelations = relations(clientMemos, ({ one }) => ({
@@ -45,6 +47,12 @@ export const estimatesRelations = relations(estimates, ({ one, many }) => ({
   client: one(clients, {
     fields: [estimates.clientId],
     references: [clients.id],
+    relationName: "estimateClient",
+  }),
+  billingClient: one(clients, {
+    fields: [estimates.billingClientId],
+    references: [clients.id],
+    relationName: "estimateBillingClient",
   }),
   series: one(estimateSeries, {
     fields: [estimates.estimateNumber],
@@ -77,6 +85,12 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   client: one(clients, {
     fields: [projects.clientId],
     references: [clients.id],
+    relationName: "projectClient",
+  }),
+  billingClient: one(clients, {
+    fields: [projects.billingClientId],
+    references: [clients.id],
+    relationName: "projectBillingClient",
   }),
   estimateSeries: one(estimateSeries, {
     fields: [projects.estimateNumber],

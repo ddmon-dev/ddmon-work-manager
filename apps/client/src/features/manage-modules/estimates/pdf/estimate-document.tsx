@@ -557,7 +557,7 @@ export function toDocumentData(estimate: EstimateWithDetails): EstimateDocumentD
   return {
     title: estimate.title,
     description: estimate.description || undefined,
-    clientName: estimate.client?.companyName || undefined,
+    clientName: estimate.billingClient?.companyName || estimate.client?.companyName || undefined,
     estimateNumber: estimate.estimateNumber,
     version: estimate.version,
     versionLabel: estimate.versionLabel || undefined,
