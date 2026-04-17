@@ -52,8 +52,10 @@ Admins = Better Auth user 테이블 (별도 admins 테이블 없음).
 
 ```
 clients ─────┬── client_memos (1:N, CASCADE)
-             ├── estimates (1:N, RESTRICT)
-             ├── projects (1:N, RESTRICT)
+             ├── estimates.clientId (1:N, RESTRICT)
+             ├── estimates.billingClientId (1:N, RESTRICT, nullable)
+             ├── projects.clientId (1:N, RESTRICT)
+             ├── projects.billingClientId (1:N, RESTRICT, nullable)
              └── schedules (1:N, SET NULL)
 
 estimate_series ─── estimates (1:N)
@@ -135,15 +137,17 @@ files ─── files (self-ref, folderId → RESTRICT)
 
 ### 견적서 (estimates)
 
+- `billing_client_id`: nullable FK → clients(id). 소통 클라이언트와 대금 청구 대상이 다른 경우 (예: 총판 경유). null이면 `client_id`와 동일 취급. 서버에서 `billing_client_id === client_id`면 null로 정규화
 - `tax_type`: `"vat"` (기본) | `"withholding"` — 세금 유형
 - `discount_type`: `"none"` | `"amount"` | `"percentage"`
 - `total_amount`, `discount_amount`: `numeric(14,2)` / `numeric(12,2)`
 - `publisher_info`: `jsonb` — 발행 시점 사업자/발행자 정보 스냅샷
-- `version`: 계열 내 자동 증가
+- `version`: 계열 내 자동 증가 (삭제된 버전 포함 max+1, 건너뛰기 허용)
 - `version_label`: 사용자 지정 레이블
 
 ### 프로젝트 (projects)
 
+- `billing_client_id`: nullable FK → clients(id). 견적서와 동일한 청구 클라이언트 개념. 견적서→프로젝트 생성 시 자동 상속
 - `status`: `pending` | `active` | `settling` | `completed` | `discarded`
 - `work_phase`: `preparing` | `working` | `reviewing` | `delivered`
 - `contract_amount`: 공급가액 (`numeric(15,2)`). 견적서와 독립
@@ -268,7 +272,7 @@ files ─── files (self-ref, folderId → RESTRICT)
 
 ## 마이그레이션 관리
 
-마이그레이션 파일: `0000_initial` ~ 최신 (순차 증가). 0000~0003은 초기 스키마, 0004는 프로젝트 일정, 0006은 라이브러리/드라이브 테이블 추가, 0007~0008은 파일 즐겨찾기, 0011은 파트너 관리, 0013은 프로젝트 재무 관리 (project_expenses, partner_payments 추가), 0014는 세금계산서 분리 (project_invoices 신규 + project_payments에서 invoice 컬럼 제거 + VAT 데이터 이관), 0015는 통합 수금 테이블 (project_collections 신규, project_payments 제거, partner_payments에 tax_type 추가).
+마이그레이션 파일: `0000_initial` ~ 최신 (순차 증가). 0000~0003은 초기 스키마, 0004는 프로젝트 일정, 0006은 라이브러리/드라이브 테이블 추가, 0007~0008은 파일 즐겨찾기, 0011은 파트너 관리, 0013은 프로젝트 재무 관리 (project_expenses, partner_payments 추가), 0014는 세금계산서 분리 (project_invoices 신규 + project_payments에서 invoice 컬럼 제거 + VAT 데이터 이관), 0015는 통합 수금 테이블 (project_collections 신규, project_payments 제거, partner_payments에 tax_type 추가), 0021은 청구 클라이언트 (estimates, projects에 billing_client_id 추가).
 
 ### 스키마 변경 절차
 

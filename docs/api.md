@@ -88,7 +88,7 @@ requireAuth → requireSuperAdmin (선택적)
 | POST | `/clients` | 생성 |
 | GET | `/clients/:id` | 상세 (메모 포함, author → "name(username)" 변환) |
 | PATCH | `/clients/:id` | 수정 |
-| DELETE | `/clients/:id` | 소프트 삭제 (활성 프로젝트/견적서 있으면 차단) |
+| DELETE | `/clients/:id` | 소프트 삭제 (clientId 또는 billingClientId로 참조하는 활성 프로젝트/견적서 있으면 차단) |
 | POST | `/clients/:id/memos` | 메모 생성 |
 | PATCH | `/clients/memos/:id` | 메모 수정 |
 | DELETE | `/clients/memos/:id` | 메모 소프트 삭제 |
@@ -110,7 +110,7 @@ requireAuth → requireSuperAdmin (선택적)
 
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | `/estimates` | 목록 (DISTINCT ON으로 계열별 대표 1건) |
+| GET | `/estimates` | 목록 (DISTINCT ON으로 계열별 대표 1건, 검색: estimateNumber, title, clientName, billingClientName) |
 | POST | `/estimates` | 생성 (트랜잭션: estimate + groups + items) |
 | GET | `/estimates/:id` | 상세 (groups/items/versions/series/linkedProject) |
 | PATCH | `/estimates/:id` | 수정 |
@@ -371,8 +371,9 @@ userId 필터링: 모든 메모 API는 `user.id`로 자동 필터링 (사용자�
 
 - `estimateSeries` — 계열 상태 관리 (pending / contracted / expired)
 - `estimates` — 계열 내 버전별 데이터
-- 계열 내 개정본 추가: 기존 estimateNumber + version 자동 증가
+- 계열 내 개정본 추가: 기존 estimateNumber + version 자동 증가 (삭제된 버전 포함 max+1, 건너뛰기 허용)
 - 계약 확정: `finalEstimateId` 설정 (최종 버전 지정)
+- 청구 클라이언트: `billingClientId`로 소통 클라이언트와 다른 청구 대상 지정 가능. 견적서 PDF "수신"란에 billingClient 우선 표시. 서버에서 `billingClientId === clientId`면 null로 정규화
 - 목록 조회: `DISTINCT ON(estimate_number)` + finalEstimateId 우선 정렬
 
 ### 소프트 삭제
@@ -397,7 +398,7 @@ where(softDeleteFilter(table.deleted))
 
 | 삭제 대상 | 참조 체크 | 에러 코드 |
 |----------|----------|----------|
-| clients | 활성 프로젝트 또는 견적서 존재 시 차단 | `HAS_REFERENCES` |
+| clients | clientId 또는 billingClientId로 참조하는 활성 프로젝트/견적서 존재 시 차단 | `HAS_REFERENCES` |
 | estimates (계열) | 연결된 활성 프로젝트 존재 시 차단 | — |
 | partners | 프로젝트 배치(project_partners) 존재 시 차단 | `PARTNER_HAS_ASSIGNMENTS` |
 | projectPartners (배치 해제) | 활성 partner_payments 존재 시 차단 | `HAS_ACTIVE_PAYMENTS` |
