@@ -30,6 +30,8 @@ coverage/
 # AI tools
 .claude/
 .serena/
+.agents/
+.playwright-mcp/
 
 # IDE
 .idea/
