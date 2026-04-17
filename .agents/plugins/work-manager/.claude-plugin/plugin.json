@@ -1,0 +1,16 @@
+{
+  "name": "work-manager",
+  "description": "리틀어썸 Work Manager 앱의 고객/견적/프로젝트 데이터에 접근해 업무 맥락을 자동 확보하고 변경 작업을 대행하는 스킬 모음",
+  "version": "0.1.0",
+  "author": {
+    "name": "LittleAwesome",
+    "email": "ldhman91@gmail.com"
+  },
+  "keywords": [
+    "work-manager",
+    "littleawesome",
+    "clients",
+    "estimates",
+    "projects"
+  ]
+}

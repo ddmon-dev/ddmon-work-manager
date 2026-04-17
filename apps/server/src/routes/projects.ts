@@ -3,7 +3,7 @@ import { z } from "zod";
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
 import { projects, projectInvoices, projectCollections, projectMemos, projectPartners, projectScheduleLanes, projectExpenses, partnerPayments, user } from "../db/schema";
-import { requireAuth } from "../middleware/auth";
+import { requireAuthOrSkill } from "../middleware/skill-auth";
 import { projectWriteSchema, projectPartnerWriteSchema } from "@packages/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
@@ -12,7 +12,7 @@ import { generateProjectNumber } from "../lib/number-generator";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
-app.use("*", requireAuth);
+app.use("*", requireAuthOrSkill);
 
 // GET /projects — 목록 (payments 합계 포함)
 app.get("/", async (c) => {

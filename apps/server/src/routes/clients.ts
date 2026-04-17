@@ -3,7 +3,7 @@ import { z } from "zod";
 import { and, count, desc, eq, inArray, or } from "drizzle-orm";
 import { db } from "../db";
 import { clients, clientMemos, projects, estimates, user } from "../db/schema";
-import { requireAuth } from "../middleware/auth";
+import { requireAuthOrSkill } from "../middleware/skill-auth";
 import { clientWriteSchema } from "@packages/schemas";
 import { parsePagination, calcOffset } from "../lib/pagination";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
@@ -11,7 +11,7 @@ import { searchFilter, softDeleteFilter, softDeletePayload } from "../lib/query-
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
-app.use("*", requireAuth);
+app.use("*", requireAuthOrSkill);
 
 // GET /clients — 목록 (페이지네이션, 검색)
 app.get("/", async (c) => {

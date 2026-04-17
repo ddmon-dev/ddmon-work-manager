@@ -3,7 +3,7 @@ import { z } from "zod";
 import { and, asc, count, countDistinct, desc, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { db } from "../db";
 import { clients, estimateSeries, estimates, estimateItemGroups, estimateItems, projects, businessInfo } from "../db/schema";
-import { requireAuth } from "../middleware/auth";
+import { requireAuthOrSkill } from "../middleware/skill-auth";
 import { estimateWriteSchema, type EstimateGroupWriteInput } from "@packages/schemas";
 import { calculateTotal } from "@packages/utils";
 import { parsePagination, calcOffset } from "../lib/pagination";
@@ -13,7 +13,7 @@ import { softDeleteFilter, softDeletePayload } from "../lib/query-helpers";
 import type { AppVariables } from "../lib/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
-app.use("*", requireAuth);
+app.use("*", requireAuthOrSkill);
 
 // --- 헬퍼 ---
 

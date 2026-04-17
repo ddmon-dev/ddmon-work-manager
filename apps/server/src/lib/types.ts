@@ -5,5 +5,6 @@ export type AuthSession = typeof auth.$Infer.Session.session;
 
 export type AppVariables = {
   user: AuthUser;
-  session: AuthSession;
+  session?: AuthSession;
+  skillCaller?: boolean;
 };
