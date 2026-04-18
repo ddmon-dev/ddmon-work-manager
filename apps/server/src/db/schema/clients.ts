@@ -19,6 +19,9 @@ export const clientMemos = pgTable("client_memos", {
   parentId: uuid("parent_id")
     .notNull()
     .references(() => clients.id, { onDelete: "cascade" }),
+  type: text("type", { enum: ["strategy", "log"] })
+    .notNull()
+    .default("log"),
   content: text("content").notNull(),
   author: text("author"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

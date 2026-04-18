@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lte, or } from "drizzle-orm";
 import { db } from "../db";
 import { projects, projectInvoices, projectCollections, projectMemos, projectPartners, projectScheduleLanes, projectExpenses, partnerPayments, user } from "../db/schema";
 import { requireAuthOrSkill } from "../middleware/skill-auth";
@@ -18,21 +18,39 @@ app.use("*", requireAuthOrSkill);
 app.get("/", async (c) => {
   const { page, pageSize, search } = parsePagination(c.req.query());
   const offset = calcOffset(page, pageSize);
-  const category = c.req.query("category");
+
+  const listQuerySchema = z.object({
+    category: z.enum(["incomplete", "completed", "discarded"]).optional(),
+    status: z.enum(["pending", "active", "settling", "completed", "discarded"]).optional(),
+    clientId: z.string().uuid().optional(),
+    amountMin: z.coerce.number().nonnegative().optional(),
+    amountMax: z.coerce.number().nonnegative().optional(),
+    contractFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    contractTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  });
+  const filterParsed = listQuerySchema.safeParse(c.req.query());
+  if (!filterParsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+  const { category, status, clientId, amountMin, amountMax, contractFrom, contractTo } = filterParsed.data;
 
   const categoryStatusMap: Record<string, string[]> = {
     incomplete: ["pending", "active", "settling"],
     completed: ["completed"],
     discarded: ["discarded"],
   };
-  const statusFilter = category && categoryStatusMap[category]
+  const categoryFilter = category && categoryStatusMap[category]
     ? inArray(projects.status, categoryStatusMap[category])
     : undefined;
 
   const where = and(
     softDeleteFilter(projects.deleted),
     search ? searchFilter([projects.name], search) : undefined,
-    statusFilter
+    categoryFilter,
+    status ? eq(projects.status, status) : undefined,
+    clientId ? or(eq(projects.clientId, clientId), eq(projects.billingClientId, clientId)) : undefined,
+    amountMin !== undefined ? gte(projects.contractAmount, String(amountMin)) : undefined,
+    amountMax !== undefined ? lte(projects.contractAmount, String(amountMax)) : undefined,
+    contractFrom ? gte(projects.contractDate, contractFrom) : undefined,
+    contractTo ? lte(projects.contractDate, contractTo) : undefined,
   );
 
   const [rows, countRows] = await Promise.all([

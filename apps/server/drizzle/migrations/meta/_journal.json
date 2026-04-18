@@ -155,6 +155,13 @@
       "when": 1776399413639,
       "tag": "0021_add_billing_client_id",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1776495442287,
+      "tag": "0022_add_client_memo_type",
+      "breakpoints": true
     }
   ]
 }

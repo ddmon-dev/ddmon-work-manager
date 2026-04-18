@@ -1,0 +1,1 @@
+ALTER TABLE "client_memos" ADD COLUMN "type" text DEFAULT 'log' NOT NULL;

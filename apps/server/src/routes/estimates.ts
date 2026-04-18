@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { and, asc, count, countDistinct, desc, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
+import { and, asc, count, countDistinct, desc, eq, gte, ilike, inArray, isNotNull, lte, or, sql } from "drizzle-orm";
 import { db } from "../db";
 import { clients, estimateSeries, estimates, estimateItemGroups, estimateItems, projects, businessInfo } from "../db/schema";
 import { requireAuthOrSkill } from "../middleware/skill-auth";
@@ -46,7 +46,17 @@ app.get("/", async (c) => {
   const { page, pageSize, search } = parsePagination(c.req.query());
   const offset = calcOffset(page, pageSize);
 
-  const status = c.req.query("status");
+  const listQuerySchema = z.object({
+    status: z.enum(["pending", "contracted", "expired"]).optional(),
+    clientId: z.string().uuid().optional(),
+    amountMin: z.coerce.number().nonnegative().optional(),
+    amountMax: z.coerce.number().nonnegative().optional(),
+    issuedFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    issuedTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  });
+  const filterParsed = listQuerySchema.safeParse(c.req.query());
+  if (!filterParsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
+  const { status, clientId, amountMin, amountMax, issuedFrom, issuedTo } = filterParsed.data;
 
   const searchFilter = search
     ? or(
@@ -57,9 +67,16 @@ app.get("/", async (c) => {
       )
     : undefined;
 
-  const statusCondition = status ? eq(estimateSeries.status, status) : undefined;
-
-  const whereCondition = and(softDeleteFilter(estimates.deleted), searchFilter, statusCondition);
+  const whereCondition = and(
+    softDeleteFilter(estimates.deleted),
+    searchFilter,
+    status ? eq(estimateSeries.status, status) : undefined,
+    clientId ? or(eq(estimates.clientId, clientId), eq(estimates.billingClientId, clientId)) : undefined,
+    amountMin !== undefined ? gte(estimates.totalAmount, String(amountMin)) : undefined,
+    amountMax !== undefined ? lte(estimates.totalAmount, String(amountMax)) : undefined,
+    issuedFrom ? gte(estimates.issuedDate, issuedFrom) : undefined,
+    issuedTo ? lte(estimates.issuedDate, issuedTo) : undefined,
+  );
 
   // DISTINCT ON 서브쿼리: finalEstimateId 우선, 없으면 최신 version
   const sq = db

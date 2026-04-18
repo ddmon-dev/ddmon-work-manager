@@ -38,12 +38,17 @@ app.get("/", async (c) => {
 // PATCH /clients/memos/:id — 메모 수정
 app.patch("/memos/:id", async (c) => {
   const id = c.req.param("id");
-  const parsed = z.object({ content: z.string().min(1) }).safeParse(await c.req.json());
+  const parsed = z.object({
+    content: z.string().min(1).optional(),
+    type: z.enum(["strategy", "log"]).optional(),
+  }).refine((v) => v.content !== undefined || v.type !== undefined, {
+    message: "수정할 필드가 없습니다.",
+  }).safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
   const [updated] = await db
     .update(clientMemos)
-    .set({ content: parsed.data.content, updatedAt: new Date() })
+    .set({ ...parsed.data, updatedAt: new Date() })
     .where(and(eq(clientMemos.id, id), softDeleteFilter(clientMemos.deleted)))
     .returning();
 
@@ -162,7 +167,10 @@ app.delete("/:id", async (c) => {
 app.post("/:id/memos", async (c) => {
   const user = c.get("user");
   const parentId = c.req.param("id");
-  const parsed = z.object({ content: z.string().min(1) }).safeParse(await c.req.json());
+  const parsed = z.object({
+    content: z.string().min(1),
+    type: z.enum(["strategy", "log"]).default("log"),
+  }).safeParse(await c.req.json());
   if (!parsed.success) return errorResponse(c, ERRORS.VALIDATION, 400);
 
   const parent = await db.query.clients.findFirst({
@@ -172,7 +180,7 @@ app.post("/:id/memos", async (c) => {
 
   const [memo] = await db
     .insert(clientMemos)
-    .values({ parentId, content: parsed.data.content, author: user.id })
+    .values({ parentId, content: parsed.data.content, type: parsed.data.type, author: user.id })
     .returning();
 
   return successResponse(c, memo, 201);
