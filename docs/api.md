@@ -86,11 +86,11 @@ requireAuth → requireSuperAdmin (선택적)
 |--------|------|------|
 | GET | `/clients` | 목록 (페이지네이션, 검색: companyName, contactName, email) |
 | POST | `/clients` | 생성 |
-| GET | `/clients/:id` | 상세 (메모 포함, author → "name(username)" 변환) |
+| GET | `/clients/:id` | 상세 (메모 포함 — `type`, `content`, `author` 등, author → "name(username)" 변환) |
 | PATCH | `/clients/:id` | 수정 |
 | DELETE | `/clients/:id` | 소프트 삭제 (clientId 또는 billingClientId로 참조하는 활성 프로젝트/견적서 있으면 차단) |
-| POST | `/clients/:id/memos` | 메모 생성 |
-| PATCH | `/clients/memos/:id` | 메모 수정 |
+| POST | `/clients/:id/memos` | 메모 생성 (`{ content, type?: "strategy" \| "log" }`, 기본 `log`) |
+| PATCH | `/clients/memos/:id` | 메모 수정 (`content`/`type` 중 하나 이상 필수) |
 | DELETE | `/clients/memos/:id` | 메모 소프트 삭제 |
 
 ### Partners (`/api/partners`)
@@ -110,7 +110,7 @@ requireAuth → requireSuperAdmin (선택적)
 
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | `/estimates` | 목록 (DISTINCT ON으로 계열별 대표 1건, 검색: estimateNumber, title, clientName, billingClientName) |
+| GET | `/estimates` | 목록 (DISTINCT ON으로 계열별 대표 1건, 검색: estimateNumber/title/clientName/billingClientName, 필터: `status`, `clientId`, `amountMin`, `amountMax`, `issuedFrom`, `issuedTo`) |
 | POST | `/estimates` | 생성 (트랜잭션: estimate + groups + items) |
 | GET | `/estimates/:id` | 상세 (groups/items/versions/series/linkedProject) |
 | PATCH | `/estimates/:id` | 수정 |
@@ -123,7 +123,7 @@ requireAuth → requireSuperAdmin (선택적)
 
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | `/projects` | 목록 (페이지네이션, 검색: name, projectNumber, clientName) |
+| GET | `/projects` | 목록 (페이지네이션, 검색: name/projectNumber/clientName, 필터: `category`, `status`, `clientId`, `amountMin`, `amountMax`, `contractFrom`, `contractTo`) |
 | POST | `/projects` | 생성 (프로젝트 번호 자동 생성) |
 | GET | `/projects/:id` | 상세 (invoices/collections/expenses/partnerPayments/memos/projectPartners 포함) |
 | PATCH | `/projects/:id` | 수정 |

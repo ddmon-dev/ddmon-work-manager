@@ -22,7 +22,7 @@ Admins = Better Auth user 테이블 (별도 admins 테이블 없음).
 | 테이블 | 설명 | PK | 삭제 방식 |
 |--------|------|-----|-----------|
 | `clients` | 고객 | uuid | 소프트 |
-| `client_memos` | 고객 메모 | uuid | 소프트 |
+| `client_memos` | 고객 메모 (`type`: strategy/log, 기본 log) | uuid | 소프트 |
 | `estimate_series` | 견적서 계열 (상태 관리) | text (estimate_number) | — |
 | `estimates` | 견적서 (버전별 데이터) | uuid | 소프트 |
 | `estimate_item_groups` | 견적서 아이템 그룹 | uuid | CASCADE |
