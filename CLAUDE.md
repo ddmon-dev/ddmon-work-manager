@@ -68,7 +68,15 @@ npm run production:rebuild # 운영 디렉토리에서 직접 rebuild만
 - **Path Alias**: `@/*` = `./src/*` (클라이언트)
 - **API 응답**: `{ success: true, data }` / `{ success: false, error, message }`
 - **DB 삭제**: 소프트 삭제 기본 (schedules, todos만 하드 삭제)
-- **Git**: 커밋: `타입: 제목` (feat, fix, refactor, docs, style, test, chore). push는 main 브랜치만 (다른 브랜치는 명시적 지시 없이 push하지 않는다). 머지: fast-forward 기본 (`--no-ff` 사용하지 않음). 선형 히스토리 유지
+- **Git 전략**:
+  - **커밋 메시지**: `타입: 제목` (feat, fix, refactor, docs, style, test, chore)
+  - **작업 브랜치**: `dev` 가 기본 개발 브랜치. `main` 직접 커밋 금지 (핫픽스 포함 모든 작업은 `dev` 경유)
+  - **하위 브랜치**: 필요 시 `dev` 에서 분기 → 완료 후 `dev` 로 ff 머지 → **머지된 하위 브랜치는 삭제**. 네이밍은 자연스럽게 (`feat/*`, `fix/*`, `docs/*` 등)
+  - **`dev` 영구 브랜치**: 삭제/재생성 금지. 배포 직후 `main == dev` 상태 유지
+  - **배포**: `dev` → `main` ff 머지 후 `npm run deploy` 실행. 스크립트 내부에서 main push + 운영 pull + install + rebuild 수행. `main` 은 **항상 배포 가능 상태** 유지
+  - **push 정책**: `main` 은 deploy 스크립트 경유로만 push. `dev` 는 백업 목적으로 사용자 요청 시에만 push 허용 (**ff push 만, force 금지**). 그 외 브랜치는 push 금지
+  - **머지**: fast-forward 기본 (`--no-ff` 사용하지 않음). 선형 히스토리 유지
+  - **main 머지 전 검증**: `npm run type-check` 통과 + 미적용 마이그레이션 순효과 통합 완료
 - **마이그레이션 네이밍**: `npm run db:generate -- --name "add_xxx"` 형식 사용 (`add_xxx`, `drop_xxx`, `alter_xxx`)
 - **마이그레이션 통합**: 운영 DB에 적용된 마이그레이션은 절대 수정/통합/삭제하지 않는다. 미적용 마이그레이션만 main 머지 전에 순효과로 통합
 
