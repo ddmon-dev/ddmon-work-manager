@@ -31,6 +31,11 @@ export interface EstimateSeries {
   finalEstimateId?: string | null;
 }
 
+export interface EstimateVersionsResponse {
+  series: Pick<EstimateSeries, "status" | "finalEstimateId">;
+  versions: EstimateVersion[];
+}
+
 export interface LinkedProject {
   id: string;
   projectNumber: string;

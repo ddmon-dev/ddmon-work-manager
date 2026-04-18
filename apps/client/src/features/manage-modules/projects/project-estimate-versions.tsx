@@ -28,7 +28,8 @@ interface EstimateVersionsProps {
 }
 
 export function EstimateVersions({ estimateNumber }: EstimateVersionsProps) {
-  const { data: versions = [], refetch } = useGetVersions(estimateNumber);
+  const { data, refetch } = useGetVersions(estimateNumber);
+  const versions = data?.versions ?? [];
   const updateFinalVersion = useUpdateFinalVersion();
   const [isUpdating, setIsUpdating] = useState(false);
 

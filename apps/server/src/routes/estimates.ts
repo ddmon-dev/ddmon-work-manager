@@ -129,7 +129,7 @@ app.get("/", async (c) => {
 
 // 계열 라우트 — /:id 전에 등록
 
-// GET /estimates/series/:estimateNumber/versions — 버전 목록
+// GET /estimates/series/:estimateNumber/versions — 버전 목록 (+ 시리즈 메타)
 app.get("/series/:estimateNumber/versions", async (c) => {
   const estimateNumber = c.req.param("estimateNumber");
 
@@ -146,15 +146,20 @@ app.get("/series/:estimateNumber/versions", async (c) => {
     }),
   ]);
 
+  if (!series) return errorResponse(c, ERRORS.NOT_FOUND, 404);
+
   const result = versions.map((v) => ({
     id: v.id,
     version: v.version,
     versionLabel: v.versionLabel,
     issuedDate: v.issuedDate,
-    isFinal: v.id === series?.finalEstimateId,
+    isFinal: v.id === series.finalEstimateId,
   }));
 
-  return successResponse(c, result);
+  return successResponse(c, {
+    series: { status: series.status, finalEstimateId: series.finalEstimateId },
+    versions: result,
+  });
 });
 
 // PATCH /estimates/series/:estimateNumber/status — 계열 상태 변경

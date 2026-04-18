@@ -8,7 +8,7 @@ import type {
   EstimateListResponse,
   EstimateStatus,
   EstimateWithDetails,
-  EstimateVersion,
+  EstimateVersionsResponse,
 } from "./types";
 
 interface ListParams {
@@ -47,7 +47,7 @@ export function useEstimate(id: string) {
 export function useGetVersions(estimateNumber: string) {
   return useQuery({
     queryKey: ["estimates", "series", estimateNumber, "versions"],
-    queryFn: () => api.get<EstimateVersion[]>(`/estimates/series/${estimateNumber}/versions`),
+    queryFn: () => api.get<EstimateVersionsResponse>(`/estimates/series/${estimateNumber}/versions`),
     enabled: !!estimateNumber,
   });
 }
