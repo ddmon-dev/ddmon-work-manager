@@ -38,6 +38,7 @@ React + Hono + Drizzle 기반. 프로덕션 레벨 기준으로 작업한다.
 │   ├── schemas/      # Zod 스키마 (클라이언트·서버 공유)
 │   ├── types/        # 상수, 타입 정의
 │   └── utils/        # 금액 계산 등 유틸리티
+└── claude-plugins/   # Claude Code 로컬 플러그인 마켓플레이스 (work-manager 스킬)
 ```
 
 ## 개발 명령어
@@ -79,3 +80,4 @@ npm run production:rebuild # 운영 디렉토리에서 직접 rebuild만
 - **[docs/api.md](docs/api.md)** — 인증, API 응답 패턴, 엔드포인트 레퍼런스, 비즈니스 로직
 - **[docs/database.md](docs/database.md)** — 테이블 스키마, 관계, FK 전략, 마이그레이션
 - **[docs/infrastructure.md](docs/infrastructure.md)** — 개발/운영 환경, Docker, 빌드, LaunchAgent
+- **[docs/plugin.md](docs/plugin.md)** — Claude Code 플러그인 구조, 스킬 개발 프로세스, 환경 전환 규칙
