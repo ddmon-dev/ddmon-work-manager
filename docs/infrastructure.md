@@ -28,7 +28,7 @@ npm workspaces 기반. 패키지 스코프: `@packages/*`.
 
 ### 환경 분리 전략
 
-개발(`~/dev/ddmon/work-manager/`)과 운영(`~/production/work-manager/`)을 **별도 디렉토리**로 완전 분리. 하나의 디렉토리 = 하나의 환경. 같은 `docker-compose.yml`, 같은 스크립트를 사용하되 `.env`와 `.env.local`의 값만 다르게 설정.
+개발(`~/dev/little-awesome/work-manager/`)과 운영(`~/production/work-manager/`)을 **별도 디렉토리**로 완전 분리. 하나의 디렉토리 = 하나의 환경. 같은 `docker-compose.yml`, 같은 스크립트를 사용하되 `.env`와 `.env.local`의 값만 다르게 설정.
 
 ### 프로젝트 환경변수 (`.env`)
 
