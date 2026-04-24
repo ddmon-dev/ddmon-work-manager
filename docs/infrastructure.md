@@ -28,7 +28,7 @@ npm workspaces 기반. 패키지 스코프: `@packages/*`.
 
 ### 환경 분리 전략
 
-개발(`~/dev/little-awesome/work-manager/`)과 운영(`~/production/work-manager/`)을 **별도 디렉토리**로 완전 분리. 하나의 디렉토리 = 하나의 환경. 같은 `docker-compose.yml`, 같은 스크립트를 사용하되 `.env`와 `.env.local`의 값만 다르게 설정.
+개발(`~/dev/lxa/work-manager/`)과 운영(`~/production/work-manager/`)을 **별도 디렉토리**로 완전 분리. 하나의 디렉토리 = 하나의 환경. 같은 `docker-compose.yml`, 같은 스크립트를 사용하되 `.env`와 `.env.local`의 값만 다르게 설정.
 
 ### 프로젝트 환경변수 (`.env`)
 
@@ -78,11 +78,11 @@ MAX_EDITOR_IMAGE_SIZE_MB=10
 
 ### 포트 할당
 
-| 서비스 | 포트 |
-|--------|------|
+| 서비스                   | 포트 |
+| ------------------------ | ---- |
 | Client (Vite dev server) | 8000 |
-| Server (Hono) | 8001 |
-| PostgreSQL | 8002 |
+| Server (Hono)            | 8001 |
+| PostgreSQL               | 8002 |
 
 Vite 개발 서버가 `/api` 요청을 서버(8001)로 프록시.
 
@@ -123,10 +123,10 @@ npm run type-check    # TypeScript 타입 체크
 
 ### 포트 할당
 
-| 서비스 | 포트 |
-|--------|------|
+| 서비스                         | 포트 |
+| ------------------------------ | ---- |
 | Server (Hono + 정적 파일 서빙) | 7070 |
-| PostgreSQL | 7020 |
+| PostgreSQL                     | 7020 |
 
 클라이언트 별도 서버 없음 — Hono가 빌드된 정적 파일을 직접 서빙.
 
@@ -134,10 +134,10 @@ npm run type-check    # TypeScript 타입 체크
 
 서버의 `SERVE_STATIC` 환경변수로 동작 분기:
 
-| SERVE_STATIC | 동작 |
-|-------------|------|
+| SERVE_STATIC  | 동작                                             |
+| ------------- | ------------------------------------------------ |
 | `true` (운영) | `/assets/*`, `/fonts/*` 정적 서빙 + SPA fallback |
-| 미설정 (개발) | CORS 미들웨어 활성화, `/` → JSON 응답 |
+| 미설정 (개발) | CORS 미들웨어 활성화, `/` → JSON 응답            |
 
 ### Docker
 
@@ -181,37 +181,37 @@ npm run build    # 클라이언트(dist/) + 서버(tsup) 빌드
 
 운영 전용 스크립트는 운영 디렉토리(`~/production/work-manager/scripts/`)에서만 관리. git으로 추적하지 않음.
 
-| 명령어 | 스크립트 | 설명 |
-|--------|---------|------|
-| `npm run deploy` | — | main push → 운영 pull → npm install → rebuild (개발 디렉토리에서 실행) |
-| `npm run production:start` | `start-production.sh` | Docker 시작 → 마이그레이션 → 서버 기동 |
-| `npm run production:stop` | `stop-production.sh` | DB 백업 → 서버 종료 → Docker 중지 |
-| `npm run production:rebuild` | `rebuild.sh` | 서버만 종료 → 리빌드 → 재시작 (Docker 유지) |
-| `npm run production:migrate` | — | 마이그레이션만 (데이터 유지) |
-| `npm run production:seed` | — | 시드 데이터 적용 |
-| `npm run production:backup` | `backup-db.sh` | DB 백업 (최근 30개 유지) |
-| `npm run db:pull-seed` | `pull-seed.sh` | 운영 DB → 개발 DB 단방향 복사 |
-| `npm run production:install` | `install-service.sh` | LaunchAgent 등록 |
-| `npm run production:uninstall` | `uninstall-service.sh` | LaunchAgent 제거 |
+| 명령어                         | 스크립트               | 설명                                                                   |
+| ------------------------------ | ---------------------- | ---------------------------------------------------------------------- |
+| `npm run deploy`               | —                      | main push → 운영 pull → npm install → rebuild (개발 디렉토리에서 실행) |
+| `npm run production:start`     | `start-production.sh`  | Docker 시작 → 마이그레이션 → 서버 기동                                 |
+| `npm run production:stop`      | `stop-production.sh`   | DB 백업 → 서버 종료 → Docker 중지                                      |
+| `npm run production:rebuild`   | `rebuild.sh`           | 서버만 종료 → 리빌드 → 재시작 (Docker 유지)                            |
+| `npm run production:migrate`   | —                      | 마이그레이션만 (데이터 유지)                                           |
+| `npm run production:seed`      | —                      | 시드 데이터 적용                                                       |
+| `npm run production:backup`    | `backup-db.sh`         | DB 백업 (최근 30개 유지)                                               |
+| `npm run db:pull-seed`         | `pull-seed.sh`         | 운영 DB → 개발 DB 단방향 복사                                          |
+| `npm run production:install`   | `install-service.sh`   | LaunchAgent 등록                                                       |
+| `npm run production:uninstall` | `uninstall-service.sh` | LaunchAgent 제거                                                       |
 
 백업 위치: `backups/work_manager_YYYYMMDD_HHMMSS.sql`
 
 ### 워크플로우
 
-| 시나리오 | 명령어 |
-|---------|--------|
-| 초기 배포 | `npm run production:install` (빌드 자동 포함) |
-| 개발→운영 배포 | `npm run deploy` (개발 디렉토리에서 실행) |
-| 운영 직접 rebuild | `npm run production:rebuild` |
-| 완전 종료 | `npm run production:stop` |
-| 서비스 제거 | `npm run production:uninstall` |
+| 시나리오          | 명령어                                        |
+| ----------------- | --------------------------------------------- |
+| 초기 배포         | `npm run production:install` (빌드 자동 포함) |
+| 개발→운영 배포    | `npm run deploy` (개발 디렉토리에서 실행)     |
+| 운영 직접 rebuild | `npm run production:rebuild`                  |
+| 완전 종료         | `npm run production:stop`                     |
+| 서비스 제거       | `npm run production:uninstall`                |
 
 ### LaunchAgent
 
-| plist | 역할 |
-|-------|------|
-| `com.ddmon.work-manager-react.plist` | 시스템 부팅 시 `start-production.sh` 실행. KeepAlive 설정 |
-| `com.ddmon.work-manager-react-backup.plist` | 매일 03:00 UTC에 `backup-db.sh` 실행 |
+| plist                                       | 역할                                                      |
+| ------------------------------------------- | --------------------------------------------------------- |
+| `com.ddmon.work-manager-react.plist`        | 시스템 부팅 시 `start-production.sh` 실행. KeepAlive 설정 |
+| `com.ddmon.work-manager-react-backup.plist` | 매일 03:00 UTC에 `backup-db.sh` 실행                      |
 
 로그 위치: `/tmp/work-manager-stdout.log`, `/tmp/work-manager-stderr.log`
 
