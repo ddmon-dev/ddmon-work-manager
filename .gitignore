@@ -50,3 +50,6 @@ Thumbs.db
 
 # typescript build
 *.tsbuildinfo
+
+# Graphify
+/graphify-out/
