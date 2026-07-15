@@ -42,6 +42,8 @@
 - **useFormGuard**: RHF `isDirty` 감지 → 시트 닫기·모드 전환·새로고침 시 확인 다이얼로그. 한 번 구현으로 전 모듈 적용
 - **모듈당 파일 10개 고정 구성** (`config / types / api / list / detail-view / write-form / ...`): 새 도메인 추가가 곧 패턴 반복이라, 기능 추가 비용이 선형으로 유지됨
 
+이 `_base` 접근은 직접 만든 [Admin Framework](https://github.com/ddmon-dev/ddmon-admin-framework)의 convention-over-configuration 설계와 같은 계보다. 그쪽이 재사용 가능한 프레임워크라면, 여기서는 실운영 제품의 도메인 복잡도(견적 버전, 재무, 간트)를 받아내는 형태로 확장했다.
+
 → 상세: [docs/architecture.md](docs/architecture.md)
 
 ### 클라이언트·서버 단일 진실원천
