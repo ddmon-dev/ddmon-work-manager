@@ -1,15 +1,18 @@
 import { like, desc } from "drizzle-orm";
+import type { db } from "../db";
 import { estimateSeries } from "../db/schema/estimates";
 import { projects } from "../db/schema/projects";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type TxLike = any;
+/** db.transaction 콜백이 받는 트랜잭션 객체 타입 */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
  * EST-YYYY-NNN 형식 견적서 번호 생성
- * 트랜잭션 내에서 호출하여 동시성 문제 방지
+ *
+ * MAX+1 방식이라 동시 트랜잭션에서는 중복 번호가 나올 수 있고,
+ * 그 경우 estimate_number PK 제약이 최종 방어선이 된다 (단일 사용자 운영 전제).
  */
-export async function generateEstimateNumber(tx: TxLike): Promise<string> {
+export async function generateEstimateNumber(tx: Tx): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `EST-${year}-`;
 
@@ -31,9 +34,11 @@ export async function generateEstimateNumber(tx: TxLike): Promise<string> {
 
 /**
  * PRJ-YYYY-NNN 형식 프로젝트 번호 생성
- * 트랜잭션 내에서 호출하여 동시성 문제 방지
+ *
+ * MAX+1 방식이라 동시 트랜잭션에서는 중복 번호가 나올 수 있고,
+ * 그 경우 project_number unique 제약이 최종 방어선이 된다 (단일 사용자 운영 전제).
  */
-export async function generateProjectNumber(tx: TxLike): Promise<string> {
+export async function generateProjectNumber(tx: Tx): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `PRJ-${year}-`;
 
