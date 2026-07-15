@@ -1,7 +1,7 @@
 import { mkdir, writeFile, unlink, stat, copyFile as fsCopyFile } from "fs/promises";
 import { createReadStream } from "fs";
-import { exec } from "child_process";
-import { join, dirname, extname, resolve as pathResolve } from "path";
+import { execFile } from "child_process";
+import { join, dirname, extname, resolve as pathResolve, sep } from "path";
 import type { Readable } from "stream";
 
 const STORAGE_DIR = process.env.STORAGE_DIR ?? "../../storage";
@@ -9,7 +9,7 @@ const STORAGE_ROOT = pathResolve(STORAGE_DIR);
 
 function resolve(key: string) {
   const resolved = pathResolve(STORAGE_ROOT, key);
-  if (!resolved.startsWith(STORAGE_ROOT)) {
+  if (resolved !== STORAGE_ROOT && !resolved.startsWith(STORAGE_ROOT + sep)) {
     throw new Error(`Path traversal detected: ${key}`);
   }
   return resolved;
@@ -76,7 +76,7 @@ export async function deleteFile(key: string) {
 
 export function openFileNative(key: string): void {
   const filePath = resolve(key);
-  exec(`open "${filePath}"`);
+  execFile("open", [filePath]);
 }
 
 export async function copyStorageFile(srcKey: string, destKey: string) {
