@@ -30,7 +30,5 @@ export { FormAddressInput } from "./form-address-input";
 export type { FormAddressInputProps } from "./form-address-input";
 export { FormFileUpload } from "./form-file-upload";
 export type { FormFileUploadProps } from "./form-file-upload";
-export { FormEditor } from "./form-editor";
-export type { FormEditorProps } from "./form-editor";
 export type { FormBaseProps, ExcludedFormProps } from "./types";
 export type { SelectOption } from "./form-select";
