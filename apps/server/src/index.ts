@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
 import { auth } from "./auth";
 import apiRoutes from "./routes";
 import type { AppVariables } from "./lib/types";
@@ -9,6 +10,8 @@ import { ERRORS, errorResponse } from "./lib/errors";
 import { ensureStorageDir } from "./lib/storage";
 
 const app = new Hono<{ Variables: AppVariables }>();
+
+app.use("*", secureHeaders());
 
 const isServeStatic = process.env.SERVE_STATIC === "true";
 
