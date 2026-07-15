@@ -12,7 +12,6 @@ npm workspaces 기반 모노레포.
 │   ├── schemas/         # Zod 스키마 (클라이언트·서버 공유)
 │   ├── types/           # 상수, 타입 정의
 │   └── utils/           # 금액 계산 등 유틸리티
-├── claude-plugins/      # Claude Code 로컬 플러그인 마켓플레이스 (docs/plugin.md 참조)
 ├── scripts/             # 유틸리티 스크립트
 ├── storage/             # 로컬 파일 스토리지 (gitignore)
 │   ├── files/           # 드라이브 파일 (flat, UUID 기반)
