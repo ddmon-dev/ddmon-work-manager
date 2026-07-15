@@ -64,7 +64,7 @@ if (isServeStatic) {
 
 app.onError((err, c) => {
   console.error("[Unhandled Error]", err);
-  return errorResponse(c, ERRORS.UNEXPECTED, 500, err.message);
+  return errorResponse(c, ERRORS.UNEXPECTED, 500);
 });
 
 const port = Number(process.env.PORT) || 4001;
