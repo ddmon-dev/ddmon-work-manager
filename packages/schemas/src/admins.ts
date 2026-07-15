@@ -22,7 +22,7 @@ export const adminUpdateSchema = z
     name: z.string().min(1, "이름을 입력해주세요."),
     email: z.string().email("올바른 이메일을 입력해주세요."),
     phone: z.string().optional(),
-    password: z.string().min(PASSWORD_MIN_LENGTH, "비밀번호는 6자 이상이어야 합니다.").optional().or(z.literal("")),
+    password: z.string().min(PASSWORD_MIN_LENGTH, `비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상이어야 합니다.`).optional().or(z.literal("")),
     passwordConfirm: z.string().optional().or(z.literal("")),
   })
   .refine(
