@@ -15,6 +15,8 @@ export default defineConfig({
   define: {
     "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV ?? "production"),
   },
+  // 루트 .env.local을 서버와 공유 (VITE_ 프리픽스만 클라이언트에 노출됨)
+  envDir: path.resolve(__dirname, "../.."),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

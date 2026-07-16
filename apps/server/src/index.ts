@@ -5,6 +5,8 @@ import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 import { auth } from "./auth";
 import apiRoutes from "./routes";
+import demoRoutes from "./routes/demo";
+import { demoGuard, IS_DEMO } from "./middleware/demo-guard";
 import type { AppVariables } from "./lib/types";
 import { ERRORS, errorResponse } from "./lib/errors";
 import { ensureStorageDir } from "./lib/storage";
@@ -23,6 +25,11 @@ if (!isServeStatic) {
       credentials: true,
     })
   );
+}
+
+if (IS_DEMO) {
+  app.use("/api/*", demoGuard);
+  app.route("/api/demo", demoRoutes);
 }
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));

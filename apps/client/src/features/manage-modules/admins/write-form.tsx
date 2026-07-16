@@ -23,6 +23,7 @@ import {
   ManageSheetClose,
 } from "../_base/ui";
 import { useFormGuard } from "../_base/hooks";
+import { IS_DEMO } from "@/shared/lib/demo";
 import { useCreateAdmin, useUpdateAdmin } from "./api";
 import type { AdminDTO } from "./types";
 import type { Resolver } from "react-hook-form";
@@ -255,6 +256,8 @@ function UpdateForm({
                 name="password"
                 label="비밀번호"
                 placeholder="변경할 비밀번호 (미입력시 유지)"
+                description={IS_DEMO ? "데모 환경에서는 비밀번호를 변경할 수 없습니다." : undefined}
+                disabled={IS_DEMO}
                 optional
               />
               <FormPasswordInput
@@ -262,6 +265,7 @@ function UpdateForm({
                 name="passwordConfirm"
                 label="비밀번호 확인"
                 placeholder="비밀번호를 다시 입력해주세요."
+                disabled={IS_DEMO}
                 optional
               />
             </FieldGroup>

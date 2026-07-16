@@ -28,6 +28,14 @@ requireAuth → requireSuperAdmin (선택적)
 - 401 → `/auth/sign-in`으로 리다이렉트
 - 403 → `/unauthorized`로 리다이렉트
 
+### 데모 모드 (demo 브랜치 전용)
+
+`DEMO_MODE=true`(서버) + `VITE_DEMO_MODE=true`(클라이언트)로 활성화. 메시지 SSOT: `packages/types/src/demo.ts`.
+
+- **demoGuard** (`middleware/demo-guard.ts`): `/api/*` 전역 등록. 차단 대상 — 모든 DELETE, `*/batch-delete`·`*/batch-permanent-delete` POST, `/api/auth/change-password`, `PATCH /api/admins/:id`의 password 필드. 생성·수정은 허용
+- 차단 응답은 400 (`DEMO_BLOCKED`) — 401/403은 클라이언트가 리다이렉트로 처리하므로 400으로 응답해 기존 에러 toast 경로로 표시
+- **POST `/api/demo/login`** (`routes/demo.ts`): 서버 env(`DEMO_USERNAME`/`DEMO_PASSWORD`)의 데모 계정으로 로그인 대행. 자격증명은 클라이언트에 노출되지 않음
+
 ## 응답 패턴
 
 ### 성공

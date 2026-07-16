@@ -25,6 +25,8 @@ import {
   FormRootError,
 } from "@/shared/ui/form";
 import { PASSWORD_MIN_LENGTH } from "@packages/utils";
+import { DEMO_MESSAGES } from "@packages/types";
+import { IS_DEMO } from "@/shared/lib/demo";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { authClient } from "@/features/auth/lib/auth-client";
 import { useDialog } from "@/shared/ui/app-dialog";
@@ -179,35 +181,43 @@ export function UpdateProfileDialog({ children }: UpdateProfileDialogProps) {
           </FieldGroup>
 
           <div className="border-t pt-4">
-            <p className="text-sm text-muted-foreground mb-3">
-              비밀번호를 변경하려면 아래 필드를 입력하세요.
-            </p>
-            <FieldGroup>
-              <FormPasswordInput
-                control={form.control}
-                name="currentPassword"
-                label="현재 비밀번호"
-                placeholder="현재 비밀번호"
-                autoComplete="current-password"
-                optional
-              />
-              <FormPasswordInput
-                control={form.control}
-                name="newPassword"
-                label="새 비밀번호"
-                placeholder={`새 비밀번호 (최소 ${PASSWORD_MIN_LENGTH}자)`}
-                autoComplete="new-password"
-                optional
-              />
-              <FormPasswordInput
-                control={form.control}
-                name="confirmPassword"
-                label="비밀번호 확인"
-                placeholder="비밀번호 확인"
-                autoComplete="new-password"
-                optional
-              />
-            </FieldGroup>
+            {IS_DEMO ? (
+              <p className="text-sm text-muted-foreground">
+                {DEMO_MESSAGES.PASSWORD_BLOCKED}
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground mb-3">
+                  비밀번호를 변경하려면 아래 필드를 입력하세요.
+                </p>
+                <FieldGroup>
+                  <FormPasswordInput
+                    control={form.control}
+                    name="currentPassword"
+                    label="현재 비밀번호"
+                    placeholder="현재 비밀번호"
+                    autoComplete="current-password"
+                    optional
+                  />
+                  <FormPasswordInput
+                    control={form.control}
+                    name="newPassword"
+                    label="새 비밀번호"
+                    placeholder={`새 비밀번호 (최소 ${PASSWORD_MIN_LENGTH}자)`}
+                    autoComplete="new-password"
+                    optional
+                  />
+                  <FormPasswordInput
+                    control={form.control}
+                    name="confirmPassword"
+                    label="비밀번호 확인"
+                    placeholder="비밀번호 확인"
+                    autoComplete="new-password"
+                    optional
+                  />
+                </FieldGroup>
+              </>
+            )}
           </div>
 
           {form.formState.errors.root && (
