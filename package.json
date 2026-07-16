@@ -20,6 +20,8 @@
     "db:push": "npm run db:push --workspace=apps/server",
     "db:seed": "npm run db:seed --workspace=apps/server",
     "db:reset": "npm run db:reset --workspace=apps/server",
+    "db:seed-demo": "npm run db:seed-demo --workspace=apps/server",
+    "db:reset-demo": "npm run db:reset-demo --workspace=apps/server",
     "db:studio": "npm run db:studio --workspace=apps/server"
   },
   "devDependencies": {
