@@ -570,17 +570,17 @@ async function seed() {
   await db.insert(businessInfo).values({
     name: "웨이브웍스 스튜디오",
     nameEn: "WAVEWORKS STUDIO",
-    ceo: "김도윤",
+    ceo: "홍길동",
     bizNumber: "123-45-67890",
     address: "서울특별시 마포구 월드컵북로 000, 5층",
     bankName: "국민은행",
     bankAccount: "000000-00-000000",
-    accountHolder: "김도윤",
+    accountHolder: "홍길동",
     bizType: "정보통신업",
     bizItem: "소프트웨어 개발 및 공급",
   });
 
-  const PUBLISHER_INFO = { issuer: "김도윤", email: "hello@waveworks.example", phone: "01000000000" };
+  const PUBLISHER_INFO = { issuer: "홍길동", email: "hello@waveworks.example", phone: "01000000000" };
 
   console.log("사업자 정보 등록 완료.");
 
