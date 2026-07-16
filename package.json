@@ -20,17 +20,7 @@
     "db:push": "npm run db:push --workspace=apps/server",
     "db:seed": "npm run db:seed --workspace=apps/server",
     "db:reset": "npm run db:reset --workspace=apps/server",
-    "db:studio": "npm run db:studio --workspace=apps/server",
-    "deploy": "git push origin main && cd ~/production/work-manager && git pull origin main && npm install && ./scripts/rebuild.sh",
-    "production:start": "cd ~/production/work-manager && ./scripts/start-production.sh",
-    "production:stop": "cd ~/production/work-manager && ./scripts/stop-production.sh",
-    "production:rebuild": "cd ~/production/work-manager && ./scripts/rebuild.sh",
-    "production:migrate": "cd ~/production/work-manager && npm run db:migrate --workspace=apps/server",
-    "production:seed": "cd ~/production/work-manager && npm run db:seed --workspace=apps/server",
-    "production:backup": "cd ~/production/work-manager && ./scripts/backup-db.sh",
-    "production:install": "cd ~/production/work-manager && ./scripts/install-service.sh",
-    "production:uninstall": "cd ~/production/work-manager && ./scripts/uninstall-service.sh",
-    "db:pull-seed": "./scripts/pull-seed.sh"
+    "db:studio": "npm run db:studio --workspace=apps/server"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

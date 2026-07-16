@@ -307,7 +307,6 @@ userId 필터링: 모든 메모 API는 `user.id`로 자동 필터링 (사용자�
 | DELETE | `/files/:id` | 휴지통으로 이동 |
 | PATCH | `/files/:id/restore` | 휴지통에서 복원 |
 | DELETE | `/files/:id/permanent` | 영구 삭제 (스토리지 파일도 삭제) |
-| POST | `/files/:id/open` | 네이티브 앱으로 파일 열기 |
 | POST | `/files/:id/duplicate` | 파일/폴더 복제 |
 | PATCH | `/files/:id/favorite` | 즐겨찾기 토글 (`{ isFavorited }`) |
 | PUT | `/files/favorites/reorder` | 즐겨찾기 순서 변경 (`{ ids }`) |

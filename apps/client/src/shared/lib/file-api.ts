@@ -141,12 +141,6 @@ export function useBatchPermanentDeleteFiles() {
   });
 }
 
-export function useOpenFile() {
-  return useMutation({
-    mutationFn: (id: string) => api.post(`/files/${id}/open`),
-  });
-}
-
 export function useBatchDeleteFiles() {
   const qc = useQueryClient();
   return useMutation({

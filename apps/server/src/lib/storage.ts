@@ -1,6 +1,5 @@
 import { mkdir, writeFile, unlink, stat, copyFile as fsCopyFile } from "fs/promises";
 import { createReadStream } from "fs";
-import { execFile } from "child_process";
 import { join, dirname, extname, resolve as pathResolve, sep } from "path";
 import type { Readable } from "stream";
 
@@ -72,11 +71,6 @@ export async function deleteFile(key: string) {
   } catch (err: any) {
     if (err.code !== "ENOENT") throw err;
   }
-}
-
-export function openFileNative(key: string): void {
-  const filePath = resolve(key);
-  execFile("open", [filePath]);
 }
 
 export async function copyStorageFile(srcKey: string, destKey: string) {

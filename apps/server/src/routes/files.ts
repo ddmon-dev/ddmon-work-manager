@@ -5,7 +5,7 @@ import { files } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
 import { fileRenameSchema, folderCreateSchema, fileFavoriteSchema, batchDeleteSchema, batchPermanentDeleteSchema, batchMoveSchema, favoriteReorderSchema, fileCopySchema } from "@packages/schemas";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
-import { uploadFile, deleteFile, getFile, copyStorageFile, openFileNative, STORAGE_CONFIG } from "../lib/storage";
+import { uploadFile, deleteFile, getFile, copyStorageFile, STORAGE_CONFIG } from "../lib/storage";
 import type { AppVariables } from "../lib/types";
 import { randomUUID } from "crypto";
 
@@ -282,20 +282,6 @@ app.get("/:id/download", async (c) => {
       "Content-Length": String(file.size ?? size),
     },
   });
-});
-
-// POST /:id/open — 네이티브 앱으로 파일 열기
-app.post("/:id/open", async (c) => {
-  const id = c.req.param("id");
-
-  const file = await db.query.files.findFirst({
-    where: and(eq(files.id, id), eq(files.deleted, false)),
-  });
-  if (!file || !file.s3Key) return errorResponse(c, ERRORS.NOT_FOUND, 404);
-
-  openFileNative(file.s3Key);
-
-  return successResponse(c, { message: "파일을 열었습니다" });
 });
 
 // PATCH /:id/favorite — 즐겨찾기 토글

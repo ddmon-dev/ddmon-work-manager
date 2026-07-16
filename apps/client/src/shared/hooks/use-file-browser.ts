@@ -16,7 +16,6 @@ import {
   useRenameFile,
   useBatchDeleteFiles,
   useBatchMoveFiles,
-  useOpenFile,
   useDuplicateFile,
   useCopyFiles,
   usePermanentDeleteFile,
@@ -407,7 +406,6 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
   const batchPermanentDeleteFiles = useBatchPermanentDeleteFiles();
   const batchDeleteFiles = useBatchDeleteFiles();
   const batchMoveFiles = useBatchMoveFiles();
-  const openFileMutation = useOpenFile();
   const duplicateFileMutation = useDuplicateFile();
   const copyFilesMutation = useCopyFiles();
 
@@ -523,9 +521,9 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
         clearSelection();
         return;
       }
-      openFileMutation.mutate(file.id);
+      window.open(`/api/files/${file.id}/download`, "_blank");
     },
-    [nav.handleNavigate, clearSelection, openFileMutation]
+    [nav.handleNavigate, clearSelection]
   );
 
   const handleDragDrop = async (

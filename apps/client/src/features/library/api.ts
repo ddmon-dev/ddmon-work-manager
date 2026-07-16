@@ -165,7 +165,6 @@ export {
   useDeleteFile,
   usePermanentDeleteFile,
   useBatchPermanentDeleteFiles,
-  useOpenFile,
   useBatchDeleteFiles,
   useBatchMoveFiles,
   useDuplicateFile,
