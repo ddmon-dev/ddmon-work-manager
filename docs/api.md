@@ -34,6 +34,7 @@ requireAuth → requireSuperAdmin (선택적)
 
 - **demoGuard** (`middleware/demo-guard.ts`): `/api/*` 전역 등록. 차단 대상 — 모든 DELETE, `*/batch-delete`·`*/batch-permanent-delete` POST, `/api/auth/change-password`, `PATCH /api/admins/:id`의 password 필드. 생성·수정은 허용
 - 차단 응답은 400 (`DEMO_BLOCKED`) — 401/403은 클라이언트가 리다이렉트로 처리하므로 400으로 응답해 기존 에러 toast 경로로 표시
+- 파일 업로드는 허용 확장자 목록으로 제한 (`routes/files.ts`의 `DEMO_ALLOWED_EXTENSIONS` — 이미지·문서·영상 등, HTML·SVG 불가). 크기 제한은 데모 env에서 `MAX_FILE_SIZE_MB=10` 권장
 - **POST `/api/demo/login`** (`routes/demo.ts`): 서버 env(`DEMO_USERNAME`/`DEMO_PASSWORD`)의 데모 계정으로 로그인 대행. 자격증명은 클라이언트에 노출되지 않음
 
 ## 응답 패턴

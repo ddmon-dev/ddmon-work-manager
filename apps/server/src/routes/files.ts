@@ -3,6 +3,8 @@ import { and, eq, isNull, asc, desc, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { files } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
+import { IS_DEMO } from "../middleware/demo-guard";
+import { DEMO_MESSAGES } from "@packages/types";
 import { fileRenameSchema, folderCreateSchema, fileFavoriteSchema, batchDeleteSchema, batchPermanentDeleteSchema, batchMoveSchema, favoriteReorderSchema, fileCopySchema } from "@packages/schemas";
 import { successResponse, errorResponse, ERRORS } from "../lib/errors";
 import { uploadFile, deleteFile, getFile, copyStorageFile, STORAGE_CONFIG } from "../lib/storage";
@@ -146,6 +148,13 @@ app.get("/", async (c) => {
   return successResponse(c, { items });
 });
 
+// 데모 환경 업로드 허용 확장자 (storage.ts MIME_MAP 지원 타입에서 SVG 제외)
+const DEMO_ALLOWED_EXTENSIONS = new Set([
+  "jpg", "jpeg", "png", "gif", "webp",
+  "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+  "txt", "csv", "json", "zip", "mp4", "mp3",
+]);
+
 // POST /upload — 파일 업로드
 app.post("/upload", async (c) => {
   const user = c.get("user");
@@ -157,6 +166,13 @@ app.post("/upload", async (c) => {
 
   if (!file || !(file instanceof File)) {
     return errorResponse(c, ERRORS.VALIDATION, 400);
+  }
+
+  if (IS_DEMO) {
+    const ext = (file.name.split(".").pop() ?? "").toLowerCase();
+    if (!DEMO_ALLOWED_EXTENSIONS.has(ext)) {
+      return errorResponse(c, ERRORS.VALIDATION, 400, DEMO_MESSAGES.UPLOAD_EXTENSION_BLOCKED);
+    }
   }
 
   // 삭제된 폴더에 업로드 방지
@@ -265,7 +281,9 @@ app.get("/:id/path", async (c) => {
 });
 
 // 브라우저에서 직접 렌더링 가능한 타입만 inline 허용
-const VIEWABLE_MIME_PATTERN = /^(image\/|video\/|audio\/|text\/|application\/pdf)/;
+// HTML·SVG는 same-origin 스크립트 실행(stored XSS) 여지로 제외
+const VIEWABLE_MIME_PATTERN =
+  /^(image\/(jpeg|png|gif|webp)|application\/pdf|video\/|audio\/|text\/plain)/;
 
 // GET /:id/download — 파일 다운로드 (?inline=1 시 뷰어블 타입은 브라우저에서 바로 열기)
 app.get("/:id/download", async (c) => {

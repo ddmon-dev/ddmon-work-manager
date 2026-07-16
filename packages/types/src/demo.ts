@@ -5,4 +5,6 @@
 export const DEMO_MESSAGES = {
   DELETE_BLOCKED: "데모 환경에서는 삭제 기능이 제한됩니다.",
   PASSWORD_BLOCKED: "데모 환경에서는 비밀번호를 변경할 수 없습니다.",
+  UPLOAD_EXTENSION_BLOCKED:
+    "데모 환경에서는 이미지·문서·영상 등 일반 파일만 업로드할 수 있습니다.",
 } as const;

@@ -521,10 +521,11 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
         clearSelection();
         return;
       }
-      // 브라우저에서 렌더링 가능한 타입은 새 탭에서 열고, 그 외는 다운로드
-      const viewable = /^(image\/|video\/|audio\/|text\/|application\/pdf)/.test(
-        file.mimeType ?? ""
-      );
+      // 브라우저에서 렌더링 가능한 타입은 새 탭에서 열고, 그 외는 다운로드 (HTML·SVG 제외 — 서버 패턴과 동일)
+      const viewable =
+        /^(image\/(jpeg|png|gif|webp)|application\/pdf|video\/|audio\/|text\/plain)/.test(
+          file.mimeType ?? ""
+        );
       window.open(
         `/api/files/${file.id}/download${viewable ? "?inline=1" : ""}`,
         "_blank"
