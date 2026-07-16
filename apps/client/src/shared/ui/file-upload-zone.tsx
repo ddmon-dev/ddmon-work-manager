@@ -18,8 +18,10 @@ export async function uploadFiles(
     try {
       await uploadMutation.mutateAsync({ file, folderId });
       successCount++;
-    } catch {
-      toast.error(`${file.name} 업로드 실패`);
+    } catch (err) {
+      toast.error(`${file.name} 업로드 실패`, {
+        description: err instanceof Error ? err.message : undefined,
+      });
       failCount++;
     }
   }
@@ -56,13 +58,16 @@ export function FileUploadZone({ folderId, owner, children }: FileUploadZoneProp
       if (files.length === 0) return;
       let successCount = 0;
       let failCount = 0;
+      const failReasons: string[] = [];
       for (let i = 0; i < files.length; i++) {
         setUploadProgress({ current: i + 1, total: files.length, loaded: 0, fileTotal: 0 });
         try {
           await uploadFile.mutateAsync({ file: files[i], folderId });
           successCount++;
-        } catch {
+        } catch (err) {
           failCount++;
+          const message = err instanceof Error ? err.message : "";
+          if (message && !failReasons.includes(message)) failReasons.push(message);
         }
       }
       setUploadProgress(null);
@@ -70,7 +75,9 @@ export function FileUploadZone({ folderId, owner, children }: FileUploadZoneProp
         toast.success(`${successCount}개 파일 업로드 완료`);
       }
       if (failCount > 0) {
-        toast.error(`${failCount}개 파일 업로드 실패`);
+        toast.error(`${failCount}개 파일 업로드 실패`, {
+          description: failReasons.join("\n") || undefined,
+        });
       }
     },
     [folderId, uploadFile]
