@@ -360,15 +360,16 @@ const CUSTOM_CATEGORY_POOL = [
   { label: "대기", color: "#8b5cf6" },
 ];
 
+// 세무·결산성 제목은 반복되면 어색하므로 랜덤 풀에서 제외하고 고정 1건씩 별도 배치
 const SCHEDULE_TITLE_TEMPLATES: ((company: string) => string)[] = [
   (c) => `${c} 미팅`,
-  () => "시안 전달",
+  (c) => `${c} 시안 전달`,
   (c) => `${c} 오픈`,
-  () => "부가세 신고",
-  () => "검수 피드백 정리",
-  () => "정기 유지보수 점검",
-  () => "월간 결산",
-  () => "세금계산서 발행",
+  (c) => `${c} 검수 피드백 정리`,
+  (c) => `${c} 유지보수 점검`,
+  (c) => `${c} 콘텐츠 원고 수령`,
+  (c) => `${c} 2차 시안 리뷰`,
+  (c) => `${c} 도메인 연결 작업`,
 ];
 const SCHEDULE_COLORS = ["default", "red", "orange", "yellow", "green", "blue", "purple", "pink", "gray"];
 const TIME_SLOTS = ["09:30", "10:00", "11:00", "14:00", "15:00", "16:00"];
@@ -1013,6 +1014,18 @@ async function seed() {
           description: pattern.descriptions[idx],
         });
       }
+      // 완료·정산 프로젝트가 전액 미수로 남지 않도록 부분 수금 보장 (단일 분할 패턴 대비)
+      if (!fullyPaid && collectCount === 0 && p.status !== PROJECT_STATUS.ACTIVE) {
+        collectionPlans.push({
+          id: randomUUID(),
+          projectId: p.id,
+          invoiceId: invIds[0],
+          amount: roundToUnit(amounts[0] * 0.6, 1000),
+          paidDate: addDays(dates[0], randInt(5, 30)),
+          paymentType: pattern.types[0],
+          description: pattern.descriptions[0],
+        });
+      }
     } else {
       const amounts = splitAmounts(p.contractAmount, pattern.splits);
       const collectCount = fullyPaid ? amounts.length : Math.max(0, amounts.length - 1);
@@ -1025,6 +1038,18 @@ async function seed() {
           paidDate: addDays(dates[idx], randInt(5, 30)),
           paymentType: pattern.types[idx],
           description: pattern.descriptions[idx],
+        });
+      }
+      // 완료·정산 프로젝트가 전액 미수로 남지 않도록 부분 수금 보장 (단일 분할 패턴 대비)
+      if (!fullyPaid && collectCount === 0 && p.status !== PROJECT_STATUS.ACTIVE) {
+        collectionPlans.push({
+          id: randomUUID(),
+          projectId: p.id,
+          invoiceId: null,
+          amount: roundToUnit(amounts[0] * 0.6, 1000),
+          paidDate: addDays(dates[0], randInt(5, 30)),
+          paymentType: pattern.types[0],
+          description: pattern.descriptions[0],
         });
       }
     }
@@ -1337,7 +1362,7 @@ async function seed() {
       startTime,
       endTime,
       color: pick(SCHEDULE_COLORS),
-      recurrenceType: title === "월간 결산" ? "monthly" : "none",
+      recurrenceType: "none",
       author: randomAuthor(),
       createdAt: withRandomTime(addDays(startDate, -randInt(1, 20))),
     });
@@ -1352,7 +1377,29 @@ async function seed() {
     otherDay = weekStart;
   }
   buildSchedule(otherDay);
-  for (let i = 0; i < 37; i++) buildSchedule();
+  for (let i = 0; i < 34; i++) buildSchedule();
+
+  // 세무·결산성 고정 일정 (각 1건, 월간 결산만 반복)
+  const fixedSchedules: { title: string; date: Date; recurrence: "none" | "monthly" }[] = [
+    { title: "부가세 신고", date: addDays(NOW, randInt(7, 20)), recurrence: "none" },
+    { title: "세금계산서 발행", date: addDays(NOW, randInt(1, 6)), recurrence: "none" },
+    { title: "월간 결산", date: new Date(NOW.getFullYear(), NOW.getMonth(), 25), recurrence: "monthly" },
+  ];
+  for (const f of fixedSchedules) {
+    scheduleInsertRows.push({
+      id: randomUUID(),
+      title: f.title,
+      description: null,
+      startDate: dateStr(f.date),
+      endDate: null,
+      startTime: null,
+      endTime: null,
+      color: pick(SCHEDULE_COLORS),
+      recurrenceType: f.recurrence,
+      author: demoId,
+      createdAt: withRandomTime(daysAgo(randInt(5, 30))),
+    });
+  }
 
   await insertChunked(schedules, scheduleInsertRows);
 
@@ -1395,14 +1442,21 @@ async function seed() {
   const blockCount = Math.min(randInt(3, 4), todayTodoIds.length);
   const chosenTodoIds = sampleUnique(todayTodoIds, blockCount);
 
-  const timeBlockRows: InferInsertModel<typeof todoTimeBlocks>[] = chosenTodoIds.map((todoId) => ({
-    id: randomUUID(),
-    todoId,
-    userId: demoId,
-    blockDate: dateStr(NOW),
-    startSlot: randInt(18, 36),
-    durationSlots: randInt(2, 4),
-  }));
+  // 타임블록은 겹치지 않게 순차 배치
+  let nextSlot = 18; // 09:00
+  const timeBlockRows: InferInsertModel<typeof todoTimeBlocks>[] = chosenTodoIds.map((todoId) => {
+    const startSlot = nextSlot + randInt(0, 2);
+    const durationSlots = randInt(2, 4);
+    nextSlot = startSlot + durationSlots + randInt(1, 3);
+    return {
+      id: randomUUID(),
+      todoId,
+      userId: demoId,
+      blockDate: dateStr(NOW),
+      startSlot,
+      durationSlots,
+    };
+  });
   await insertChunked(todoTimeBlocks, timeBlockRows);
 
   console.log(`할일 ${todoRows.length}개, 타임블록 ${timeBlockRows.length}개 삽입 완료.`);
