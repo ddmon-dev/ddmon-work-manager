@@ -12,6 +12,7 @@
     "dev:client": "npm run dev --workspace=apps/client",
     "dev:server": "npm run dev --workspace=apps/server",
     "build": "npm run build --workspaces --if-present",
+    "start:demo": "npm run start:demo --workspace=apps/server",
     "type-check": "tsc -b",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",

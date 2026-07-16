@@ -527,7 +527,7 @@ interface SchedulePlan {
 // 메인 시드 로직
 // ────────────────────────────────────────────────────────────
 
-async function seed() {
+export async function seedDemo() {
   console.log("데모 데이터 시딩 시작...");
 
   // ── 1. 계정 ─────────────────────────────────────────────
@@ -1603,11 +1603,4 @@ async function seed() {
   console.log(`  - 위젯 메모: ${WIDGET_MEMO_CONTENTS.length}개`);
   console.log(`  - 고객환경정보: ${envClients.length}개`);
   console.log(`  - 드라이브: 폴더 ${FOLDER_NAMES.length}개, 파일 ${fileInsertRows.length}개`);
-
-  process.exit(0);
 }
-
-seed().catch((err) => {
-  console.error("데모 시딩 실패:", err);
-  process.exit(1);
-});
