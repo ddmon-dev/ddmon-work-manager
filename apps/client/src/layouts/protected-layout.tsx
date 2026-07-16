@@ -2,7 +2,6 @@ import { Navigate, Outlet } from "react-router";
 import { SidebarProvider, SidebarInset } from "@/shared/ui/sidebar";
 import { AppSidebar } from "@/features/ui/app-sidebar";
 import { TodoProvider, TodoSheet } from "@/features/ui/todo-widget";
-import { MindnoteProvider, MindnoteSheet } from "@/features/ui/mindnote-widget";
 import { MemoProvider, MemoSheet } from "@/features/ui/memo-widget";
 import { CalculatorProvider, CalculatorPopup } from "@/features/ui/calculator-widget";
 import { useAuth } from "@/features/auth/hooks/use-auth";
@@ -27,19 +26,16 @@ export function ProtectedLayout() {
     <IdleLogoutProvider>
       <CalculatorProvider>
         <TodoProvider>
-          <MindnoteProvider>
-            <MemoProvider>
-              <SidebarProvider>
-                <AppSidebar />
-                <SidebarInset>
-                  <Outlet />
-                </SidebarInset>
-              </SidebarProvider>
-              <TodoSheet />
-              <MindnoteSheet />
-              <MemoSheet />
-            </MemoProvider>
-          </MindnoteProvider>
+          <MemoProvider>
+            <SidebarProvider>
+              <AppSidebar />
+              <SidebarInset>
+                <Outlet />
+              </SidebarInset>
+            </SidebarProvider>
+            <TodoSheet />
+            <MemoSheet />
+          </MemoProvider>
         </TodoProvider>
         <CalculatorPopup />
       </CalculatorProvider>

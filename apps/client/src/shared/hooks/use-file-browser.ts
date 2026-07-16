@@ -521,7 +521,14 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
         clearSelection();
         return;
       }
-      window.open(`/api/files/${file.id}/download`, "_blank");
+      // 브라우저에서 렌더링 가능한 타입은 새 탭에서 열고, 그 외는 다운로드
+      const viewable = /^(image\/|video\/|audio\/|text\/|application\/pdf)/.test(
+        file.mimeType ?? ""
+      );
+      window.open(
+        `/api/files/${file.id}/download${viewable ? "?inline=1" : ""}`,
+        "_blank"
+      );
     },
     [nav.handleNavigate, clearSelection]
   );

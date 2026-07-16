@@ -17,9 +17,9 @@ src/
 │   ├── dashboard/      # 대시보드
 │   ├── revenue/        # 매출 현황
 │   ├── settlement/     # 정산 (세금계산서/원천세 일괄 처리)
-│   ├── library/        # 라이브러리 (보드/문서/드라이브/휴지통)
+│   ├── drive/          # 드라이브 (파일 탐색기/휴지통)
 │   ├── settings/       # 설정
-│   └── ui/             # 글로벌 UI (app-sidebar, 미니앱: todo-widget, mindnote-widget, memo-widget, calculator-widget)
+│   └── ui/             # 글로벌 UI (app-sidebar, 미니앱: todo-widget, memo-widget, calculator-widget)
 └── shared/             # 공유 레이어
     ├── ui/             # 기본 컴포넌트, 폼 컴포넌트, DataList, file-browser
     ├── lib/            # api-client, query-keys, query-client
@@ -50,7 +50,7 @@ RootLayout (Toaster, ThemeContext)
     ├── /revenue       → RevenuePage
     ├── /settlement    → SettlementPage
     ├── /admins        → AdminsPage
-    ├── /library       → LibraryPage
+    ├── /drive         → DrivePage
     ├── /unauthorized  → UnauthorizedPage
     └── *              → NotFoundPage
 ```
@@ -152,7 +152,7 @@ useManageSheet() → { open, close, closeWithGuard, setMode, setModeWithGuard, s
 
 ### 파일 브라우저 시스템
 
-드라이브(`features/library/drive.tsx`)와 모듈 파일 브라우저(`features/manage-modules/_base/ui/file-browser.tsx`)가 공유하는 파일 탐색 UI.
+드라이브(`features/drive/drive.tsx`)와 모듈 파일 브라우저(`features/manage-modules/_base/ui/file-browser.tsx`)가 공유하는 파일 탐색 UI.
 
 #### 구조
 
@@ -281,7 +281,7 @@ src/
 ├── routes/               # API 라우트 (모듈별 1파일)
 │   ├── index.ts          # 라우트 조합
 │   ├── clients.ts, partners.ts, estimates.ts, projects.ts, project-schedules.ts, schedules.ts
-│   ├── todos.ts, mindnotes.ts, admins.ts, dashboard.ts, revenue.ts
+│   ├── todos.ts, admins.ts, dashboard.ts, revenue.ts
 │   ├── library-boards.ts, library-documents.ts, files.ts, uploads.ts, trash.ts
 │   └── business-info.ts
 ├── lib/                  # 유틸리티

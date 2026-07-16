@@ -12,9 +12,7 @@ import {
 } from "@/shared/ui/empty";
 import {
   useTrashQuery,
-  useRestoreDocument,
   useRestoreFile,
-  usePermanentDeleteDocument,
   usePermanentDeleteFile,
   useEmptyTrash,
 } from "./api";
@@ -33,9 +31,7 @@ interface ContextMenuState {
 
 export function TrashView() {
   const { data: items, isLoading } = useTrashQuery();
-  const restoreDocument = useRestoreDocument();
   const restoreFile = useRestoreFile();
-  const permanentDeleteDocument = usePermanentDeleteDocument();
   const permanentDeleteFile = usePermanentDeleteFile();
   const emptyTrash = useEmptyTrash();
   const { confirm } = useDialog();
@@ -53,37 +49,26 @@ export function TrashView() {
     setContextMenu(null);
   }, []);
 
-  const handleRestore = async (id: string, type: "document" | "file") => {
+  const handleRestore = async (id: string) => {
     await confirm({
       title: "복원",
       description: "이 항목을 원래 위치로 복원하시겠습니까?",
       confirmText: "복원",
       onConfirm: async () => {
-        if (type === "document") {
-          await restoreDocument.mutateAsync(id);
-        } else {
-          await restoreFile.mutateAsync(id);
-        }
+        await restoreFile.mutateAsync(id);
         toast.success("복원되었습니다.");
       },
     });
   };
 
-  const handlePermanentDelete = async (
-    id: string,
-    type: "document" | "file"
-  ) => {
+  const handlePermanentDelete = async (id: string) => {
     await confirm({
       title: "영구 삭제",
       description: "이 항목을 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
       confirmText: "영구 삭제",
       variant: "destructive",
       onConfirm: async () => {
-        if (type === "document") {
-          await permanentDeleteDocument.mutateAsync(id);
-        } else {
-          await permanentDeleteFile.mutateAsync(id);
-        }
+        await permanentDeleteFile.mutateAsync(id);
         toast.success("영구 삭제되었습니다.");
       },
     });
@@ -153,11 +138,9 @@ export function TrashView() {
             onContextMenu={(e) => openContextMenu(e, item)}
           >
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">
-                {item.type === "document" ? item.title : item.name}
-              </p>
+              <p className="truncate text-sm font-medium">{item.name}</p>
               <p className="text-xs text-muted-foreground">
-                {item.type === "document" ? "문서" : item.isFolder ? "폴더" : "파일"}
+                {item.isFolder ? "폴더" : "파일"}
                 {" · "}
                 {formatDistanceToNow(new Date(item.deletedAt), {
                   addSuffix: true,
@@ -171,7 +154,7 @@ export function TrashView() {
                 variant="ghost"
                 size="icon"
                 className="size-7"
-                onClick={() => handleRestore(item.id, item.type)}
+                onClick={() => handleRestore(item.id)}
               >
                 <RotateCcw className="size-3.5" />
               </Button>
@@ -179,7 +162,7 @@ export function TrashView() {
                 variant="ghost"
                 size="icon"
                 className="size-7 text-destructive"
-                onClick={() => handlePermanentDelete(item.id, item.type)}
+                onClick={() => handlePermanentDelete(item.id)}
               >
                 <Trash2 className="size-3.5" />
               </Button>
@@ -194,11 +177,11 @@ export function TrashView() {
           onClose={closeContextMenu}
           onRestore={(item) => {
             closeContextMenu();
-            handleRestore(item.id, item.type);
+            handleRestore(item.id);
           }}
           onDelete={(item) => {
             closeContextMenu();
-            handlePermanentDelete(item.id, item.type);
+            handlePermanentDelete(item.id);
           }}
         />
       )}

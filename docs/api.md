@@ -214,18 +214,6 @@ requireAuth → requireSuperAdmin (선택적)
 
 userId 필터링: 모든 투두 API는 `user.id`로 자동 필터링 (사용자별 데이터 분리).
 
-### Mindnotes (`/api/mindnotes`)
-
-| Method | Path | 설명 |
-|--------|------|------|
-| GET | `/mindnotes` | 전체 목록 (createdAt desc, 비페이지네이션) |
-| GET | `/mindnotes/random` | 랜덤 1건 (대시보드 히어로 섹션용) |
-| POST | `/mindnotes` | 생성 |
-| PATCH | `/mindnotes/:id` | 수정 |
-| DELETE | `/mindnotes/:id` | **하드 삭제** |
-
-userId 필터링: 모든 마인드노트 API는 `user.id`로 자동 필터링 (사용자별 데이터 분리).
-
 ### Memos (`/api/memos`)
 
 | Method | Path | 설명 |
@@ -309,7 +297,7 @@ userId 필터링: 모든 메모 API는 `user.id`로 자동 필터링 (사용자�
 | GET | `/files` | 목록 (`?folderId=&sort=&order=`, null이면 루트) |
 | POST | `/files/upload` | 파일 업로드 (multipart, `file` + `folderId`) |
 | POST | `/files/folder` | 폴더 생성 |
-| GET | `/files/:id/download` | 파일 다운로드 |
+| GET | `/files/:id/download` | 파일 다운로드 (`?inline=1` 시 뷰어블 타입은 브라우저에서 바로 열기) |
 | PATCH | `/files/:id` | 이름 변경 |
 | PATCH | `/files/:id/move` | 폴더 이동 (`{ folderId }`) |
 | DELETE | `/files/:id` | 휴지통으로 이동 |
@@ -395,7 +383,7 @@ where(softDeleteFilter(table.deleted))
 .set(softDeletePayload())  // { deleted: true, updatedAt: new Date() }
 ```
 
-예외: schedules, todos, todo_time_blocks, mindnotes → 하드 삭제 (`db.delete()`)
+예외: schedules, todos, todo_time_blocks → 하드 삭제 (`db.delete()`)
 
 헬퍼: `apps/server/src/lib/query-helpers.ts` — `softDeleteFilter`, `softDeletePayload`, `searchFilter`, `getBilledAmount`, `reorderSchema`, `executeReorder`
 

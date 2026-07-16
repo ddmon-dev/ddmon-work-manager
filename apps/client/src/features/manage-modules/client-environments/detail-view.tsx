@@ -50,7 +50,7 @@ export function DetailView({ data }: DetailViewProps) {
               <SectionTitle>호스팅</SectionTitle>
               <DetailInfoRow label="호스팅 업체" value={hosting.provider} copyable />
               <DetailInfoRow label="아이디" value={hosting.username} copyable />
-              <DetailInfoRow label="비밀번호" value={hosting.password} copyable />
+              <DetailInfoRow label="비밀번호" value={hosting.password} copyable masked />
             </SheetContainer>
           )}
 
@@ -60,7 +60,7 @@ export function DetailView({ data }: DetailViewProps) {
               <SectionTitle>도메인</SectionTitle>
               <DetailInfoRow label="등록 업체" value={domain.registrar} copyable />
               <DetailInfoRow label="아이디" value={domain.username} copyable />
-              <DetailInfoRow label="비밀번호" value={domain.password} copyable />
+              <DetailInfoRow label="비밀번호" value={domain.password} copyable masked />
             </SheetContainer>
           )}
 
@@ -71,7 +71,7 @@ export function DetailView({ data }: DetailViewProps) {
               <DetailInfoRow label="호스트" value={remoteAccess.host} copyable />
               <DetailInfoRow label="포트" value={remoteAccess.port?.toString()} copyable />
               <DetailInfoRow label="아이디" value={remoteAccess.username} copyable />
-              <DetailInfoRow label="비밀번호" value={remoteAccess.password} copyable />
+              <DetailInfoRow label="비밀번호" value={remoteAccess.password} copyable masked />
             </SheetContainer>
           )}
 

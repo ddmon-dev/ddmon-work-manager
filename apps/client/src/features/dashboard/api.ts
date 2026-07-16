@@ -53,18 +53,3 @@ export function useUpcomingSchedules() {
     queryFn: () => api.get<ScheduleData>("/dashboard/schedules"),
   });
 }
-
-export interface RandomMindnote {
-  id: string;
-  content: string;
-  createdAt: string;
-}
-
-export function useRandomMindnote() {
-  return useQuery({
-    queryKey: queryKeys.mindnotes.random,
-    queryFn: () => api.get<{ mindnote: RandomMindnote | null }>("/mindnotes/random"),
-    staleTime: Infinity,
-    refetchOnMount: "always",
-  });
-}

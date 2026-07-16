@@ -5,7 +5,6 @@ import {
   FolderKanban,
   CalendarDays,
   TrendingUp,
-  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,7 +20,6 @@ const actions: QuickAction[] = [
   { title: "프로젝트", href: "/projects", icon: FolderKanban },
   { title: "일정", href: "/schedules", icon: CalendarDays },
   { title: "재무", href: "/financial", icon: TrendingUp },
-  { title: "관리자", href: "/admins", icon: Users },
 ];
 
 export function QuickActions() {

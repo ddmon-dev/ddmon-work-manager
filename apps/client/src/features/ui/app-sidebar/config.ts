@@ -1,12 +1,12 @@
 import { type MenuData } from "./types";
 import {
   BarChart3,
-  BookOpen,
   Briefcase,
   CalendarDays,
   FileSpreadsheet,
   FolderKanban,
   GanttChart,
+  HardDrive,
   ServerCog,
   Users,
 } from "lucide-react";
@@ -42,7 +42,7 @@ export const navigationConfig: MenuConfig = {
       title: "도구",
       items: [
         { title: "캘린더", url: "/schedules", icon: CalendarDays },
-        { title: "라이브러리", url: "/library", icon: BookOpen },
+        { title: "드라이브", url: "/drive", icon: HardDrive },
       ],
     },
   ],

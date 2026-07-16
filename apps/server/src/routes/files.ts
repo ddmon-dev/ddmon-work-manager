@@ -264,7 +264,10 @@ app.get("/:id/path", async (c) => {
   return successResponse(c, { path });
 });
 
-// GET /:id/download — 파일 다운로드
+// 브라우저에서 직접 렌더링 가능한 타입만 inline 허용
+const VIEWABLE_MIME_PATTERN = /^(image\/|video\/|audio\/|text\/|application\/pdf)/;
+
+// GET /:id/download — 파일 다운로드 (?inline=1 시 뷰어블 타입은 브라우저에서 바로 열기)
 app.get("/:id/download", async (c) => {
   const id = c.req.param("id");
 
@@ -275,10 +278,14 @@ app.get("/:id/download", async (c) => {
 
   const { stream, size } = await getFile(file.s3Key);
 
+  const inline =
+    c.req.query("inline") === "1" &&
+    VIEWABLE_MIME_PATTERN.test(file.mimeType ?? "");
+
   return new Response(stream as any, {
     headers: {
       "Content-Type": file.mimeType ?? "application/octet-stream",
-      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(file.name)}`,
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(file.name)}`,
       "Content-Length": String(file.size ?? size),
     },
   });

@@ -14,7 +14,7 @@ import { FinancialPage } from "@/pages/financial";
 import { PartnersPage } from "@/pages/partners";
 import { ClientEnvironmentsPage } from "@/pages/client-environments";
 import { AdminsPage } from "@/pages/admins";
-import { LibraryPage } from "@/pages/library";
+import { DrivePage } from "@/pages/drive";
 import { NotFoundPage } from "@/pages/not-found";
 import { UnauthorizedPage } from "@/pages/unauthorized";
 
@@ -43,7 +43,7 @@ export const router = createBrowserRouter([
               { path: "/client-environments", element: <ClientEnvironmentsPage /> },
               { path: "/financial", element: <FinancialPage /> },
               { path: "/admins", element: <AdminsPage /> },
-              { path: "/library", element: <LibraryPage /> },
+              { path: "/drive", element: <DrivePage /> },
               { path: "/unauthorized", element: <UnauthorizedPage /> },
               { path: "*", element: <NotFoundPage /> },
             ],

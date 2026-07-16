@@ -69,19 +69,6 @@ export const queryKeys = {
   businessInfo: {
     single: ["business-info"] as const,
   },
-  mindnotes: {
-    all: ["mindnotes"] as const,
-    random: ["mindnotes", "random"] as const,
-  },
-  libraryBoards: {
-    all: ["library-boards"] as const,
-    list: () => ["library-boards", "list"] as const,
-  },
-  libraryDocuments: {
-    all: ["library-documents"] as const,
-    list: (boardId: string) => ["library-documents", "list", boardId] as const,
-    detail: (id: string) => ["library-documents", "detail", id] as const,
-  },
   files: {
     all: ["files"] as const,
     list: (folderId: string | null) => ["files", "list", folderId] as const,
