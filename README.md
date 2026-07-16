@@ -12,27 +12,9 @@
 
 ## 소개
 
-직접 만든 [Admin Framework](https://github.com/ddmon-dev/ddmon-admin-framework)를 기반으로 프리랜서 외주 업무에 맞춰 확장한 시스템입니다. 고객 관리부터 견적 발행, 프로젝트 진행, 수금·정산까지 외주 업무의 전체 흐름을 다루며, 로컬 운영 서버에서 실제 업무에 매일 사용하고 있습니다.
+직접 만든 [Admin Framework](https://github.com/ddmon-dev/ddmon-admin-framework)를 기반으로 프리랜서 외주 업무에 맞춰 확장한 시스템입니다. 고객 관리부터 견적 발행, 프로젝트 진행, 수금·정산까지 외주 업무의 전체 흐름을 다루며, 로컬 운영 서버에서 사용중에 있습니다.
 
-프레임워크가 범용 CRUD 골격을 제공한다면, 이 프로젝트는 그 위에 견적 버전 관리·재무·간트 일정 같은 실업무 도메인을 얹은 것입니다. 고객·견적·프로젝트·파트너 등 8개 도메인 모듈이 전부 `_base` 공통 인프라 위에서 동작하고, 모듈 하나의 시트(상세·수정·생성·복제) 배선은 이것이 전부입니다.
-
-```tsx
-// clients/item-sheet.tsx — 모듈 하나의 시트 배선 전부
-export function ItemSheet() {
-  return (
-    <ManageSheet<ClientWithMemos>
-      queryKeyFn={id => queryKeys.clients.detail(id)}
-      fetchFn={fetchClient}
-      formComponent={WriteForm}
-      viewComponent={DetailView}
-      moduleName={CONFIG.moduleName}
-      size={{ create: 'md', modify: 'md', view: '2xl', duplicate: 'md' }}
-    />
-  );
-}
-```
-
-이 선언 하나가 `view / modify / create / duplicate` 4모드 상태 머신, 폼 이탈 가드(수정 중 닫기·전환·새로고침 확인), 모드별 시트 크기, 데이터 페칭까지 연결합니다.
+프레임워크가 범용 CRUD 골격을 제공한다면, 이 프로젝트는 그 위에 견적 버전 관리·재무·간트 일정 같은 실업무 도메인을 얹은 것입니다. 고객·견적·프로젝트·파트너 등 8개 도메인 모듈이 전부 `_base` 공통 인프라 위에서 동작합니다.
 
 ## 핵심 기능
 
