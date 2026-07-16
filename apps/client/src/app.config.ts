@@ -3,7 +3,7 @@ import type { SidebarVariant } from '@/shared/ui/sidebar';
 export const APP_CONFIG = {
   META: {
     TITLE: 'LittleAwesome WM',
-    DESCRIPTION: '외주 고객·견적·프로젝트·수금 관리 시스템',
+    DESCRIPTION: '프리랜서 업무 관리 시스템 (데모)',
   },
   AUTH: {
     PATHS: {

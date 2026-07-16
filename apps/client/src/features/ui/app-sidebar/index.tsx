@@ -14,6 +14,7 @@ import {
   SidebarMenuButton,
 } from "@/shared/ui/sidebar";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { IS_DEMO } from "@/shared/lib/demo";
 import { BusinessInfoDialog } from "@/features/settings/business-info-dialog";
 import { AppSidebarIdentity } from "./identity";
 import { NavMenu } from "./nav-menu";
@@ -43,15 +44,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarGroup>
               <SidebarGroupLabel>설정</SidebarGroupLabel>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/admins">
-                      <Users />
-                      <span>관리자 계정 관리</span>
-                      <ArrowRight className="ml-auto" />
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {!IS_DEMO && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/admins">
+                        <Users />
+                        <span>관리자 계정 관리</span>
+                        <ArrowRight className="ml-auto" />
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => setBizInfoOpen(true)}>
                     <Building2 />

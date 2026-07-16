@@ -256,8 +256,9 @@ function randomAddress(): string {
   return `${street}${randInt(1, 300)}길 ${randInt(1, 40)}, ${randInt(2, 15)}층`;
 }
 
-function randomPhone(): string {
-  return `010-${randInt(1000, 9999)}-${randInt(1000, 9999)}`;
+// 개인정보성 번호는 랜덤 생성 대신 전부 0 마스킹 패턴으로 고정
+function maskedPhone(): string {
+  return "010-0000-0000";
 }
 
 const CLIENT_MEMO_TEMPLATES: { type: "strategy" | "log"; content: string }[] = [
@@ -550,7 +551,7 @@ async function seed() {
     username: demoUsername,
     password: demoPassword,
   });
-  await db.update(user).set({ superAdmin: true, phone: "01000000000" }).where(eq(user.id, demoId));
+  await db.update(user).set({ superAdmin: true, phone: "010-0000-0000" }).where(eq(user.id, demoId));
 
   const jiwonId = await ensureAccount({
     name: "한지원",
@@ -568,10 +569,10 @@ async function seed() {
   // ── 2. 사업자 정보 ────────────────────────────────────────
 
   await db.insert(businessInfo).values({
-    name: "웨이브웍스 스튜디오",
-    nameEn: "WAVEWORKS STUDIO",
+    name: "리틀어썸",
+    nameEn: "LittleAwesome",
     ceo: "홍길동",
-    bizNumber: "123-45-67890",
+    bizNumber: "000-00-00000",
     address: "서울특별시 마포구 월드컵북로 000, 5층",
     bankName: "국민은행",
     bankAccount: "000000-00-000000",
@@ -580,7 +581,7 @@ async function seed() {
     bizItem: "소프트웨어 개발 및 공급",
   });
 
-  const PUBLISHER_INFO = { issuer: "홍길동", email: "hello@waveworks.example", phone: "01000000000" };
+  const PUBLISHER_INFO = { issuer: "홍길동", email: "hello@littleawesome.example", phone: "010-0000-0000" };
 
   console.log("사업자 정보 등록 완료.");
 
@@ -594,7 +595,7 @@ async function seed() {
       companyName: c.name,
       contactName: contact.display,
       email: `${contact.roman}@${c.slug}.example`,
-      phone: randomPhone(),
+      phone: maskedPhone(),
       address: randomAddress(),
       createdAt: withRandomTime(daysAgo(randInt(0, 365))),
     };
@@ -641,9 +642,9 @@ async function seed() {
     id: randomUUID(),
     name: p.name,
     email: `${p.roman}@partner.example`,
-    phone: randomPhone(),
+    phone: maskedPhone(),
     bankName: pick(BANKS),
-    bankAccount: `${randInt(100, 999)}-${randInt(100, 999)}-${randInt(100000, 999999)}`,
+    bankAccount: "000-000-000000",
     specialties: sampleUnique(PARTNER_SPECIALTIES, randInt(1, 2)),
     createdAt: withRandomTime(daysAgo(randInt(30, 365))),
   }));
