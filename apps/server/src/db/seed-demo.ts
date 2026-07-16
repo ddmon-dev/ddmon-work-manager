@@ -1502,7 +1502,7 @@ async function seed() {
   const filePlans: { name: string; ext: string; mime: string; buffer: Buffer; folderIndex: number }[] = [
     { name: "표준 용역계약서 조항 요약.txt", ext: "txt", mime: "text/plain", buffer: Buffer.from(TXT_SAMPLES[0], "utf-8"), folderIndex: 0 },
     { name: "계약서 최종본.pdf", ext: "pdf", mime: "application/pdf", buffer: Buffer.from(MIN_PDF, "utf-8"), folderIndex: 0 },
-    { name: "웨이브웍스 견적서 사본.pdf", ext: "pdf", mime: "application/pdf", buffer: Buffer.from(MIN_PDF, "utf-8"), folderIndex: 1 },
+    { name: "리틀어썸 견적서 사본.pdf", ext: "pdf", mime: "application/pdf", buffer: Buffer.from(MIN_PDF, "utf-8"), folderIndex: 1 },
     { name: "메인 배너 시안.png", ext: "png", mime: "image/png", buffer: Buffer.from(PNG_BASE64, "base64"), folderIndex: 2 },
     { name: "서브페이지 시안.png", ext: "png", mime: "image/png", buffer: Buffer.from(PNG_BASE64, "base64"), folderIndex: 2 },
     { name: "납품 체크리스트.txt", ext: "txt", mime: "text/plain", buffer: Buffer.from(TXT_SAMPLES[1], "utf-8"), folderIndex: 3 },

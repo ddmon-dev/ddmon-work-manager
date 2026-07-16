@@ -300,9 +300,16 @@ app.get("/:id/download", async (c) => {
     c.req.query("inline") === "1" &&
     VIEWABLE_MIME_PATTERN.test(file.mimeType ?? "");
 
+  // 텍스트 계열은 charset 명시 (없으면 브라우저가 인코딩을 추측해 한글이 깨짐)
+  const contentType = !file.mimeType
+    ? "application/octet-stream"
+    : /^(text\/|application\/json)/.test(file.mimeType)
+      ? `${file.mimeType}; charset=utf-8`
+      : file.mimeType;
+
   return new Response(stream as any, {
     headers: {
-      "Content-Type": file.mimeType ?? "application/octet-stream",
+      "Content-Type": contentType,
       "Content-Disposition": `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(file.name)}`,
       "Content-Length": String(file.size ?? size),
     },
