@@ -1,8 +1,2 @@
-# 사용자 주도형 AI 에이전트만 허용 (실시간 fetch), 검색엔진·학습용 크롤러는 차단
-User-agent: Claude-User
-User-agent: ChatGPT-User
-User-agent: Perplexity-User
-Allow: /
-
 User-agent: *
-Disallow: /
+Allow: /
