@@ -10,16 +10,10 @@ export function SignInPage() {
         title="Welcome back!"
         description="관리자님, 다시 만나서 반가워요!"
       >
-        {IS_DEMO ? (
-          <div className="relative">
-            <div inert>
-              <SignInForm />
-            </div>
-            <DemoLoginOverlay />
-          </div>
-        ) : (
+        <div className="relative">
           <SignInForm />
-        )}
+          {IS_DEMO && <DemoLoginOverlay />}
+        </div>
       </AuthCard>
     </AuthContainer>
   );

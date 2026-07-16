@@ -10,6 +10,8 @@ export const APP_CONFIG = {
       SIGN_IN: '/auth/sign-in',
       FORBIDDEN: '/unauthorized',
     },
+    IDLE_TIMEOUT_MINUTES: 30, // 자동 로그아웃 (데모 모드)
+    IDLE_WARNING_MINUTES: 5, // 로그아웃 경고 표시 (5분 전)
     ADMIN_LABELS: {
       SUPER_ADMIN: '최고관리자',
       ADMIN: '일반관리자',

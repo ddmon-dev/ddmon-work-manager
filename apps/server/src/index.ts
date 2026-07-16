@@ -58,6 +58,10 @@ if (isServeStatic) {
     })
   );
 
+  // 루트 정적 파일 (SPA fallback보다 먼저 매칭)
+  app.use("/favicon.svg", serveStatic({ root: staticDir }));
+  app.use("/robots.txt", serveStatic({ root: staticDir }));
+
   // SPA fallback: API 경로 외 모든 요청 → index.html
   app.use("*", async (c, next) => {
     const path = c.req.path;

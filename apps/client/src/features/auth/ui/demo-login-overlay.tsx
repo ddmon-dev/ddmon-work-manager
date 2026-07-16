@@ -1,21 +1,29 @@
 import { useState } from "react";
+import { toast } from "sonner";
+import { AUTH_ERRORS } from "@/shared/constants/error-messages";
+import { DemoOverlay, DemoOverlayMessage } from "@/shared/ui/demo-overlay";
 import { LoadingButton } from "@/shared/ui/loading-button";
 
+/**
+ * 데모 모드 로그인 오버레이.
+ *
+ * 공용 DemoOverlay(backdrop-blur shell) 위에 원클릭 '데모로 접속' 버튼을 얹어
+ * 데모 계정 실제 로그인을 수행한다. 폼을 지우지 않고 블러로 남겨 실제 인증 폼 존재를 보인다.
+ */
 export function DemoLoginOverlay() {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleDemoLogin() {
     setIsLoading(true);
-    setError(null);
 
+    // 자격증명은 서버(/api/demo/login)가 주입한다. 클라이언트는 데모 접속 의사만 전달.
     const res = await fetch("/api/demo/login", {
       method: "POST",
       credentials: "include",
     }).catch(() => null);
 
     if (!res?.ok) {
-      setError("데모 접속에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      toast.error(AUTH_ERRORS.UNKNOWN_ERROR);
       setIsLoading(false);
       return;
     }
@@ -25,19 +33,17 @@ export function DemoLoginOverlay() {
   }
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-y-4 bg-background/60 backdrop-blur-[3px]">
-      <p className="text-sm text-muted-foreground">
-        데모 환경입니다. 버튼 한 번으로 둘러보세요.
-      </p>
+    <DemoOverlay className="-inset-8">
+      <DemoOverlayMessage>데모 계정으로 자유롭게 둘러보세요</DemoOverlayMessage>
       <LoadingButton
         type="button"
         variant="black"
-        onClick={handleDemoLogin}
         isLoading={isLoading}
+        onClick={handleDemoLogin}
+        className="min-w-40"
       >
         데모로 접속
       </LoadingButton>
-      {error && <p className="text-sm text-destructive">{error}</p>}
-    </div>
+    </DemoOverlay>
   );
 }
