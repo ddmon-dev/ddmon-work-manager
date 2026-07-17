@@ -1,6 +1,7 @@
 import { createContext, use, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
+import { blockedDeleteInDemo } from "@/shared/lib/demo";
 
 import type { Memo } from "./types";
 import {
@@ -79,6 +80,8 @@ export function MemoProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeMemo = async (id: string) => {
+    if (blockedDeleteInDemo()) return;
+
     const snapshot = memos;
     setMemos((prev) => prev.filter((m) => m.id !== id));
 
