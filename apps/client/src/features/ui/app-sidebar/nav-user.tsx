@@ -73,12 +73,7 @@ export function NavUser() {
 function UserInfo({ auth }: { auth: AuthState }) {
   const user = auth.status === "authenticated" ? auth.user : undefined;
 
-  const initials = user?.name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  const initials = user?.name?.charAt(0).toUpperCase();
 
   const role =
     auth.status === "authenticated" && auth.isSuperAdmin
