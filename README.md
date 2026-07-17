@@ -8,6 +8,10 @@
 ![Drizzle](https://img.shields.io/badge/Drizzle_ORM-Postgres%2017-c5f74f)
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-v4-38bdf8)
 
+**라이브 데모** — <https://wm-demo.ddmon.com>
+
+로그인 화면의 **"데모로 접속"** 버튼으로 계정 입력 없이 바로 체험할 수 있습니다. 모든 데이터는 전시용 가상 시드이며, 데모 모드에서는 데이터 삭제·비밀번호 변경 등 일부 동작이 제한됩니다.
+
 ---
 
 ## 소개
