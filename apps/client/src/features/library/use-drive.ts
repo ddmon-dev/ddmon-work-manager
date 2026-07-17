@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useToggleFavorite, useDeleteFile, useBatchDeleteFiles } from "./api";
 import { useFileBrowser } from "@/shared/hooks/use-file-browser";
+import { errorMessage } from "@/shared/lib/api-client";
 import { FILE_MESSAGES } from "@/shared/ui/file-browser";
 
 export type {
@@ -73,8 +74,8 @@ export function useDrive() {
         }
         toast.success(FILE_MESSAGES.MOVED_TO_TRASH);
         fb.clearSelection();
-      } catch {
-        toast.error(FILE_MESSAGES.DELETE_FAILED);
+      } catch (err) {
+        toast.error(errorMessage(err, FILE_MESSAGES.DELETE_FAILED));
       }
     },
     [deleteFile, batchDeleteFiles, fb.selectedIds, fb.clearSelection]

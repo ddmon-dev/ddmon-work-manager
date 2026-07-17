@@ -21,6 +21,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { toast } from "sonner";
+import { errorMessage } from "@/shared/lib/api-client";
 import { useDialog } from "@/shared/ui/app-dialog";
 import { ContextMenuPortal } from "@/shared/ui/context-menu-portal";
 import type { TrashItem } from "./types";
@@ -59,12 +60,16 @@ export function TrashView() {
       description: "이 항목을 원래 위치로 복원하시겠습니까?",
       confirmText: "복원",
       onConfirm: async () => {
-        if (type === "document") {
-          await restoreDocument.mutateAsync(id);
-        } else {
-          await restoreFile.mutateAsync(id);
+        try {
+          if (type === "document") {
+            await restoreDocument.mutateAsync(id);
+          } else {
+            await restoreFile.mutateAsync(id);
+          }
+          toast.success("복원되었습니다.");
+        } catch (err) {
+          toast.error(errorMessage(err, "복원에 실패했습니다."));
         }
-        toast.success("복원되었습니다.");
       },
     });
   };
@@ -79,12 +84,16 @@ export function TrashView() {
       confirmText: "영구 삭제",
       variant: "destructive",
       onConfirm: async () => {
-        if (type === "document") {
-          await permanentDeleteDocument.mutateAsync(id);
-        } else {
-          await permanentDeleteFile.mutateAsync(id);
+        try {
+          if (type === "document") {
+            await permanentDeleteDocument.mutateAsync(id);
+          } else {
+            await permanentDeleteFile.mutateAsync(id);
+          }
+          toast.success("영구 삭제되었습니다.");
+        } catch (err) {
+          toast.error(errorMessage(err, "영구 삭제에 실패했습니다."));
         }
-        toast.success("영구 삭제되었습니다.");
       },
     });
   };
@@ -96,8 +105,12 @@ export function TrashView() {
       confirmText: "모두 삭제",
       variant: "destructive",
       onConfirm: async () => {
-        await emptyTrash.mutateAsync();
-        toast.success("휴지통을 비웠습니다.");
+        try {
+          await emptyTrash.mutateAsync();
+          toast.success("휴지통을 비웠습니다.");
+        } catch (err) {
+          toast.error(errorMessage(err, "휴지통 비우기에 실패했습니다."));
+        }
       },
     });
   };

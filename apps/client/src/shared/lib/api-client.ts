@@ -55,6 +55,11 @@ function buildQuery(params?: Params): string {
   return "?" + new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
 }
 
+/** 서버가 내려준 에러 메시지가 있으면 그대로, 없으면 fallback 문구를 반환한다. */
+export function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 export const api = {
   get: <T>(path: string, params?: Params) =>
     request<T>(`${path}${buildQuery(params)}`),
