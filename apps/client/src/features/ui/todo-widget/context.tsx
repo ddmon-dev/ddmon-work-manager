@@ -7,6 +7,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
+import { blockedDeleteInDemo } from "@/shared/lib/demo";
 
 import type { Todo, TimeBlockWithTodo } from "./types";
 import {
@@ -256,6 +257,8 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
   };
 
   const handleDeleteTodo = async (todoId: string) => {
+      if (blockedDeleteInDemo()) return;
+
       const todo = todos.find((t) => t.id === todoId);
       if (todo) {
         const snapshot = { todos, timeBlocks };
@@ -410,6 +413,8 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeBlock = (blockId: string) => {
+      if (blockedDeleteInDemo()) return;
+
       const snapshot = timeBlocks;
       setTimeBlocks((prev) => prev.filter((b) => b.id !== blockId));
 

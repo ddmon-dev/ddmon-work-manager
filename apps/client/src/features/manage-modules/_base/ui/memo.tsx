@@ -1,3 +1,4 @@
+import { blockedDeleteInDemo } from "@/shared/lib/demo";
 import { DetailSectionTitle } from "./manage-detail";
 import { MemoForm } from "./memo-form";
 import { MemoHistory } from "./memo-history";
@@ -29,6 +30,7 @@ export function MemoSection({ parentId, memos, hooks }: MemoSectionProps) {
   };
 
   const handleDelete = async (memoId: string) => {
+    if (blockedDeleteInDemo()) return;
     await deleteMemo.mutateAsync({ parentId, memoId });
   };
 
