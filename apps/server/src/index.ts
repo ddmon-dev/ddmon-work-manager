@@ -14,6 +14,7 @@ const app = new Hono<{ Variables: AppVariables }>();
 app.use("*", secureHeaders());
 
 const isServeStatic = process.env.SERVE_STATIC === "true";
+const staticDir = process.env.STATIC_DIR ?? "../../apps/client/dist";
 
 if (!isServeStatic) {
   app.use(
@@ -30,8 +31,6 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 app.route("/api", apiRoutes);
 
 if (isServeStatic) {
-  const staticDir = process.env.STATIC_DIR ?? "../../apps/client/dist";
-
   // Vite 빌드 에셋 (장기 캐시)
   app.use(
     "/assets/*",
@@ -71,10 +70,10 @@ app.onError((err, c) => {
 });
 
 const port = Number(process.env.PORT) || 4001;
-serve({ fetch: app.fetch, port }, async (info) => {
+const server = serve({ fetch: app.fetch, port }, async (info) => {
   console.log(`Server running at http://localhost:${info.port}`);
   if (isServeStatic) {
-    console.log(`Serving static files from: ${process.env.STATIC_DIR}`);
+    console.log(`Serving static files from: ${staticDir}`);
   }
   try {
     await ensureStorageDir();
@@ -82,5 +81,13 @@ serve({ fetch: app.fetch, port }, async (info) => {
     console.warn("[Storage] 디렉토리 초기화 실패:", (err as Error).message);
   }
 });
+
+// 종료 신호에 정상 응답하지 않으면 배포 교체 시 강제 종료되어 크러시로 기록됨
+const shutdown = () => {
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 5000).unref();
+};
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
 
 export default app;
