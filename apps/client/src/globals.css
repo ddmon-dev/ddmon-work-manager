@@ -95,40 +95,42 @@
 
 :root {
   /* ============================================================ */
-  /* Background & Foreground */
+  /* Background & Foreground — 쿨 그래파이트 뉴트럴 */
   /* ============================================================ */
-  --background: oklch(0.995 0.002 30);
-  --background-secondary: oklch(0.975 0.0035 35);
-  --foreground: oklch(0.18 0.04 260);
+  --background: oklch(0.995 0.001 270);
+  --background-secondary: oklch(0.975 0.002 270);
+  --foreground: oklch(0.21 0.012 270);
 
   /* ============================================================ */
-  /* Primary: Sky Blue (HSL 206 100% 50% based) */
+  /* Primary: Golden Amber — 버튼은 다크 앰버 텍스트 */
   /* ============================================================ */
-  --primary: oklch(0.65 0.21 237);
-  --primary-foreground: oklch(0.98 0.01 237);
-  --primary-light: oklch(0.97 0.02 237);
-  --primary-light-foreground: var(--primary);
-  --primary-dark: oklch(0.55 0.15 237);
-  --primary-dark-foreground: var(--primary-foreground);
+  --primary: oklch(0.62 0.135 72);
+  --primary-foreground: oklch(0.2 0.045 80);
+  --primary-light: oklch(0.955 0.035 85);
+  --primary-light-foreground: oklch(0.52 0.12 70);
+  --primary-dark: oklch(0.52 0.115 70);
+  --primary-dark-foreground: oklch(0.98 0.01 85);
 
   /* ============================================================ */
   /* Secondary: 버튼/뱃지 배경 — 가장 진한 neutral */
   /* ============================================================ */
-  --secondary: oklch(0.93 0.003 30);
-  --secondary-foreground: oklch(0.45 0.03 260);
+  --secondary: oklch(0.93 0.003 270);
+  --secondary-foreground: oklch(0.45 0.015 270);
 
   /* ============================================================ */
   /* Muted: 비활성/보조 배경 — 가장 옅은 neutral */
   /* Accent: 인터랙션 하이라이트 — muted와 secondary 사이 */
   /* ============================================================ */
-  --muted: oklch(0.96 0.003 30);
-  --muted-dark: oklch(0.92 0.005 30);
-  --muted-foreground: oklch(0.55 0.01 30);
-  --accent: oklch(0.94 0.005 30);
-  --accent-foreground: oklch(0.25 0.04 260);
+  --muted: oklch(0.96 0.002 270);
+  --muted-dark: oklch(0.92 0.004 270);
+  --muted-foreground: oklch(0.52 0.012 270);
+  --accent: oklch(0.94 0.004 270);
+  --accent-foreground: oklch(0.25 0.015 270);
 
   /* ============================================================ */
   /* Semantic Colors */
+  /* warning은 primary(앰버 hue 72)와 구분되도록 hue 50 사용 */
+  /* info는 primary가 앰버로 바뀌며 스틸 블루로 독립 */
   /* ============================================================ */
   --destructive: oklch(0.65 0.2 25);
   --destructive-foreground: oklch(1 0 0);
@@ -140,15 +142,15 @@
   --success-light: oklch(0.95 0.04 150);
   --success-light-foreground: oklch(0.5 0.18 150);
 
-  --warning: oklch(0.75 0.17 65);
+  --warning: oklch(0.65 0.15 50);
   --warning-foreground: oklch(0.98 0 0);
-  --warning-light: oklch(0.95 0.05 65);
-  --warning-light-foreground: oklch(0.5 0.15 65);
+  --warning-light: oklch(0.955 0.045 50);
+  --warning-light-foreground: oklch(0.5 0.14 45);
 
-  --info: var(--primary);
-  --info-foreground: var(--primary-foreground);
-  --info-light: var(--primary-light);
-  --info-light-foreground: oklch(0.55 0.18 237);
+  --info: oklch(0.58 0.11 235);
+  --info-foreground: oklch(0.98 0.01 235);
+  --info-light: oklch(0.95 0.03 235);
+  --info-light-foreground: oklch(0.5 0.1 240);
 
   /* ============================================================ */
   /* Card & Popover */
@@ -161,19 +163,19 @@
   /* ============================================================ */
   /* Border & Input */
   /* ============================================================ */
-  --border: oklch(0.88 0.003 30);
-  --border-dark: oklch(0.84 0.005 30);
-  --input: oklch(0.91 0.003 30);
-  --ring: oklch(0.65 0.21 237 / 20%);
+  --border: oklch(0.885 0.004 270);
+  --border-dark: oklch(0.845 0.006 270);
+  --input: oklch(0.91 0.004 270);
+  --ring: oklch(0.62 0.135 72 / 25%);
   --ring-destructive: oklch(0.85 0.15 25);
 
   /* ============================================================ */
-  /* Chart Colors */
+  /* Chart Colors — 앰버와 겹치는 주황 제거, 퍼플 대신 스틸블루·틸 */
   /* ============================================================ */
   --chart-1: var(--primary);
   --chart-2: oklch(0.65 0.15 150);
-  --chart-3: oklch(0.75 0.15 65);
-  --chart-4: oklch(0.65 0.18 300);
+  --chart-3: oklch(0.55 0.1 235);
+  --chart-4: oklch(0.6 0.09 200);
   --chart-5: oklch(0.65 0.18 25);
 
   /* ============================================================ */
@@ -204,33 +206,33 @@
   /* ============================================================ */
   /* Background & Foreground */
   /* ============================================================ */
-  --background: oklch(0.15 0 0);
-  --background-secondary: oklch(0.18 0 0);
-  --foreground: oklch(0.95 0 0);
+  --background: oklch(0.15 0.005 270);
+  --background-secondary: oklch(0.18 0.005 270);
+  --foreground: oklch(0.93 0.004 270);
 
   /* ============================================================ */
-  /* Primary: Sky Blue */
+  /* Primary: Golden Amber */
   /* ============================================================ */
-  --primary: oklch(0.6 0.2 237);
-  --primary-foreground: oklch(0.98 0 0);
-  --primary-light: oklch(0.25 0.05 237);
-  --primary-light-foreground: oklch(0.7 0.18 237);
-  --primary-dark: oklch(0.5 0.15 237);
+  --primary: oklch(0.78 0.14 80);
+  --primary-foreground: oklch(0.22 0.06 80);
+  --primary-light: oklch(0.27 0.045 80);
+  --primary-light-foreground: oklch(0.82 0.125 82);
+  --primary-dark: oklch(0.68 0.13 75);
   --primary-dark-foreground: var(--primary-foreground);
 
   /* ============================================================ */
   /* Secondary */
   /* ============================================================ */
-  --secondary: oklch(0.25 0.005 260);
+  --secondary: oklch(0.25 0.005 270);
   --secondary-foreground: var(--foreground);
 
   /* ============================================================ */
   /* Muted & Accent */
   /* ============================================================ */
-  --muted: oklch(0.22 0.003 260);
-  --muted-dark: oklch(0.20 0.003 260);
-  --muted-foreground: oklch(0.60 0.005 260);
-  --accent: oklch(0.28 0.008 260);
+  --muted: oklch(0.22 0.003 270);
+  --muted-dark: oklch(0.2 0.003 270);
+  --muted-foreground: oklch(0.62 0.008 270);
+  --accent: oklch(0.28 0.008 270);
   --accent-foreground: var(--foreground);
 
   /* ============================================================ */
@@ -246,20 +248,20 @@
   --success-light: oklch(0.25 0.05 150);
   --success-light-foreground: oklch(0.65 0.15 150);
 
-  --warning: oklch(0.82 0.16 65);
-  --warning-foreground: oklch(1 0 0);
-  --warning-light: oklch(0.25 0.05 65);
-  --warning-light-foreground: oklch(0.82 0.16 65);
+  --warning: oklch(0.78 0.15 55);
+  --warning-foreground: oklch(0.16 0.02 55);
+  --warning-light: oklch(0.25 0.05 55);
+  --warning-light-foreground: oklch(0.8 0.13 60);
 
-  --info: var(--primary);
-  --info-foreground: var(--primary-foreground);
-  --info-light: var(--primary-light);
-  --info-light-foreground: var(--primary-light-foreground);
+  --info: oklch(0.68 0.1 230);
+  --info-foreground: oklch(0.15 0.02 230);
+  --info-light: oklch(0.26 0.04 235);
+  --info-light-foreground: oklch(0.72 0.09 230);
 
   /* ============================================================ */
   /* Card & Popover */
   /* ============================================================ */
-  --card: oklch(0.2 0 0);
+  --card: oklch(0.2 0.005 270);
   --card-foreground: var(--foreground);
   --popover: var(--card);
   --popover-foreground: var(--foreground);
@@ -270,7 +272,7 @@
   --border: oklch(1 0 0 / 10%);
   --border-dark: oklch(1 0 0 / 20%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.65 0.21 237 / 20%);
+  --ring: oklch(0.78 0.14 80 / 25%);
   --ring-destructive: oklch(0.68 0.2 25);
 
   /* ============================================================ */
@@ -278,8 +280,8 @@
   /* ============================================================ */
   --chart-1: var(--primary);
   --chart-2: oklch(0.65 0.15 150);
-  --chart-3: oklch(0.78 0.14 65);
-  --chart-4: oklch(0.68 0.18 300);
+  --chart-3: oklch(0.65 0.1 235);
+  --chart-4: oklch(0.65 0.09 200);
   --chart-5: oklch(0.68 0.2 25);
 
   /* ============================================================ */
