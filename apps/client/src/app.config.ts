@@ -2,7 +2,7 @@ import type { SidebarVariant } from '@/shared/ui/sidebar';
 
 export const APP_CONFIG = {
   META: {
-    TITLE: 'LittleAwesome WM',
+    TITLE: 'DDmon Work Manager',
     DESCRIPTION: '프리랜서 업무 관리 시스템 (데모)',
   },
   AUTH: {
