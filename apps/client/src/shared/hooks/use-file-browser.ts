@@ -8,6 +8,7 @@ import {
   type SetStateAction,
 } from "react";
 import { toast } from "sonner";
+import { errorMessage } from "@/shared/lib/api-client";
 import {
   useFilesQuery,
   useFilePathQuery,
@@ -480,24 +481,28 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
         confirmText: "삭제",
         variant: "destructive",
         onConfirm: async () => {
-          if (isPermanent) {
-            if (ids.length === 1) {
-              await permanentDeleteFile.mutateAsync(ids[0]);
+          try {
+            if (isPermanent) {
+              if (ids.length === 1) {
+                await permanentDeleteFile.mutateAsync(ids[0]);
+              } else {
+                await batchPermanentDeleteFiles.mutateAsync(ids);
+              }
             } else {
-              await batchPermanentDeleteFiles.mutateAsync(ids);
+              if (ids.length === 1) {
+                await deleteFile.mutateAsync(ids[0]);
+              } else {
+                await batchDeleteFiles.mutateAsync(ids);
+              }
             }
-          } else {
-            if (ids.length === 1) {
-              await deleteFile.mutateAsync(ids[0]);
-            } else {
-              await batchDeleteFiles.mutateAsync(ids);
-            }
+            toast.success(
+              isPermanent ? FILE_MESSAGES.DELETED_PERMANENT : FILE_MESSAGES.MOVED_TO_TRASH
+            );
+            clearSelection();
+            setActiveItemId(null);
+          } catch (err) {
+            toast.error(errorMessage(err, FILE_MESSAGES.DELETE_FAILED));
           }
-          toast.success(
-            isPermanent ? FILE_MESSAGES.DELETED_PERMANENT : FILE_MESSAGES.MOVED_TO_TRASH
-          );
-          clearSelection();
-          setActiveItemId(null);
         },
       });
     },
