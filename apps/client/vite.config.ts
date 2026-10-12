@@ -4,6 +4,8 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 export default defineConfig({
+  // HTML·API 주소와 공개 에셋 전송 경로를 독립적으로 설정할 수 있다.
+  base: process.env.VITE_ASSET_BASE_URL || "/",
   plugins: [
     react({
       babel: {
