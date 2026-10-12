@@ -13,6 +13,12 @@ export function registerFonts(): Promise<void> {
   const timeout = setTimeout(() => controller.abort(), 15_000);
   const urls: string[] = [];
   let registered = false;
+  const existingFonts = Object.values(Font.getRegisteredFonts()).map(({ family, sources }) => ({
+    family,
+    fonts: sources.map(({ src, fontStyle, fontWeight, options }) => ({
+      src, fontStyle, fontWeight, ...options,
+    })),
+  }));
   const fonts = [
     { src: regularUrl, fontWeight: 400 },
     { src: mediumUrl, fontWeight: 500 },
@@ -38,8 +44,11 @@ export function registerFonts(): Promise<void> {
       ));
     } catch {
       controller.abort();
-      // 이 앱의 PDF 폰트는 이 모듈에서만 등록한다. 파싱 실패 시 내부 실패 캐시도 비운다.
-      if (registered) Font.clear();
+      // 실패한 소스 캐시를 비우되 렌더러의 기본 폰트 등록은 복원한다.
+      if (registered) {
+        Font.clear();
+        existingFonts.forEach((font) => Font.register(font));
+      }
       ready = undefined;
       throw new Error('견적서 폰트를 불러오지 못했습니다. 다시 시도해 주세요.');
     } finally {

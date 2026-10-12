@@ -71,4 +71,3 @@ export function toDocumentData(estimate: EstimateWithDetails): EstimateDocumentD
     })),
   };
 }
-
