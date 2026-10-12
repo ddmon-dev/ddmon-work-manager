@@ -4,6 +4,8 @@
 
 Hono의 정적 서빙(`SERVE_STATIC=true`)에서 Vite 해시 에셋(`/assets/*`)은 `public, max-age=31536000, immutable`, 고정 경로 웹폰트(`/fonts/*`)는 `public, max-age=86400`을 설정한다. SPA HTML은 `no-cache`로 새 배포의 에셋 목록을 확인한다. 없는 에셋·폰트는 HTML 대신 404를 반환한다. 외부 CDN의 실제 캐시 정책은 별도로 적용될 수 있다.
 
+정적 에셋·폰트의 GET 응답은 로컬 파일을 완전히 읽은 뒤 버퍼로 전송하여 Node 파일 스트림을 외부 프록시까지 유지하지 않는다. 콘텐츠 SHA-256 ETag를 제공하며 `If-None-Match`가 일치하면 본문 없이 304를 반환한다. 메모리 사용량은 동시에 전송하는 파일 크기에 비례하며, 파일 버퍼를 영구 캐시하지 않는다.
+
 ## 모노레포 구조
 
 npm workspaces 기반 모노레포.

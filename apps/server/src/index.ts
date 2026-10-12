@@ -3,6 +3,7 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
+import { createHash } from "node:crypto";
 import { auth } from "./auth";
 import apiRoutes from "./routes";
 import type { AppVariables } from "./lib/types";
@@ -39,7 +40,14 @@ if (isServeStatic) {
     if (isAsset && c.req.method === "GET" && c.res.status === 200) {
       const headers = new Headers(c.res.headers);
       const body = await c.res.arrayBuffer();
-      c.res = new Response(new Uint8Array(body), { status: 200, headers });
+      const etag = `"${createHash("sha256").update(new Uint8Array(body)).digest("hex")}"`;
+      headers.set("ETag", etag);
+      const unchanged = c.req.header("If-None-Match")?.split(",")
+        .some((value) => value.trim().replace(/^W\//, "") === etag || value.trim() === "*");
+      if (unchanged) headers.delete("Content-Length");
+      c.res = new Response(unchanged ? null : new Uint8Array(body), {
+        status: unchanged ? 304 : 200, headers,
+      });
     }
   });
 
