@@ -40,7 +40,6 @@ export function ItemSheet() {
     queryKey: id ? queryKeys.estimates.detail(id) : ["__disabled__"],
     queryFn: () => fetchEstimate(id!),
     enabled: !!id && isOpen && mode !== "create",
-    staleTime: 0,
   } as UseQueryOptions<EstimateWithDetails>);
 
   const dataContextValue: DataContextValue = {

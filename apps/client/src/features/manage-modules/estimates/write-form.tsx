@@ -38,7 +38,7 @@ import { ItemGroupEditor } from "./item-group-editor";
 import {
   type EstimateDocumentData,
   generateEstimateDocumentPdfBlob,
-} from "./pdf/estimate-document";
+} from "./pdf/generate-document";
 import { getDownloadFileName } from "./pdf/get-download-file-name";
 
 // 로컬 폼 스키마: 서버 스키마 확장 (날짜를 Date 객체로 override, clientName/billingClientName 추가)

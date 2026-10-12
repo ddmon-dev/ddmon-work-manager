@@ -1,5 +1,9 @@
 # 인프라
 
+## 정적 파일 캐시
+
+Hono의 정적 서빙(`SERVE_STATIC=true`)에서 Vite 해시 에셋(`/assets/*`)은 `public, max-age=31536000, immutable`, 고정 경로 웹폰트(`/fonts/*`)는 `public, max-age=86400`을 설정한다. SPA HTML은 `no-cache`로 새 배포의 에셋 목록을 확인한다. 없는 에셋·폰트는 HTML 대신 404를 반환한다. 외부 CDN의 실제 캐시 정책은 별도로 적용될 수 있다.
+
 ## 모노레포 구조
 
 npm workspaces 기반 모노레포.

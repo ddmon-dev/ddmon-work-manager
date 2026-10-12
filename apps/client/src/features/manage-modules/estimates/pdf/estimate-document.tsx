@@ -4,6 +4,7 @@ import {
   View,
   Text,
   StyleSheet,
+  pdf,
 } from '@react-pdf/renderer';
 import { formatCurrency, formatPhoneNumber, formatBizNumber } from '@/shared/utils/format';
 import {
@@ -12,44 +13,7 @@ import {
   buildPriceSummaryDisplay,
 } from '@packages/utils';
 import { registerFonts } from './register-fonts';
-import type { EstimateWithDetails } from '../types';
-
-registerFonts();
-
-export interface EstimateDocumentData {
-  title: string;
-  description?: string;
-  clientName?: string;
-  estimateNumber?: string;
-  version?: number;
-  versionLabel?: string;
-  issuedDate?: string;
-  validUntil?: string;
-  // 발행자 정보 (publisher_info 스냅샷)
-  issuer?: string;
-  issuerPhone?: string;
-  issuerEmail?: string;
-  // 사업자 정보
-  bizName?: string;
-  bizNameEn?: string;
-  ceo?: string;
-  bizNumber?: string;
-  bizAddress?: string;
-  taxType: string;
-  showTaxAmount: boolean;
-  discountType: string;
-  discountValue: number;
-  notes?: string;
-  groups: Array<{
-    name: string;
-    items: Array<{
-      name: string;
-      quantity: number;
-      unit: string;
-      amount: number;
-    }>;
-  }>;
-}
+import type { EstimateDocumentData } from './document-data';
 
 const C = {
   black: '#18181b',
@@ -551,52 +515,8 @@ export function EstimateDocument({ data }: { data: EstimateDocumentData }) {
   );
 }
 
-/** EstimateWithDetails -> EstimateDocumentData 변환 */
-export function toDocumentData(estimate: EstimateWithDetails): EstimateDocumentData {
-  const pub = estimate.publisherInfo;
-  return {
-    title: estimate.title,
-    description: estimate.description || undefined,
-    clientName: estimate.billingClient?.companyName || estimate.client?.companyName || undefined,
-    estimateNumber: estimate.estimateNumber,
-    version: estimate.version,
-    versionLabel: estimate.versionLabel || undefined,
-    issuedDate: estimate.issuedDate || undefined,
-    validUntil: estimate.validUntil || undefined,
-    issuer: pub?.issuer || undefined,
-    issuerPhone: pub?.phone || undefined,
-    issuerEmail: pub?.email || undefined,
-    bizName: pub?.bizName || undefined,
-    bizNameEn: pub?.bizNameEn || undefined,
-    ceo: pub?.ceo || undefined,
-    bizNumber: pub?.bizNumber || undefined,
-    bizAddress: pub?.address || undefined,
-    taxType: estimate.taxType,
-    showTaxAmount: estimate.showTaxAmount ?? true,
-    discountType: estimate.discountType,
-    discountValue: Number(estimate.discountValue) || 0,
-    notes: estimate.notes || undefined,
-    groups: estimate.groups.map(g => ({
-      name: g.name,
-      items: g.items.map(item => ({
-        name: item.name,
-        quantity: Number(item.quantity),
-        unit: item.unit ?? '',
-        amount: Number(item.amount),
-      })),
-    })),
-  };
-}
-
-/** EstimateWithDetails -> PDF Blob 생성 */
-export async function generateEstimatePdfBlob(estimate: EstimateWithDetails): Promise<Blob> {
-  const data = toDocumentData(estimate);
-  const { pdf } = await import('@react-pdf/renderer');
-  return pdf(<EstimateDocument data={data} />).toBlob();
-}
-
-/** EstimateDocumentData -> PDF Blob 생성 (폼 미리보기용) */
-export async function generateEstimateDocumentPdfBlob(data: EstimateDocumentData): Promise<Blob> {
-  const { pdf } = await import('@react-pdf/renderer');
+/** 폰트가 모두 준비된 뒤 PDF를 생성한다. */
+export async function renderEstimatePdf(data: EstimateDocumentData): Promise<Blob> {
+  await registerFonts();
   return pdf(<EstimateDocument data={data} />).toBlob();
 }
