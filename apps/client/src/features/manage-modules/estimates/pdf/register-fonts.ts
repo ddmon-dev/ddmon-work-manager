@@ -1,17 +1,51 @@
 import { Font } from '@react-pdf/renderer';
+import regularUrl from '@/shared/assets/fonts/pretendard-regular.woff?url';
+import mediumUrl from '@/shared/assets/fonts/pretendard-medium.woff?url';
+import boldUrl from '@/shared/assets/fonts/pretendard-bold.woff?url';
 
-let registered = false;
+let ready: Promise<void> | undefined;
 
-export function registerFonts() {
-  if (registered) return;
-  registered = true;
+export function registerFonts(): Promise<void> {
+  if (ready) return ready;
 
-  Font.register({
-    family: 'Pretendard',
-    fonts: [
-      { src: '/fonts/Pretendard-Regular.ttf', fontWeight: 'normal' },
-      { src: '/fonts/Pretendard-Medium.ttf', fontWeight: 'medium' },
-      { src: '/fonts/Pretendard-Bold.ttf', fontWeight: 'bold' },
-    ],
-  });
+  const controller = new AbortController();
+  // 헤더 수신 후 본문 전송이 멈추는 경우까지 제한한다.
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  const urls: string[] = [];
+  let registered = false;
+  const fonts = [
+    { src: regularUrl, fontWeight: 400 },
+    { src: mediumUrl, fontWeight: 500 },
+    { src: boldUrl, fontWeight: 700 },
+  ];
+
+  ready = (async () => {
+    try {
+      const loaded = await Promise.all(fonts.map(async (font) => {
+        const response = await fetch(font.src, { signal: controller.signal });
+        if (!response.ok) throw new Error(`폰트 응답 오류 (${response.status})`);
+        const blob = await response.blob();
+        if (controller.signal.aborted) throw new Error('폰트 로딩 시간 초과');
+        const src = URL.createObjectURL(blob);
+        urls.push(src);
+        return { ...font, src };
+      }));
+      // 미완료/실패 요청이 내부 캐시에 남지 않도록 완전히 받은 뒤 등록한다.
+      Font.register({ family: 'Pretendard', fonts: loaded });
+      registered = true;
+      await Promise.all(fonts.map(({ fontWeight }) =>
+        Font.load({ fontFamily: 'Pretendard', fontWeight })
+      ));
+    } catch {
+      controller.abort();
+      // 이 앱의 PDF 폰트는 이 모듈에서만 등록한다. 파싱 실패 시 내부 실패 캐시도 비운다.
+      if (registered) Font.clear();
+      ready = undefined;
+      throw new Error('견적서 폰트를 불러오지 못했습니다. 다시 시도해 주세요.');
+    } finally {
+      clearTimeout(timeout);
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    }
+  })();
+  return ready;
 }

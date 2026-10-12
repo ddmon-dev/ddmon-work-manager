@@ -36,19 +36,27 @@ if (isServeStatic) {
     "/assets/*",
     serveStatic({
       root: staticDir,
-      onNotFound: (path, c) => {
+      onFound: (_path, c) => {
+        c.header("Cache-Control", "public, max-age=31536000, immutable");
+      },
+      onNotFound: (path) => {
         console.warn(`[static] not found: ${path}`);
       },
     })
   );
+  app.get("/assets/*", (c) => c.notFound());
 
   // 폰트 파일
   app.use(
     "/fonts/*",
     serveStatic({
       root: staticDir,
+      onFound: (_path, c) => {
+        c.header("Cache-Control", "public, max-age=86400");
+      },
     })
   );
+  app.get("/fonts/*", (c) => c.notFound());
 
   // SPA fallback: API 경로 외 모든 요청 → index.html
   app.use("*", async (c, next) => {
@@ -56,7 +64,10 @@ if (isServeStatic) {
     if (path.startsWith("/api/")) {
       return next();
     }
-    return serveStatic({ path: "/index.html", root: staticDir })(c, next);
+    return serveStatic({
+      path: "/index.html", root: staticDir,
+      onFound: (_path, context) => context.header("Cache-Control", "no-cache"),
+    })(c, next);
   });
 } else {
   app.get("/", (c) => {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Maximize, ArrowLeftRight, Download, Loader2 } from "lucide-react";
+import { getPdfRuntime } from "./pdf-runtime";
 import { cn } from "@/shared/utils/classnames";
 import { downloadBlob } from "@/shared/utils/download";
 
@@ -42,7 +43,7 @@ interface PdfPreviewProps {
 /**
  * PDF를 canvas에 렌더링하는 미리보기 컴포넌트.
  * 전체 페이지를 렌더링하여 스크롤 가능하게 표시.
- * offscreen canvas에 먼저 그린 후 visible canvas로 복사하여 깜빡임 방지.
+ * 분리된 canvas에 먼저 그린 뒤 전체 페이지를 교체한다.
  */
 export function PdfPreview({
   generateBlob,
@@ -51,122 +52,153 @@ export function PdfPreview({
 }: PdfPreviewProps) {
   const [fitMode, setFitMode] = useState<FitMode>("fit-width");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
+  const [renderWidth, setRenderWidth] = useState(0);
   const pagesRef = useRef<HTMLDivElement>(null);
-  const prevKeyRef = useRef("");
-  const generationRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const generateRef = useRef(generateBlob);
+  const blobRef = useRef<{ key: string; blob: Blob } | null>(null);
+
+  useEffect(() => { generateRef.current = generateBlob; }, [generateBlob]);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver(() => {
+      // 모바일에서 숨겨진 미리보기는 폰트·PDF를 준비하지 않는다.
+      setRenderWidth(container.clientHeight > 0 ? Math.max(0, container.clientWidth - 32) : 0);
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   async function handleDownload() {
     setIsGenerating(true);
     try {
-      const blob = await generateBlob();
+      const cached = blobRef.current;
+      const blob = cached?.key === dependencyKey ? cached.blob : await generateBlob();
       downloadBlob(blob, downloadFileName ?? "document.pdf");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "PDF 다운로드에 실패했습니다.");
     } finally {
       setIsGenerating(false);
     }
   }
 
-  const renderToCanvas = async (gen: number, mode: FitMode) => {
-      const blob = await generateBlob();
+  useEffect(() => {
+    if (renderWidth <= 0) return;
+    let cancelled = false;
+    let task: import("pdfjs-dist").PDFDocumentLoadingTask | undefined;
+    let rendering: import("pdfjs-dist").RenderTask | undefined;
+    const generate = generateRef.current;
+    const timeout = setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      rendering?.cancel();
+      void task?.destroy();
+      setError("미리보기 로딩 시간이 초과되었습니다. 다시 시도해 주세요.");
+      setStatus("error");
+    }, 30_000);
 
-      if (gen !== generationRef.current) return;
+    async function render() {
+      // 빠른 폼 입력은 마지막 값만 생성한다. 상세 미리보기도 같은 경로를 사용한다.
+      setStatus("loading");
+      setError("");
+      pagesRef.current?.replaceChildren();
+      try {
+        const [blob, { pdfjs, worker }] = await Promise.all([generate(), getPdfRuntime()]);
+        if (cancelled) return;
+        blobRef.current = { key: dependencyKey, blob };
+        const data = await blob.arrayBuffer();
+        if (cancelled) return;
+        task = pdfjs.getDocument({ data, worker });
+        const pdf = await task.promise;
+        const containerWidth = renderWidth;
+        const fragment = document.createDocumentFragment();
 
-      const arrayBuffer = await blob.arrayBuffer();
-
-      const pdfjs = await import("pdfjs-dist");
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-        "pdfjs-dist/build/pdf.worker.min.mjs",
-        import.meta.url
-      ).toString();
-
-      const pdfDoc = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-
-      if (gen !== generationRef.current) {
-        pdfDoc.destroy();
-        return;
-      }
-
-      const scrollContainer = scrollRef.current;
-      const containerWidth = (scrollContainer?.clientWidth ?? 500) - 32;
-      const containerHeight = (scrollContainer?.clientHeight ?? 700) - 32;
-      const fragment = document.createDocumentFragment();
-
-      for (let i = 1; i <= pdfDoc.numPages; i++) {
-        const page = await pdfDoc.getPage(i);
-
-        if (gen !== generationRef.current) {
-          pdfDoc.destroy();
-          return;
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          if (cancelled) return;
+          const viewport = page.getViewport({ scale: 1 });
+          // 폭에 맞춰 한 번 그린 뒤 화면 맞춤은 CSS 크기만 바꾼다.
+          const scale = containerWidth / viewport.width * Math.min(window.devicePixelRatio, 2);
+          const canvas = document.createElement("canvas");
+          const scaled = page.getViewport({ scale });
+          canvas.width = Math.ceil(scaled.width);
+          canvas.height = Math.ceil(scaled.height);
+          canvas.dataset.pageWidth = String(viewport.width);
+          canvas.dataset.pageHeight = String(viewport.height);
+          canvas.className = "shadow-lg rounded";
+          rendering = page.render({ canvas, canvasContext: canvas.getContext("2d")!, viewport: scaled });
+          await rendering.promise;
+          if (cancelled) return;
+          fragment.appendChild(canvas);
         }
-
-        const viewport = page.getViewport({ scale: 1 });
-
-        let scale: number;
-        if (mode === "fit-width") {
-          scale = (containerWidth * window.devicePixelRatio) / viewport.width;
-        } else {
-          const scaleW = containerWidth / viewport.width;
-          const scaleH = containerHeight / viewport.height;
-          scale = Math.min(scaleW, scaleH) * window.devicePixelRatio;
+        pagesRef.current?.replaceChildren(fragment);
+        setStatus("ready");
+      } catch (cause) {
+        if (!cancelled) {
+          setError(cause instanceof Error ? cause.message : "PDF 미리보기를 불러오지 못했습니다.");
+          setStatus("error");
         }
-
-        const scaledViewport = page.getViewport({ scale });
-
-        const offscreen = document.createElement("canvas");
-        offscreen.width = scaledViewport.width;
-        offscreen.height = scaledViewport.height;
-        const offCtx = offscreen.getContext("2d")!;
-
-        await page.render({
-          canvasContext: offCtx,
-          viewport: scaledViewport,
-          canvas: offscreen,
-        }).promise;
-
-        if (gen !== generationRef.current) {
-          pdfDoc.destroy();
-          return;
-        }
-
-        const canvas = document.createElement("canvas");
-        canvas.width = scaledViewport.width;
-        canvas.height = scaledViewport.height;
-        canvas.style.width = `${scaledViewport.width / window.devicePixelRatio}px`;
-        canvas.style.height = `${scaledViewport.height / window.devicePixelRatio}px`;
-        canvas.className = "shadow-lg rounded";
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(offscreen, 0, 0);
-
-        fragment.appendChild(canvas);
+      } finally {
+        clearTimeout(timeout);
+        if (!cancelled) void task?.destroy();
       }
+    }
 
-      if (gen !== generationRef.current) {
-        pdfDoc.destroy();
-        return;
-      }
-
-      const pagesContainer = pagesRef.current;
-      if (pagesContainer) {
-        pagesContainer.replaceChildren(fragment);
-      }
-
-      pdfDoc.destroy();
-  };
+    const timer = setTimeout(() => { void render(); }, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      clearTimeout(timeout);
+      rendering?.cancel();
+      void task?.destroy();
+    };
+  }, [dependencyKey, retry, renderWidth]);
 
   useEffect(() => {
-    const key = `${dependencyKey}__${fitMode}`;
-    if (key === prevKeyRef.current) return;
-    prevKeyRef.current = key;
-
-    const gen = ++generationRef.current;
-    renderToCanvas(gen, fitMode).catch(() => {});
-  });
+    const container = scrollRef.current;
+    if (!container) return;
+    function fitPages() {
+      if (!container) return;
+      const width = Math.max(1, container.clientWidth - 32);
+      const height = Math.max(1, container.clientHeight - 32);
+      pagesRef.current?.querySelectorAll("canvas").forEach((canvas) => {
+        const pageWidth = Number(canvas.dataset.pageWidth);
+        const pageHeight = Number(canvas.dataset.pageHeight);
+        const scale = fitMode === "fit-width" ? width / pageWidth
+          : Math.min(width / pageWidth, height / pageHeight);
+        canvas.style.width = `${pageWidth * scale}px`;
+        canvas.style.height = `${pageHeight * scale}px`;
+      });
+    }
+    fitPages();
+    const observer = new ResizeObserver(fitPages);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [fitMode, status]);
 
   return (
     <div
       ref={scrollRef}
       className="flex-1 overflow-y-auto hide-scrollbar bg-background-secondary dark:bg-secondary/50 p-4"
     >
+      {status === "loading" && (
+        <div role="status" className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />견적서 미리보기를 준비하고 있습니다.
+        </div>
+      )}
+      {error && (
+        <div role="alert" className="py-8 text-center text-sm text-muted-foreground">
+          <p>{error}</p>
+          <button type="button" className="mt-3 underline" onClick={() => setRetry((value) => value + 1)}>
+            다시 시도
+          </button>
+        </div>
+      )}
       <div
         ref={pagesRef}
         className={`flex flex-col gap-4 min-h-full ${
@@ -177,7 +209,7 @@ export function PdfPreview({
         <div className="flex items-center gap-1 bg-black/70 dark:bg-white/80 backdrop-blur-xl rounded-full p-1.5 shadow-xl shadow-black/20 dark:shadow-black/40">
           <IslandButton
             onClick={handleDownload}
-            disabled={isGenerating}
+            disabled={isGenerating || status !== "ready"}
             title="PDF 다운로드"
           >
             {isGenerating ? (

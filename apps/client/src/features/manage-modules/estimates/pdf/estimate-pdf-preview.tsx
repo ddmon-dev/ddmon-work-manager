@@ -1,5 +1,5 @@
 import { PdfPreview } from '@/shared/ui/pdf-preview';
-import { generateEstimatePdfBlob } from './estimate-document';
+import { generateEstimateDocumentPdfBlob, toDocumentData } from './generate-document';
 import { getDownloadFileName } from './get-download-file-name';
 import type { EstimateWithDetails } from '../types';
 
@@ -8,9 +8,10 @@ interface Props {
 }
 
 export function EstimatePdfPreview({ estimate }: Props) {
-  const dependencyKey = JSON.stringify(estimate);
+  const data = toDocumentData(estimate);
+  const dependencyKey = JSON.stringify(data);
 
-  const generateBlob = () => generateEstimatePdfBlob(estimate);
+  const generateBlob = () => generateEstimateDocumentPdfBlob(data);
 
   return (
     <PdfPreview

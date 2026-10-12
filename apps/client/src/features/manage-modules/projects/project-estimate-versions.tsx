@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/shared/lib/query-keys";
 import { format } from "date-fns";
 import { FileTextIcon, LoaderIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -28,6 +30,7 @@ interface EstimateVersionsProps {
 }
 
 export function EstimateVersions({ estimateNumber }: EstimateVersionsProps) {
+  const queryClient = useQueryClient();
   const { data, refetch } = useGetVersions(estimateNumber);
   const versions = data?.versions ?? [];
   const updateFinalVersion = useUpdateFinalVersion();
@@ -61,7 +64,10 @@ export function EstimateVersions({ estimateNumber }: EstimateVersionsProps) {
     setPdfLabel(versionLabel || `v${version}`);
     setPdfOpen(true);
     try {
-      const data = await fetchEstimate(estimateId);
+      const data = await queryClient.fetchQuery({
+        queryKey: queryKeys.estimates.detail(estimateId),
+        queryFn: () => fetchEstimate(estimateId),
+      });
       setPdfData(data);
     } catch {
       toast.error("견적서 데이터를 불러오지 못했습니다.");
