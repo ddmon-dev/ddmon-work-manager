@@ -31,6 +31,18 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 app.route("/api", apiRoutes);
 
 if (isServeStatic) {
+  // 빌드 에셋은 로컬 파일을 완전히 읽은 뒤 전송한다.
+  // 외부 프록시에 긴 파일 스트림을 유지하지 않고 유한한 응답 본문을 전달한다.
+  app.use("*", async (c, next) => {
+    await next();
+    const isAsset = c.req.path.startsWith("/assets/") || c.req.path.startsWith("/fonts/");
+    if (isAsset && c.req.method === "GET" && c.res.status === 200) {
+      const headers = new Headers(c.res.headers);
+      const body = await c.res.arrayBuffer();
+      c.res = new Response(new Uint8Array(body), { status: 200, headers });
+    }
+  });
+
   // Vite 빌드 에셋 (장기 캐시)
   app.use(
     "/assets/*",
