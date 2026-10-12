@@ -3,6 +3,7 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
+import { createHash } from "node:crypto";
 import { auth } from "./auth";
 import apiRoutes from "./routes";
 import demoRoutes from "./routes/demo";
@@ -38,6 +39,25 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 app.route("/api", apiRoutes);
 
 if (isServeStatic) {
+  // 빌드 에셋은 로컬 파일을 완전히 읽은 뒤 전송한다.
+  // 외부 프록시에 긴 파일 스트림을 유지하지 않고 유한한 응답 본문을 전달한다.
+  app.use("*", async (c, next) => {
+    await next();
+    const isAsset = c.req.path.startsWith("/assets/") || c.req.path.startsWith("/fonts/");
+    if (isAsset && c.req.method === "GET" && c.res.status === 200) {
+      const headers = new Headers(c.res.headers);
+      const body = await c.res.arrayBuffer();
+      const etag = `"${createHash("sha256").update(new Uint8Array(body)).digest("hex")}"`;
+      headers.set("ETag", etag);
+      const unchanged = c.req.header("If-None-Match")?.split(",")
+        .some((value) => value.trim().replace(/^W\//, "") === etag || value.trim() === "*");
+      if (unchanged) headers.delete("Content-Length");
+      c.res = new Response(unchanged ? null : new Uint8Array(body), {
+        status: unchanged ? 304 : 200, headers,
+      });
+    }
+  });
+
   // Vite 빌드 에셋 (장기 캐시)
   app.use(
     "/assets/*",
