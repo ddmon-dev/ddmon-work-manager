@@ -1,7 +1,7 @@
 import { Font } from '@react-pdf/renderer';
-import regularUrl from '@/shared/assets/fonts/pretendard-regular.woff?url';
-import mediumUrl from '@/shared/assets/fonts/pretendard-medium.woff?url';
-import boldUrl from '@/shared/assets/fonts/pretendard-bold.woff?url';
+import regularUrl from '@/shared/assets/fonts/pretendard-regular.ttf?url';
+import mediumUrl from '@/shared/assets/fonts/pretendard-medium.ttf?url';
+import boldUrl from '@/shared/assets/fonts/pretendard-bold.ttf?url';
 
 let ready: Promise<void> | undefined;
 
