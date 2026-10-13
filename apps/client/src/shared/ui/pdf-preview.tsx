@@ -1,10 +1,53 @@
 import { useEffect, useRef, useState } from "react";
 import { Maximize, ArrowLeftRight, Download, Loader2 } from "lucide-react";
 import { getPdfRuntime } from "./pdf-runtime";
+import { Skeleton } from "./skeleton";
 import { cn } from "@/shared/utils/classnames";
 import { downloadBlob } from "@/shared/utils/download";
 
 type FitMode = "fit-page" | "fit-width";
+
+function PdfPreviewSkeleton() {
+  return (
+    <div role="status" className="absolute inset-0 flex items-center justify-center p-8">
+      <span className="sr-only">견적서 미리보기를 준비하고 있습니다.</span>
+      <div
+        aria-hidden="true"
+        className="flex aspect-[595/842] h-full max-h-112 max-w-full flex-col gap-6 rounded border border-border/60 bg-background p-7 shadow-sm [&_[data-slot=skeleton]]:rounded-sm [&_[data-slot=skeleton]]:motion-reduce:animate-none"
+      >
+        <div className="flex items-start justify-between gap-6">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-3 w-12" />
+        </div>
+        <div className="grid grid-cols-2 gap-5">
+          {[0, 1].map((column) => (
+            <div key={column} className="space-y-2">
+              <Skeleton className="h-3 w-3/4" />
+              <Skeleton className="h-2 w-full" />
+              <Skeleton className="h-2 w-2/3" />
+            </div>
+          ))}
+        </div>
+        <div className="flex-1 space-y-3 border-y border-border/60 py-3">
+          <Skeleton className="h-5 w-full" />
+          {[0, 1, 2, 3].map((row) => (
+            <div key={row} className="flex items-center justify-between gap-6">
+              <Skeleton className="h-2 w-3/5" />
+              <Skeleton className="h-2 w-1/5" />
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end">
+          <Skeleton className="h-4 w-1/3" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-2 w-2/3" />
+          <Skeleton className="h-2 w-1/2" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function IslandButton({
   active,
@@ -184,12 +227,10 @@ export function PdfPreview({
   return (
     <div
       ref={scrollRef}
-      className="flex-1 overflow-y-auto hide-scrollbar bg-background-secondary dark:bg-secondary/50 p-4"
+      className="relative flex-1 overflow-y-auto hide-scrollbar bg-background-secondary dark:bg-secondary/50 p-4"
     >
       {status === "loading" && (
-        <div role="status" className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />견적서 미리보기를 준비하고 있습니다.
-        </div>
+        <PdfPreviewSkeleton />
       )}
       {error && (
         <div role="alert" className="py-8 text-center text-sm text-muted-foreground">
