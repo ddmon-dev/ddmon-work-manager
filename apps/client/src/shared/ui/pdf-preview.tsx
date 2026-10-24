@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Maximize, ArrowLeftRight, Download, Loader2 } from "lucide-react";
 import { getPdfRuntime } from "./pdf-runtime";
 import { PDF_PREVIEW_PADDING, getPdfPageSize, type PdfFitMode } from "./pdf-preview-layout";
@@ -65,6 +65,8 @@ type PreviewFrame = { fragment: DocumentFragment; blob: Blob };
 
 interface PdfPreviewProps {
   enabled?: boolean;
+  /** 이 값이 바뀌면 문서를 다시 그리지 않고 스크롤만 초기화한다. */
+  scrollResetKey?: string;
   /** PDF Blob을 생성하는 함수 */
   generateBlob: () => Promise<Blob>;
   /** 다운로드 시 파일명 */
@@ -81,6 +83,7 @@ interface PdfPreviewProps {
  */
 export function PdfPreview({
   enabled = true,
+  scrollResetKey,
   generateBlob,
   downloadFileName,
   dependencyKey,
@@ -194,6 +197,13 @@ export function PdfPreview({
     generateRef.current = generateBlob;
     fitModeRef.current = fitMode;
   }, [generateBlob, fitMode]);
+
+  useLayoutEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    container.scrollTop = 0;
+    container.scrollLeft = 0;
+  }, [scrollResetKey]);
 
   async function handleDownload() {
     setIsGenerating(true);

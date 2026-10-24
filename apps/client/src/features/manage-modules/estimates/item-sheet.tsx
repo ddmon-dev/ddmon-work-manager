@@ -165,7 +165,7 @@ export function ItemSheet() {
           )}>
             {renderContent()}
             <div className={cn("col-start-2 row-start-1 min-h-0 flex-col border-l", mode === "view" ? "hidden lg:flex" : "flex", error && !prevValues && "hidden")}>
-              <EstimatePdfPreview documentData={
+              <EstimatePdfPreview scrollResetKey={mode} documentData={
                 mode === "view" ? (prevValues ? toDocumentData(prevValues) : null)
                   : draftDocument ?? (mode === "modify" && prevValues ? toDocumentData(prevValues) : null)
               } />
