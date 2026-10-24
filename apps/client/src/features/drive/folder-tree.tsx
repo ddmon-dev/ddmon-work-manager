@@ -8,6 +8,8 @@ import {
   Folder,
 } from "lucide-react";
 import { cn } from "@/shared/utils/classnames";
+import { Skeleton } from "@/shared/ui/skeleton";
+import { QueryError } from "@/shared/ui/query-error";
 import { Input } from "@/shared/ui/input";
 import { MiddleTruncate } from "@/shared/ui/middle-truncate";
 import { useSortableReorder } from "@/shared/hooks";
@@ -95,8 +97,8 @@ export function FolderTree({
     [onNavigate]
   );
 
-  const { data: favorites } = useFavoritesQuery();
-  const hasFavorites = showTrash && favorites && favorites.length > 0;
+  const { data: favorites, isLoading: favoritesLoading } = useFavoritesQuery();
+  const hasFavorites = showTrash && (favoritesLoading || (favorites && favorites.length > 0));
 
   const treeContent = (
     <>
@@ -197,13 +199,15 @@ function FavoritesList({
   onRenameSubmit?: (id: string) => void;
   onRenameCancel?: () => void;
 }) {
-  const { data: serverFavorites } = useFavoritesQuery();
+  const { data: serverFavorites, isLoading, error, refetch } = useFavoritesQuery();
   const reorderFavorites = useReorderFavorites();
   const { items: favorites, sensors, handleDragEnd } = useSortableReorder({
     serverData: serverFavorites,
     onReorder: (ids) => reorderFavorites.mutate(ids),
   });
 
+  if (isLoading) return <FolderRowsSkeleton label="즐겨찾기를 불러오고 있습니다" />;
+  if (error && !serverFavorites) return <QueryError onRetry={() => void refetch()} />;
   if (favorites.length === 0) return null;
 
   return (
@@ -358,10 +362,11 @@ function FolderChildren({
   onRenameCancel?: () => void;
   depth: number;
 }) {
-  const { data: items, isLoading } = useFilesQuery(folderId);
+  const { data: items, isLoading, error, refetch } = useFilesQuery(folderId);
   const folders = items?.filter((f) => f.isFolder) ?? [];
 
-  if (isLoading) return null;
+  if (isLoading) return <FolderRowsSkeleton depth={depth} />;
+  if (error && !items) return <QueryError onRetry={() => void refetch()} message="폴더를 불러오지 못했습니다." />;
 
   if (folders.length === 0) return null;
 
@@ -584,6 +589,18 @@ function TreeItem({
       ) : (
         <MiddleTruncate className="min-w-0 flex-1 text-sm">{label}</MiddleTruncate>
       )}
+    </div>
+  );
+}
+
+function FolderRowsSkeleton({ depth = 0, label = "폴더를 불러오고 있습니다" }: { depth?: number; label?: string }) {
+  return (
+    <div role="status" aria-label={label}>
+      {Array.from({ length: 3 }, (_, i) => (
+        <div key={i} aria-hidden="true" className="flex h-8 items-center gap-2 pr-2" style={{ paddingLeft: 24 + depth * 16 }}>
+          <Skeleton className="size-4 shrink-0 rounded-sm" /><Skeleton className="h-3 w-24 max-w-full" />
+        </div>
+      ))}
     </div>
   );
 }

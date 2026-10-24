@@ -186,6 +186,7 @@ interface ManageSheetProps<T> {
   formComponent?: React.ComponentType<{ id?: string; prevValues: T | null }>;
   viewComponent?: React.ComponentType<{ data: T; refetch: () => void }>;
   viewHeader?: React.ComponentType;
+  viewSkeleton?: React.ComponentType;
   hideViewHeader?: boolean;
   size?: SizeKey | string | Partial<Record<ManageSheetMode, SizeKey | string>>;
   moduleName?: string;
@@ -197,6 +198,7 @@ export function ManageSheet<T>({
   formComponent: FormComponent,
   viewComponent: ViewComponent,
   viewHeader: ViewHeader,
+  viewSkeleton: ViewSkeleton,
   hideViewHeader,
   moduleName,
   size = "md",
@@ -234,6 +236,7 @@ export function ManageSheet<T>({
       ) : null;
     }
 
+    if (isLoading && mode === "view" && ViewSkeleton) return <ViewSkeleton />;
     if (isLoading) return (
       <SheetBody><SheetContainer>{mode === "view" ? <DetailSkeleton /> : <div role="status" aria-label="수정 정보를 불러오고 있습니다"><FormSkeleton /></div>}</SheetContainer></SheetBody>
     );

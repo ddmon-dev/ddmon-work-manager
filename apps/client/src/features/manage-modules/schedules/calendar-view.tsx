@@ -15,6 +15,7 @@ interface CalendarViewProps {
   year: number;
   month: number;
   schedules: CalendarSchedule[];
+  isLoading?: boolean;
 }
 
 function getCalendarWeeks(year: number, month: number): Date[][] {
@@ -32,13 +33,13 @@ function getCalendarWeeks(year: number, month: number): Date[][] {
   return weeks;
 }
 
-export function CalendarView({ year, month, schedules }: CalendarViewProps) {
+export function CalendarView({ year, month, schedules, isLoading = false }: CalendarViewProps) {
   const currentDate = new Date(year, month - 1);
   const weeks = getCalendarWeeks(year, month);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   return (
-    <div className="border rounded-lg overflow-hidden flex flex-col flex-1">
+    <div role={isLoading ? "status" : undefined} aria-label={isLoading ? "캘린더 일정을 불러오고 있습니다" : undefined} aria-busy={isLoading} className="border rounded-lg overflow-hidden flex flex-col flex-1">
       {/* 요일 헤더 */}
       <div className="grid grid-cols-7 border-b">
         {WEEKDAYS.map((day, i) => (
@@ -65,6 +66,7 @@ export function CalendarView({ year, month, schedules }: CalendarViewProps) {
         {weeks.map((weekDates, i) => (
           <CalendarWeekRow
             key={i}
+            isLoading={isLoading}
             weekDates={weekDates}
             currentDate={currentDate}
             schedules={schedules}

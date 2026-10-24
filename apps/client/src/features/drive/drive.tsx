@@ -22,6 +22,8 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@/shared/ui/empty";
+import { FileListSkeleton } from "@/shared/ui/file-browser/file-list-skeleton";
+import { QueryError } from "@/shared/ui/query-error";
 import { cn } from "@/shared/utils/classnames";
 import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
 import { FileUploadZone as FileUpload, UploadButton } from "@/shared/ui/file-upload-zone";
@@ -60,6 +62,8 @@ export function Drive() {
     renaming,
     items,
     isLoading,
+    error,
+    refetch,
     breadcrumbs,
     setNewFolderName,
     setShowNewFolder,
@@ -380,7 +384,10 @@ export function Drive() {
                   />
                 )}
 
-                {!isLoading && items?.length === 0 ? (
+                {error && items && <QueryError floating onRetry={() => void refetch()} />}
+                {isLoading ? <FileListSkeleton /> : error && !items ? (
+                  <QueryError onRetry={() => void refetch()} message="파일 목록을 불러오지 못했습니다." />
+                ) : items?.length === 0 ? (
                   <Empty className="h-full border-0">
                     <EmptyHeader>
                       <EmptyMedia variant="icon">

@@ -40,11 +40,13 @@ import { GanttGrid } from "./gantt-grid";
 import { GanttBar } from "./gantt-bar";
 import { GhostBar } from "./ghost-bar";
 import { LaneRow } from "./lane-row";
+import { QueryError } from "@/shared/ui/query-error";
+import { GanttSkeleton } from "./gantt-skeleton";
 import { SchedulePopover } from "./schedule-popover";
 
 export function ProjectScheduleOverview() {
   const [status, setStatus] = useState<"active" | "completed">("active");
-  const { data } = useProjectScheduleOverview(status);
+  const { data, isLoading, error, refetch } = useProjectScheduleOverview(status);
   const projects = data?.items ?? [];
 
   return (
@@ -83,7 +85,10 @@ export function ProjectScheduleOverview() {
         </Container>
       </header>
 
-      {projects.length === 0 ? (
+      {error && data && <QueryError floating onRetry={() => void refetch()} />}
+      {isLoading ? <GanttSkeleton /> : error && !data ? (
+        <div className="p-4"><QueryError onRetry={() => void refetch()} message="프로젝트 일정을 불러오지 못했습니다." /></div>
+      ) : projects.length === 0 ? (
         <div className="py-16 text-center text-sm text-muted-foreground">
           {status === "active" ? "진행중인 프로젝트가 없습니다." : "완료된 프로젝트가 없습니다."}
         </div>

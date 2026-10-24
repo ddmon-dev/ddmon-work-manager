@@ -1,4 +1,6 @@
 import { useState, useRef, useMemo } from "react";
+import { FileListSkeleton } from "@/shared/ui/file-browser/file-list-skeleton";
+import { QueryError } from "@/shared/ui/query-error";
 import { cn } from "@/shared/utils/classnames";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import FocusTrap from "focus-trap-react";
@@ -65,6 +67,8 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent", fullHe
     renaming,
     items,
     isLoading,
+    error,
+    refetch,
     breadcrumbs,
     selectedIds,
     contextMenu,
@@ -302,7 +306,10 @@ export function FileBrowser({ owner, ownerName, deleteMode = "permanent", fullHe
                   />
                 )}
 
-                {!isLoading && items?.length === 0 && !showNewFolder ? (
+                {error && items && <QueryError floating onRetry={() => void refetch()} />}
+                {isLoading ? <FileListSkeleton compact rows={fullHeight ? 6 : 3} /> : error && !items ? (
+                  <QueryError onRetry={() => void refetch()} message="파일 목록을 불러오지 못했습니다." />
+                ) : items?.length === 0 && !showNewFolder ? (
                   <Empty className="flex-1 border-0 py-4!">
                     <EmptyHeader className="gap-1">
                       <EmptyMedia variant="icon" className="mb-2 size-8">

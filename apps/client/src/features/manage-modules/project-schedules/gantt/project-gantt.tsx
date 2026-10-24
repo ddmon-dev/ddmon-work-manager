@@ -17,6 +17,8 @@ import { GanttBar } from "./gantt-bar";
 import { GhostBar } from "./ghost-bar";
 import { LaneRow } from "./lane-row";
 import { SchedulePopover } from "./schedule-popover";
+import { GanttSkeleton } from "./gantt-skeleton";
+import { QueryError } from "@/shared/ui/query-error";
 import { ROW_HEIGHT } from "./utils";
 
 /** 프로젝트 상세 시트에서는 좁은 lane 너비 사용 (overview는 utils의 150px) */
@@ -38,10 +40,14 @@ export function ProjectGantt({
   completedDate,
 }: ProjectGanttProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { data: scheduleData } = useProjectScheduleList(projectId);
-  const { data: laneData } = useLaneList(projectId);
+  const { data: scheduleData, isLoading: schedulesLoading, error: schedulesError, refetch: refetchSchedules } = useProjectScheduleList(projectId);
+  const { data: laneData, isLoading: lanesLoading, error: lanesError, refetch: refetchLanes } = useLaneList(projectId);
+  const error = schedulesError || lanesError;
+  const hasData = !!scheduleData && !!laneData;
+  const retry = () => { void refetchSchedules(); void refetchLanes(); };
   const items = scheduleData?.items ?? [];
   const [lanes, setLanes] = useState<ProjectScheduleLaneDTO[]>([]);
+  const isLoading = schedulesLoading || lanesLoading || (!lanes.length && !!laneData?.items.length);
   useEffect(() => { if (laneData?.items) setLanes(laneData.items); }, [laneData?.items]);
 
   // 행별 일정 그룹핑
@@ -68,7 +74,7 @@ export function ProjectGantt({
   const [hoverCell, setHoverCell] = useState<{ col: number; row: number } | null>(null);
 
   // 공유 훅
-  useScrollToToday(scrollRef, range.start);
+  useScrollToToday(scrollRef, range.start, !isLoading && hasData);
 
   const reorderLanes = useReorderLanes();
   const {
@@ -114,9 +120,19 @@ export function ProjectGantt({
   const rowCount = Math.max(lanes.length, 1);
   const contentHeight = rowCount * ROW_HEIGHT;
 
+  if (isLoading || (error && !hasData)) {
+    return (
+      <div>
+        <DetailSectionTitle>일정</DetailSectionTitle>
+        {isLoading ? <div className="overflow-hidden rounded-lg border"><GanttSkeleton compact rows={Math.max(laneData?.items.length ?? 3, 1)} /></div> : <QueryError onRetry={retry} message="프로젝트 일정을 불러오지 못했습니다." />}
+      </div>
+    );
+  }
+
   return (
     <div>
       <DetailSectionTitle>일정</DetailSectionTitle>
+      {error && <QueryError floating onRetry={retry} />}
 
       <div className="rounded-lg border border-border overflow-hidden">
         <div

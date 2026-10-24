@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/shared/lib/query-keys";
 import { format } from "date-fns";
-import { FileTextIcon, LoaderIcon, XIcon } from "lucide-react";
+import { FileTextIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/shared/utils/classnames";
 import { Button } from "@/shared/ui/button";
@@ -16,6 +16,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/shared/ui/dialog";
+import { Skeleton } from "@/shared/ui/skeleton";
+import { QueryError } from "@/shared/ui/query-error";
+import { toDocumentData } from "../estimates/pdf/document-data";
 import { DetailSectionTitle } from "../_base/ui";
 import {
   fetchEstimate,
@@ -23,25 +26,25 @@ import {
   useUpdateFinalVersion,
 } from "../estimates/api";
 import { EstimatePdfPreview } from "../estimates/pdf/estimate-pdf-preview";
-import type { EstimateWithDetails } from "../estimates/types";
 
 interface EstimateVersionsProps {
   estimateNumber: string;
 }
 
 export function EstimateVersions({ estimateNumber }: EstimateVersionsProps) {
-  const queryClient = useQueryClient();
-  const { data, refetch } = useGetVersions(estimateNumber);
+  const { data, isLoading, error, refetch } = useGetVersions(estimateNumber);
   const versions = data?.versions ?? [];
   const updateFinalVersion = useUpdateFinalVersion();
   const [isUpdating, setIsUpdating] = useState(false);
 
   const [pdfOpen, setPdfOpen] = useState(false);
-  const [pdfData, setPdfData] = useState<EstimateWithDetails | null>(null);
+  const [pdfId, setPdfId] = useState<string | null>(null);
   const [pdfLabel, setPdfLabel] = useState("");
-  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
-
-  if (versions.length === 0) return null;
+  const { data: pdfData, error: pdfError, refetch: refetchPdf } = useQuery({
+    queryKey: pdfId ? queryKeys.estimates.detail(pdfId) : ["__estimate-preview-disabled__"],
+    queryFn: () => fetchEstimate(pdfId!),
+    enabled: pdfOpen && !!pdfId,
+  });
 
   async function handleSetFinalVersion(estimateId: string) {
     setIsUpdating(true);
@@ -55,32 +58,20 @@ export function EstimateVersions({ estimateNumber }: EstimateVersionsProps) {
     }
   }
 
-  async function handleOpenPdf(
-    estimateId: string,
-    version: number,
-    versionLabel: string | null
-  ) {
-    setIsLoadingPdf(true);
+  function handleOpenPdf(estimateId: string, version: number, versionLabel: string | null) {
+    setPdfId(estimateId);
     setPdfLabel(versionLabel || `v${version}`);
     setPdfOpen(true);
-    try {
-      const data = await queryClient.fetchQuery({
-        queryKey: queryKeys.estimates.detail(estimateId),
-        queryFn: () => fetchEstimate(estimateId),
-      });
-      setPdfData(data);
-    } catch {
-      toast.error("견적서 데이터를 불러오지 못했습니다.");
-      setPdfOpen(false);
-    } finally {
-      setIsLoadingPdf(false);
-    }
   }
 
   return (
     <div>
       <DetailSectionTitle>견적서 버전</DetailSectionTitle>
-      <ul>
+      {error && data && <QueryError floating onRetry={() => void refetch()} />}
+      {isLoading ? <VersionsSkeleton /> : error && !data ? (
+        <QueryError onRetry={() => void refetch()} message="견적서 버전을 불러오지 못했습니다." />
+      ) : <ul>
+        {versions.length === 0 && <li className="py-4 text-sm text-muted-foreground">견적서 버전이 없습니다.</li>}
         {versions.map((rev, index) => {
           const isFinal = rev.isFinal;
           const isFirst = index === 0;
@@ -160,7 +151,7 @@ export function EstimateVersions({ estimateNumber }: EstimateVersionsProps) {
             </li>
           );
         })}
-      </ul>
+      </ul>}
 
       {/* PDF 미리보기 다이얼로그 */}
       <Dialog open={pdfOpen} onOpenChange={setPdfOpen}>
@@ -182,17 +173,30 @@ export function EstimateVersions({ estimateNumber }: EstimateVersionsProps) {
               </Button>
             </DialogClose>
           </DialogHeader>
-          {isLoadingPdf || !pdfData ? (
-            <div className="flex items-center justify-center">
-              <LoaderIcon className="size-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <div className="min-h-0 flex flex-col">
-              <EstimatePdfPreview estimate={pdfData} />
-            </div>
-          )}
+          <div className="min-h-0 flex flex-col">
+            {pdfError && !pdfData ? (
+              <div className="p-6"><QueryError onRetry={() => void refetchPdf()} message="견적서 데이터를 불러오지 못했습니다." /></div>
+            ) : <EstimatePdfPreview documentData={pdfData ? toDocumentData(pdfData) : null} />}
+            {pdfError && pdfData && <QueryError floating onRetry={() => void refetchPdf()} />}
+          </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function VersionsSkeleton() {
+  return (
+    <div role="status" aria-label="견적서 버전을 불러오고 있습니다">
+      {Array.from({ length: 3 }, (_, i) => (
+        <div key={i} aria-hidden="true" className="flex items-center gap-3">
+          <div className="flex w-6 shrink-0 justify-center"><Skeleton className="size-3 rounded-full" /></div>
+          <div className="flex min-w-0 flex-1 items-center gap-3 p-3 my-0.5">
+            <div className="flex-1 space-y-2"><Skeleton className="h-4 w-3/5" /><Skeleton className="h-3 w-28" /></div>
+            <Skeleton className="size-6 rounded-md" /><Skeleton className="h-6 w-16 rounded-md" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

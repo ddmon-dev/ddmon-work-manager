@@ -4,6 +4,7 @@ import { useMonthlySchedules } from "./api";
 import { CONFIG } from "./config";
 import { ItemSheet } from "./item-sheet";
 import { CalendarView } from "./calendar-view";
+import { QueryError } from "@/shared/ui/query-error";
 import { CalendarNav } from "./calendar-nav";
 
 export function SchedulesModule() {
@@ -16,7 +17,7 @@ export function SchedulesModule() {
     ? Number(get("month"))
     : now.getMonth() + 1;
 
-  const { data: schedules, isLoading } = useMonthlySchedules(year, month);
+  const { data: schedules, isLoading, error, refetch } = useMonthlySchedules(year, month);
 
   return (
     <ManageContainer
@@ -24,12 +25,15 @@ export function SchedulesModule() {
       hideSearchBar
       hideCreateButton
     >
-      {isLoading ? null : (
-        <div className="flex flex-col gap-4 flex-1 pb-12">
-          <CalendarNav year={year} month={month} />
-          <CalendarView year={year} month={month} schedules={schedules ?? []} />
-        </div>
-      )}
+      <div className="flex flex-col gap-4 flex-1 pb-12">
+        <CalendarNav year={year} month={month} />
+        {error && !schedules ? (
+          <QueryError onRetry={() => void refetch()} message="캘린더 일정을 불러오지 못했습니다." />
+        ) : (
+          <CalendarView year={year} month={month} schedules={schedules ?? []} isLoading={isLoading} />
+        )}
+        {error && schedules && <QueryError floating onRetry={() => void refetch()} />}
+      </div>
       <ItemSheet />
     </ManageContainer>
   );

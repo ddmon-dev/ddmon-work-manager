@@ -1,14 +1,14 @@
 import { useRef, useEffect } from "react";
 import { dateToX, startOfDay } from "./utils";
 
-export function useScrollToToday(scrollRef: React.RefObject<HTMLDivElement | null>, rangeStart: Date) {
+export function useScrollToToday(scrollRef: React.RefObject<HTMLDivElement | null>, rangeStart: Date, enabled = true) {
   const didScroll = useRef(false);
 
   useEffect(() => {
-    if (didScroll.current || !scrollRef.current) return;
+    const container = scrollRef.current;
+    if (!enabled || didScroll.current || !container) return;
     didScroll.current = true;
     const todayX = dateToX(startOfDay(new Date()), rangeStart);
-    const containerWidth = scrollRef.current.clientWidth;
-    scrollRef.current.scrollLeft = Math.max(0, todayX - containerWidth / 3);
-  }, [rangeStart, scrollRef]);
+    container.scrollLeft = Math.max(0, todayX - container.clientWidth / 3);
+  }, [rangeStart, scrollRef, enabled]);
 }

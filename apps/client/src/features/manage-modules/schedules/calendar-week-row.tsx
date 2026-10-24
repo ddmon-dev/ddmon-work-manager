@@ -7,6 +7,7 @@ import {
   PopoverTrigger,
 } from "@/shared/ui/popover";
 import { useManageSheet } from "../_base/ui";
+import { CalendarSkeleton } from "./calendar-skeleton";
 import { getColorConfig } from "./constants";
 import { computeWeekLayout, type EventPlacement } from "./calendar-layout";
 import type { CalendarSchedule } from "./types";
@@ -14,6 +15,7 @@ import type { CalendarSchedule } from "./types";
 const MAX_SLOTS = 3;
 
 interface CalendarWeekRowProps {
+  isLoading?: boolean;
   weekDates: Date[];
   currentDate: Date;
   schedules: CalendarSchedule[];
@@ -22,6 +24,7 @@ interface CalendarWeekRowProps {
 }
 
 export function CalendarWeekRow({
+  isLoading = false,
   weekDates,
   currentDate,
   schedules,
@@ -109,6 +112,7 @@ export function CalendarWeekRow({
 
         {/* 이벤트 영역 */}
         <div className="flex-1 min-h-0 overflow-hidden space-y-0.5 pb-0.5">
+          {isLoading && <CalendarSkeleton />}
           {Array.from({ length: maxVisibleSlot }, (_, slotIdx) => (
             <div key={`slot-${slotIdx}`} className="grid grid-cols-7">
               {renderSlot(

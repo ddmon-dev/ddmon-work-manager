@@ -316,7 +316,7 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const lastSelectedIdRef = useRef<string | null>(null);
 
-  const { data: rawItems, isLoading } = useFilesQuery(
+  const { data: rawItems, isLoading, isPlaceholderData, error, refetch } = useFilesQuery(
     nav.currentFolderId,
     owner
   );
@@ -908,7 +908,9 @@ export function useFileBrowser(options: UseFileBrowserOptions) {
     showNewFolder: folder.showNewFolder,
     renaming: renaming.renaming,
     items,
-    isLoading,
+    isLoading: isLoading || isPlaceholderData,
+    error,
+    refetch,
     breadcrumbs: nav.breadcrumbs,
     selectedIds,
     contextMenu,
