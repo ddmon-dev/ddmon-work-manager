@@ -1,52 +1,44 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Maximize, ArrowLeftRight, Download, Loader2 } from "lucide-react";
 import { getPdfRuntime } from "./pdf-runtime";
-import { Skeleton } from "./skeleton";
+import { PDF_PREVIEW_PADDING, getPdfPageSize, type PdfFitMode } from "./pdf-preview-layout";
 import { cn } from "@/shared/utils/classnames";
 import { downloadBlob } from "@/shared/utils/download";
 
-type FitMode = "fit-page" | "fit-width";
+const previewClassName = "relative flex-1 overflow-y-auto hide-scrollbar bg-background-secondary dark:bg-secondary/50 p-4";
 
-function PdfPreviewSkeleton() {
+function usePreviewSize(ref: RefObject<HTMLDivElement | null>) {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const container = ref.current;
+    if (!container) return;
+    const observer = new ResizeObserver(() => {
+      const width = container.clientHeight > 0 ? Math.max(0, container.clientWidth - PDF_PREVIEW_PADDING * 2) : 0;
+      const height = Math.max(0, container.clientHeight - PDF_PREVIEW_PADDING * 2);
+      setSize((previous) => previous.width === width && previous.height === height ? previous : { width, height });
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [ref]);
+  return size;
+}
+
+function PdfPreviewSkeleton({ width, height, children }: { width: number; height: number; children?: ReactNode }) {
   return (
-    <div role="status" className="absolute inset-0 flex items-center justify-center p-8">
-      <span className="sr-only">견적서 미리보기를 준비하고 있습니다.</span>
-      <div
-        aria-hidden="true"
-        className="flex aspect-[595/842] h-full max-h-112 max-w-full flex-col gap-6 rounded border border-border/60 bg-background p-7 shadow-sm [&_[data-slot=skeleton]]:rounded-sm [&_[data-slot=skeleton]]:motion-reduce:animate-none"
-      >
-        <div className="flex items-start justify-between gap-6">
-          <Skeleton className="h-5 w-24" />
-          <Skeleton className="h-3 w-12" />
-        </div>
-        <div className="grid grid-cols-2 gap-5">
-          {[0, 1].map((column) => (
-            <div key={column} className="space-y-2">
-              <Skeleton className="h-3 w-3/4" />
-              <Skeleton className="h-2 w-full" />
-              <Skeleton className="h-2 w-2/3" />
-            </div>
-          ))}
-        </div>
-        <div className="flex-1 space-y-3 border-y border-border/60 py-3">
-          <Skeleton className="h-5 w-full" />
-          {[0, 1, 2, 3].map((row) => (
-            <div key={row} className="flex items-center justify-between gap-6">
-              <Skeleton className="h-2 w-3/5" />
-              <Skeleton className="h-2 w-1/5" />
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-end">
-          <Skeleton className="h-4 w-1/3" />
-        </div>
-        <div className="space-y-2">
-          <Skeleton className="h-2 w-2/3" />
-          <Skeleton className="h-2 w-1/2" />
-        </div>
+    <div role="status" aria-label="견적서 미리보기를 준비하고 있습니다" className="flex min-h-full flex-col items-center">
+      <div data-slot="pdf-preview-page" aria-hidden="true" className="shrink-0 overflow-hidden rounded bg-white shadow-lg" style={{ width, height }}>
+        {children}
       </div>
     </div>
   );
+}
+
+/** 견적 상세 API를 기다리는 동안에도 PDF와 같은 프리뷰 영역을 사용한다. */
+export function PdfPreviewPlaceholder({ skeleton }: { skeleton: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const viewport = usePreviewSize(ref);
+  const page = getPdfPageSize(viewport.width, viewport.height, "fit-width");
+  return <div ref={ref} className={previewClassName}><PdfPreviewSkeleton {...page}>{skeleton}</PdfPreviewSkeleton></div>;
 }
 
 function IslandButton({
@@ -81,6 +73,7 @@ interface PdfPreviewProps {
   downloadFileName?: string;
   /** 재렌더링 트리거용 의존성 키 (예: JSON.stringify(data)) */
   dependencyKey: string;
+  skeleton?: ReactNode;
 }
 
 /**
@@ -92,30 +85,26 @@ export function PdfPreview({
   generateBlob,
   downloadFileName,
   dependencyKey,
+  skeleton,
 }: PdfPreviewProps) {
-  const [fitMode, setFitMode] = useState<FitMode>("fit-width");
+  const [fitMode, setFitMode] = useState<PdfFitMode>("fit-width");
   const [isGenerating, setIsGenerating] = useState(false);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
-  const [renderWidth, setRenderWidth] = useState(0);
   const pagesRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const generateRef = useRef(generateBlob);
+  const fitModeRef = useRef(fitMode);
+  const viewport = usePreviewSize(scrollRef);
+  const renderWidth = viewport.width;
+  const skeletonPage = getPdfPageSize(viewport.width, viewport.height, fitMode);
   const blobRef = useRef<{ key: string; blob: Blob } | null>(null);
 
-  useEffect(() => { generateRef.current = generateBlob; }, [generateBlob]);
-
   useEffect(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const observer = new ResizeObserver(() => {
-      // 모바일에서 숨겨진 미리보기는 폰트·PDF를 준비하지 않는다.
-      setRenderWidth(container.clientHeight > 0 ? Math.max(0, container.clientWidth - 32) : 0);
-    });
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, []);
+    generateRef.current = generateBlob;
+    fitModeRef.current = fitMode;
+  }, [generateBlob, fitMode]);
 
   async function handleDownload() {
     setIsGenerating(true);
@@ -171,6 +160,9 @@ export function PdfPreview({
           const scaled = page.getViewport({ scale });
           canvas.width = Math.ceil(scaled.width);
           canvas.height = Math.ceil(scaled.height);
+          const pageSize = getPdfPageSize(containerWidth, Math.max(0, (scrollRef.current?.clientHeight ?? 0) - PDF_PREVIEW_PADDING * 2), fitModeRef.current, viewport);
+          canvas.style.width = `${pageSize.width}px`;
+          canvas.style.height = `${pageSize.height}px`;
           canvas.dataset.pageWidth = String(viewport.width);
           canvas.dataset.pageHeight = String(viewport.height);
           canvas.className = "shadow-lg rounded";
@@ -207,15 +199,14 @@ export function PdfPreview({
     if (!container) return;
     function fitPages() {
       if (!container) return;
-      const width = Math.max(1, container.clientWidth - 32);
-      const height = Math.max(1, container.clientHeight - 32);
+      const width = Math.max(1, container.clientWidth - PDF_PREVIEW_PADDING * 2);
+      const height = Math.max(1, container.clientHeight - PDF_PREVIEW_PADDING * 2);
       pagesRef.current?.querySelectorAll("canvas").forEach((canvas) => {
         const pageWidth = Number(canvas.dataset.pageWidth);
         const pageHeight = Number(canvas.dataset.pageHeight);
-        const scale = fitMode === "fit-width" ? width / pageWidth
-          : Math.min(width / pageWidth, height / pageHeight);
-        canvas.style.width = `${pageWidth * scale}px`;
-        canvas.style.height = `${pageHeight * scale}px`;
+        const page = getPdfPageSize(width, height, fitMode, { width: pageWidth, height: pageHeight });
+        canvas.style.width = `${page.width}px`;
+        canvas.style.height = `${page.height}px`;
       });
     }
     fitPages();
@@ -227,10 +218,10 @@ export function PdfPreview({
   return (
     <div
       ref={scrollRef}
-      className="relative flex-1 overflow-y-auto hide-scrollbar bg-background-secondary dark:bg-secondary/50 p-4"
+      className={previewClassName}
     >
       {status === "loading" && (
-        <PdfPreviewSkeleton />
+        <PdfPreviewSkeleton {...skeletonPage}>{skeleton}</PdfPreviewSkeleton>
       )}
       {error && (
         <div role="alert" className="py-8 text-center text-sm text-muted-foreground">
@@ -242,7 +233,7 @@ export function PdfPreview({
       )}
       <div
         ref={pagesRef}
-        className={`flex flex-col gap-4 min-h-full ${
+        className={`${status === "loading" ? "hidden" : "flex"} flex-col gap-4 min-h-full ${
           fitMode === "fit-page" ? "items-center" : ""
         }`}
       />

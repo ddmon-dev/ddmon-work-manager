@@ -1,3 +1,5 @@
+import { PdfPreviewPlaceholder } from "@/shared/ui/pdf-preview";
+import { EstimateDocumentSkeleton } from "./pdf/estimate-document-skeleton";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Separator } from "@/shared/ui/separator";
 import {
@@ -10,7 +12,10 @@ import {
 export function EstimateSkeleton() {
   return (
     <>
-      <SheetBody className="lg:grid-cols-2">
+      <div className="flex h-[61px] shrink-0 items-center gap-4 border-b px-4 md:px-8" aria-hidden="true">
+        <Skeleton className="h-5 w-32" /><Skeleton className="h-7 w-48 rounded-full" /><Skeleton className="h-7 w-36 rounded-full" />
+      </div>
+      <SheetBody className="lg:grid-cols-[1fr_800px]">
         {/* 좌측: 상세 정보 */}
         <SheetScrollColumn>
           <SheetContainer className="space-y-8">
@@ -82,8 +87,8 @@ export function EstimateSkeleton() {
         </SheetScrollColumn>
 
         {/* 우측: PDF 미리보기 */}
-        <div className="hidden lg:flex flex-col min-h-0 p-4">
-          <Skeleton className="w-full h-full rounded-lg" />
+        <div className="hidden lg:flex flex-col min-h-0">
+          <PdfPreviewPlaceholder skeleton={<EstimateDocumentSkeleton />} />
         </div>
       </SheetBody>
 

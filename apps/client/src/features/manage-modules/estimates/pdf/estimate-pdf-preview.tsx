@@ -1,3 +1,4 @@
+import { EstimateDocumentSkeleton } from "./estimate-document-skeleton";
 import { PdfPreview } from '@/shared/ui/pdf-preview';
 import { generateEstimateDocumentPdfBlob, toDocumentData } from './generate-document';
 import { getDownloadFileName } from './get-download-file-name';
@@ -22,6 +23,7 @@ export function EstimatePdfPreview({ estimate }: Props) {
         issuedDate: estimate.issuedDate,
       })}
       dependencyKey={dependencyKey}
+      skeleton={<EstimateDocumentSkeleton data={data} />}
     />
   );
 }

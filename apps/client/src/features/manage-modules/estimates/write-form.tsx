@@ -18,6 +18,7 @@ import {
   FormSwitch,
 } from "@/shared/ui/form";
 import { SheetFooter, SheetBody } from "@/shared/ui/sheet";
+import { EstimateDocumentSkeleton } from "./pdf/estimate-document-skeleton";
 import { PdfPreview } from "@/shared/ui/pdf-preview";
 import { formatCurrency } from "@/shared/utils/format";
 import { useAuth } from "@/features/auth/hooks/use-auth";
@@ -483,6 +484,7 @@ function EstimateFormPdfPreview({
       generateBlob={generateBlob}
       downloadFileName={fileName}
       dependencyKey={dependencyKey}
+      skeleton={<EstimateDocumentSkeleton data={documentData} />}
     />
   );
 }
