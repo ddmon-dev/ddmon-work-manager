@@ -1,4 +1,4 @@
-import type { EstimateDocumentData } from './document-data';
+import { getEstimateDocumentKey, type EstimateDocumentData } from './document-data';
 
 export { toDocumentData, type EstimateDocumentData } from './document-data';
 
@@ -6,7 +6,7 @@ export { toDocumentData, type EstimateDocumentData } from './document-data';
 const documents = new Map<string, Promise<Blob>>();
 
 export function generateEstimateDocumentPdfBlob(data: EstimateDocumentData): Promise<Blob> {
-  const key = JSON.stringify(data);
+  const key = getEstimateDocumentKey(data);
   const cached = documents.get(key);
   if (cached) {
     documents.delete(key);

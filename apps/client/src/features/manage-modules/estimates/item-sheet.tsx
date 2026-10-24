@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
 import {
   Sheet,
@@ -6,7 +7,6 @@ import {
   SheetTitle,
   SheetDescription,
   SheetContainer,
-  SheetBody,
 } from "@/shared/ui/sheet";
 import { Separator } from "@/shared/ui/separator";
 import { cn } from "@/shared/utils/classnames";
@@ -15,11 +15,13 @@ import { useManageSheet, ManageSheetDataContext } from "../_base/ui";
 import { fetchEstimate } from "./api";
 import { CONFIG } from "./config";
 import { WriteForm } from "./write-form";
-import { EstimateSkeleton } from "./estimate-skeleton";
+import { EstimateSkeleton, EstimateHeaderSkeleton } from "./estimate-skeleton";
 import { QueryError } from "@/shared/ui/query-error";
-import { DetailView } from "./detail-view";
+import { DetailView, EstimateDetailHeader } from "./detail-view";
 import { VersionSelector } from "./version-selector";
 import type { EstimateWithDetails } from "./types";
+import { EstimatePdfPreview } from "./pdf/estimate-pdf-preview";
+import { toDocumentData, type EstimateDocumentData } from "./pdf/document-data";
 
 type DataContextValue = {
   prevValues: unknown;
@@ -30,6 +32,7 @@ type DataContextValue = {
 
 export function ItemSheet() {
   const manageSheet = useManageSheet();
+  const [draftDocument, setDraftDocument] = useState<EstimateDocumentData | null>(null);
   const { id, mode } = manageSheet.data ?? {};
   const isOpen = manageSheet.data !== null;
 
@@ -51,41 +54,43 @@ export function ItemSheet() {
     refetch,
   };
 
+  const versionOf = manageSheet.data?.meta?.versionOf;
+  const duplicateValues = useMemo(() => {
+    if (!prevValues) return null;
+    return {
+      ...prevValues,
+      versionLabel: versionOf ? "" : "초안",
+      ...(!versionOf && {
+        estimateNumber: undefined,
+        version: undefined,
+        clientId: "",
+        client: undefined,
+        title: "",
+        memo: null,
+      }),
+    } as EstimateWithDetails;
+  }, [prevValues, versionOf]);
+
   const renderContent = () => {
     if (mode === "create") {
-      return <WriteForm id={undefined} prevValues={null} />;
+      return <WriteForm id={undefined} prevValues={null} onDocumentChange={setDraftDocument} />;
     }
-    if (isLoading) return <div role="status" aria-label="견적서를 불러오고 있습니다" className="flex min-h-0 flex-1 flex-col"><EstimateSkeleton /></div>;
+    if (isLoading) return <EstimateSkeleton />;
     if (error && !prevValues) {
       return (
-        <SheetBody>
-          <SheetContainer className="flex items-center justify-center min-h-[200px]">
-            <QueryError onRetry={() => void refetch()} />
-          </SheetContainer>
-        </SheetBody>
+        <SheetContainer className="col-span-full flex items-center justify-center min-h-[200px]">
+          <QueryError onRetry={() => void refetch()} />
+        </SheetContainer>
       );
     }
     if (mode === "modify" && prevValues) {
-      return <WriteForm id={id} prevValues={prevValues} />;
+      return <WriteForm id={id} prevValues={prevValues} onDocumentChange={setDraftDocument} />;
     }
     if (mode === "duplicate" && prevValues) {
-      const versionOf = manageSheet.data?.meta?.versionOf;
-      const cleaned = {
-        ...prevValues,
-        versionLabel: versionOf ? "" : "초안",
-        ...(!versionOf && {
-          estimateNumber: undefined,
-          version: undefined,
-          clientId: "",
-          client: undefined,
-          title: "",
-          memo: null,
-        }),
-      } as EstimateWithDetails;
-      return <WriteForm id={undefined} prevValues={cleaned} />;
+      return <WriteForm id={undefined} prevValues={duplicateValues} onDocumentChange={setDraftDocument} />;
     }
     if (mode === "view" && prevValues) {
-      return <DetailView data={prevValues} refetch={refetch} />;
+      return <DetailView data={prevValues} />;
     }
     return null;
   };
@@ -151,8 +156,21 @@ export function ItemSheet() {
               </div>
             );
           })()}
+          {mode === "view" && prevValues && <EstimateDetailHeader data={prevValues} refetch={refetch} />}
+          {mode !== "create" && isLoading && <EstimateHeaderSkeleton />}
           {error && prevValues && <QueryError floating onRetry={() => void refetch()} message="최신 데이터를 가져오지 못했습니다. 이전 내용을 표시합니다." />}
-          {renderContent()}
+          <div className={cn(
+            "grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto]",
+            mode === "view" ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_800px]" : "grid-cols-[1fr_800px] overflow-x-auto"
+          )}>
+            {renderContent()}
+            <div className={cn("col-start-2 row-start-1 min-h-0 flex-col border-l", mode === "view" ? "hidden lg:flex" : "flex", error && !prevValues && "hidden")}>
+              <EstimatePdfPreview documentData={
+                mode === "view" ? (prevValues ? toDocumentData(prevValues) : null)
+                  : draftDocument ?? (mode === "modify" && prevValues ? toDocumentData(prevValues) : null)
+              } />
+            </div>
+          </div>
         </ManageSheetDataContext.Provider>
       </SheetContent>
     </Sheet>

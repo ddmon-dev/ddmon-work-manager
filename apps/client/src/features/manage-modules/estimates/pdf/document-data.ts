@@ -71,3 +71,31 @@ export function toDocumentData(estimate: EstimateWithDetails): EstimateDocumentD
     })),
   };
 }
+
+/** PDF에 출력되는 값만 비교한다. 객체 생성 순서나 내부 버전명은 영향을 주지 않는다. */
+export function getEstimateDocumentKey(data: EstimateDocumentData): string {
+  return JSON.stringify({
+    title: data.title,
+    description: data.description || undefined,
+    clientName: data.clientName || undefined,
+    estimateNumber: data.estimateNumber || undefined,
+    issuedDate: data.issuedDate || undefined,
+    validUntil: data.validUntil || undefined,
+    issuer: data.issuer || undefined,
+    issuerPhone: data.issuerPhone || undefined,
+    issuerEmail: data.issuerEmail || undefined,
+    bizName: data.bizName || undefined,
+    bizNameEn: data.bizNameEn || undefined,
+    ceo: data.ceo || undefined,
+    bizNumber: data.bizNumber || undefined,
+    taxType: data.taxType,
+    showTaxAmount: data.showTaxAmount,
+    discountType: data.discountType,
+    discountValue: data.discountValue,
+    notes: data.notes || undefined,
+    groups: data.groups.map(group => ({
+      name: group.name,
+      items: group.items.map(item => ({ name: item.name, quantity: item.quantity, unit: item.unit, amount: item.amount })),
+    })),
+  });
+}

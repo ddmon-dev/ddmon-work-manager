@@ -17,9 +17,7 @@ import {
   FormNumberInput,
   FormSwitch,
 } from "@/shared/ui/form";
-import { SheetFooter, SheetBody } from "@/shared/ui/sheet";
-import { EstimateDocumentSkeleton } from "./pdf/estimate-document-skeleton";
-import { PdfPreview } from "@/shared/ui/pdf-preview";
+import { SheetFooter } from "@/shared/ui/sheet";
 import { formatCurrency } from "@/shared/utils/format";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useBusinessInfo } from "@/features/settings/api";
@@ -36,11 +34,7 @@ import { useCreateEstimate, useUpdateEstimate } from "./api";
 import { DISCOUNT_OPTIONS, TAX_OPTIONS, DEFAULT_UNIT } from "./constants";
 import type { EstimateWithDetails } from "./types";
 import { ItemGroupEditor } from "./item-group-editor";
-import {
-  type EstimateDocumentData,
-  generateEstimateDocumentPdfBlob,
-} from "./pdf/generate-document";
-import { getDownloadFileName } from "./pdf/get-download-file-name";
+import { getEstimateDocumentKey, type EstimateDocumentData, toDocumentData } from "./pdf/document-data";
 
 // 로컬 폼 스키마: 서버 스키마 확장 (날짜를 Date 객체로 override, clientName/billingClientName 추가)
 const formSchema = estimateWriteSchema.extend({
@@ -110,9 +104,10 @@ function toFormValues(data: EstimateWithDetails): FormValues {
 interface WriteFormProps {
   id?: string;
   prevValues: EstimateWithDetails | null;
+  onDocumentChange: (data: EstimateDocumentData | null) => void;
 }
 
-export function WriteForm({ id, prevValues }: WriteFormProps) {
+export function WriteForm({ id, prevValues, onDocumentChange }: WriteFormProps) {
   const sheet = useManageSheet();
   const { refetch } = useManageSheetData();
   const isDuplicate = sheet.data?.mode === "duplicate";
@@ -137,8 +132,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
       form.setValue("billingClientId", null);
       form.setValue("billingClientName", "");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedClientId]);
+  }, [watchedClientId, form]);
 
   useEffect(() => {
     if (prevValues) {
@@ -157,10 +151,9 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
         validUntil: addMonths(now, 1),
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prevValues]);
+  }, [prevValues, isDuplicate, form]);
 
-  const issuedDate = form.watch("issuedDate");
+  const issuedDate = useWatch({ control: form.control, name: "issuedDate" });
 
   useEffect(() => {
     if (!issuedDate) return;
@@ -168,8 +161,7 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
     const prevDate = prevValues?.issuedDate;
     if (prevDate && format(issuedDate, "yyyy-MM-dd") === prevDate) return;
     form.setValue("validUntil", addMonths(issuedDate, 1));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [issuedDate]);
+  }, [issuedDate, prevValues?.issuedDate, form]);
 
   async function onSubmit(values: FormValues) {
     try {
@@ -210,155 +202,147 @@ export function WriteForm({ id, prevValues }: WriteFormProps) {
   }
 
   return (
-    <SheetBody>
-      <FormProvider {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="h-full space-y-0!">
-          <div className="grid grid-cols-[1fr_800px] gap-0 flex-1 min-h-0 divide-x">
-            {/* 폼 영역 */}
-            <div className="overflow-y-auto 2xl:overflow-hidden hide-scrollbar 2xl:grid 2xl:grid-cols-[2fr_3fr] 2xl:divide-x min-h-0">
-              {/* 1단: 기본 정보 */}
-              <div className="px-6 py-5 2xl:overflow-y-auto hide-scrollbar">
-                <FieldGroup>
-                  <ClientSelect
-                    disabled={!!id && !isDuplicate}
-                    onValueChange={(_, label) => form.setValue("clientName", label)}
-                  />
-                  <ClientSelect
-                    name="billingClientId"
-                    label="청구 클라이언트"
-                    placeholder="소통 클라이언트와 동일"
-                    optional
-                    excludeId={watchedClientId}
-                    onValueChange={(_, label) => form.setValue("billingClientName", label)}
-                  />
-                  <FormTextInput
-                    control={form.control}
-                    name="title"
-                    label="견적서 제목"
-                    placeholder="견적서 제목을 입력해주세요."
-                  />
-                  <FormTextInput
-                    control={form.control}
-                    name="description"
-                    label="설명"
-                    placeholder="예: 1차 - 프론트엔드 개발"
-                    optional
-                  />
-                  <FormTextInput
-                    control={form.control}
-                    name="versionLabel"
-                    label="버전명"
-                    placeholder="예: 다이어그램 이미지삽입 및 어드민"
-                    optional
-                  />
-                  <FormDatePicker
-                    control={form.control}
-                    name="issuedDate"
-                    label="발행일"
-                    placeholder="발행일을 선택해주세요."
-                  />
-                  <FormDatePicker
-                    control={form.control}
-                    name="validUntil"
-                    label="유효기간"
-                    placeholder="유효기간을 선택해주세요."
-                    optional
-                  />
-                  <FormTextarea
-                    control={form.control}
-                    name="notes"
-                    label="비고"
-                    placeholder="비고를 입력해주세요."
-                    description="줄바꿈으로 항목이 구분됩니다."
-                    optional
-                    rows={3}
-                  />
-                  <FormTextarea
-                    control={form.control}
-                    name="memo"
-                    label="내부 메모"
-                    placeholder="내부 관리용 메모를 입력해주세요."
-                    optional
-                    rows={3}
-                  />
-                </FieldGroup>
-              </div>
-
-              {/* 2단: 견적 항목 + 금액 요약 */}
-              <div className="2xl:relative 2xl:overflow-y-auto hide-scrollbar">
-                <div className="2xl:min-h-full 2xl:flex 2xl:flex-col">
-                  <div className="flex-1 px-6 py-5">
-                    <ItemGroupEditor />
-                  </div>
-                  <div className="sticky bottom-0 border-t border-border-dark/50 bg-background/60 backdrop-blur-md">
-                    <div className="px-6 pt-4 pb-2 space-y-2">
-                      <div className="flex items-end gap-2">
-                        <div className="flex-1">
-                          <FormNativeSelect
-                            control={form.control}
-                            name="taxType"
-                            label="세금 타입"
-                            options={[...TAX_OPTIONS]}
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <FormNativeSelect
-                            control={form.control}
-                            name="discountType"
-                            label="할인 타입"
-                            options={[...DISCOUNT_OPTIONS]}
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <FormNumberInput
-                            control={form.control}
-                            name="discountValue"
-                            label={
-                              discountType === "percentage"
-                                ? "할인율 (%)"
-                                : "할인 금액 (원)"
-                            }
-                            suffix={
-                              discountType === "percentage"
-                                ? "%"
-                                : "원"
-                            }
-                            thousandSeparator={
-                              discountType !== "percentage"
-                            }
-                            placeholder="0"
-                            disabled={discountType === "none"}
-                          />
-                        </div>
-                        <div className="pb-2 ml-auto">
-                          <FormSwitch
-                            control={form.control}
-                            name="showTaxAmount"
-                            label="부가세 금액 표기"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <EstimateTotalSummary />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 3단: PDF 실시간 미리보기 */}
-            <div className="flex flex-col min-h-0">
-              <EstimateFormPdfPreview prevValues={prevValues} />
-            </div>
+    <FormProvider {...form}>
+      <EstimateFormDocumentSync prevValues={prevValues} onDocumentChange={onDocumentChange} useSavedPublisher={!!id && !isDuplicate} />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="contents">
+        {/* 폼 영역 */}
+        <div className="col-start-1 row-start-1 overflow-y-auto 2xl:overflow-hidden hide-scrollbar 2xl:grid 2xl:grid-cols-[2fr_3fr] 2xl:divide-x min-h-0">
+          {/* 1단: 기본 정보 */}
+          <div className="px-6 py-5 2xl:overflow-y-auto hide-scrollbar">
+            <FieldGroup>
+              <ClientSelect
+                disabled={!!id && !isDuplicate}
+                onValueChange={(_, label) => form.setValue("clientName", label)}
+              />
+              <ClientSelect
+                name="billingClientId"
+                label="청구 클라이언트"
+                placeholder="소통 클라이언트와 동일"
+                optional
+                excludeId={watchedClientId}
+                onValueChange={(_, label) => form.setValue("billingClientName", label)}
+              />
+              <FormTextInput
+                control={form.control}
+                name="title"
+                label="견적서 제목"
+                placeholder="견적서 제목을 입력해주세요."
+              />
+              <FormTextInput
+                control={form.control}
+                name="description"
+                label="설명"
+                placeholder="예: 1차 - 프론트엔드 개발"
+                optional
+              />
+              <FormTextInput
+                control={form.control}
+                name="versionLabel"
+                label="버전명"
+                placeholder="예: 다이어그램 이미지삽입 및 어드민"
+                optional
+              />
+              <FormDatePicker
+                control={form.control}
+                name="issuedDate"
+                label="발행일"
+                placeholder="발행일을 선택해주세요."
+              />
+              <FormDatePicker
+                control={form.control}
+                name="validUntil"
+                label="유효기간"
+                placeholder="유효기간을 선택해주세요."
+                optional
+              />
+              <FormTextarea
+                control={form.control}
+                name="notes"
+                label="비고"
+                placeholder="비고를 입력해주세요."
+                description="줄바꿈으로 항목이 구분됩니다."
+                optional
+                rows={3}
+              />
+              <FormTextarea
+                control={form.control}
+                name="memo"
+                label="내부 메모"
+                placeholder="내부 관리용 메모를 입력해주세요."
+                optional
+                rows={3}
+              />
+            </FieldGroup>
           </div>
 
-          <SheetFooter>
-            <ManageSheetClose />
-            {(id || isDuplicate) && <ManageSheetModeChange mode="view" />}
-            <ManageFormSubmit isLoading={form.formState.isSubmitting} />
-          </SheetFooter>
-        </form>
-      </FormProvider>
-    </SheetBody>
+          {/* 2단: 견적 항목 + 금액 요약 */}
+          <div className="2xl:relative 2xl:overflow-y-auto hide-scrollbar">
+            <div className="2xl:min-h-full 2xl:flex 2xl:flex-col">
+              <div className="flex-1 px-6 py-5">
+                <ItemGroupEditor />
+              </div>
+              <div className="sticky bottom-0 border-t border-border-dark/50 bg-background/60 backdrop-blur-md">
+                <div className="px-6 pt-4 pb-2 space-y-2">
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <FormNativeSelect
+                        control={form.control}
+                        name="taxType"
+                        label="세금 타입"
+                        options={[...TAX_OPTIONS]}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <FormNativeSelect
+                        control={form.control}
+                        name="discountType"
+                        label="할인 타입"
+                        options={[...DISCOUNT_OPTIONS]}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <FormNumberInput
+                        control={form.control}
+                        name="discountValue"
+                        label={
+                          discountType === "percentage"
+                            ? "할인율 (%)"
+                            : "할인 금액 (원)"
+                        }
+                        suffix={
+                          discountType === "percentage"
+                            ? "%"
+                            : "원"
+                        }
+                        thousandSeparator={
+                          discountType !== "percentage"
+                        }
+                        placeholder="0"
+                        disabled={discountType === "none"}
+                      />
+                    </div>
+                    <div className="pb-2 ml-auto">
+                      <FormSwitch
+                        control={form.control}
+                        name="showTaxAmount"
+                        label="부가세 금액 표기"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <EstimateTotalSummary />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <SheetFooter className="col-span-full row-start-2">
+          <ManageSheetClose />
+          {(id || isDuplicate) && <ManageSheetModeChange mode="view" />}
+          <ManageFormSubmit isLoading={form.formState.isSubmitting} />
+        </SheetFooter>
+      </form>
+    </FormProvider>
   );
 }
 
@@ -422,16 +406,26 @@ function EstimateTotalSummary() {
   );
 }
 
-function EstimateFormPdfPreview({
-  prevValues,
-}: {
+function EstimateFormDocumentSync({ prevValues, onDocumentChange, useSavedPublisher }: {
   prevValues: EstimateWithDetails | null;
+  onDocumentChange: (data: EstimateDocumentData | null) => void;
+  useSavedPublisher: boolean;
 }) {
   const { control } = useFormContext<FormValues>();
   const { user } = useAuth();
   const { data: bizInfo } = useBusinessInfo();
   const values = useWatch({ control }) as FormValues;
 
+  const publisher = useSavedPublisher && prevValues ? toDocumentData(prevValues) : {
+    issuer: user?.name || undefined,
+    issuerPhone: user?.phone || undefined,
+    issuerEmail: user?.email || undefined,
+    bizName: bizInfo?.name || undefined,
+    bizNameEn: bizInfo?.nameEn || undefined,
+    ceo: bizInfo?.ceo || undefined,
+    bizNumber: bizInfo?.bizNumber || undefined,
+    bizAddress: bizInfo?.address || undefined,
+  };
   const documentData: EstimateDocumentData = {
     title: values.title || "(제목 없음)",
     description: values.description || undefined,
@@ -445,14 +439,14 @@ function EstimateFormPdfPreview({
     validUntil: values.validUntil
       ? format(values.validUntil, "yyyy-MM-dd")
       : undefined,
-    issuer: user?.name || undefined,
-    issuerPhone: user?.phone ?? undefined,
-    issuerEmail: user?.email || undefined,
-    bizName: bizInfo?.name ?? undefined,
-    bizNameEn: bizInfo?.nameEn ?? undefined,
-    ceo: bizInfo?.ceo ?? undefined,
-    bizNumber: bizInfo?.bizNumber ?? undefined,
-    bizAddress: bizInfo?.address ?? undefined,
+    issuer: publisher.issuer,
+    issuerPhone: publisher.issuerPhone,
+    issuerEmail: publisher.issuerEmail,
+    bizName: publisher.bizName,
+    bizNameEn: publisher.bizNameEn,
+    ceo: publisher.ceo,
+    bizNumber: publisher.bizNumber,
+    bizAddress: publisher.bizAddress,
     taxType: values.taxType,
     showTaxAmount: values.showTaxAmount ?? true,
     discountType: values.discountType,
@@ -469,22 +463,11 @@ function EstimateFormPdfPreview({
     })),
   };
 
-  const dependencyKey = JSON.stringify(documentData);
-
-  const generateBlob = () => generateEstimateDocumentPdfBlob(documentData);
-
-  const fileName = getDownloadFileName({
-    bizName: documentData.bizName,
-    title: documentData.title,
-    issuedDate: documentData.issuedDate,
-  });
-
-  return (
-    <PdfPreview
-      generateBlob={generateBlob}
-      downloadFileName={fileName}
-      dependencyKey={dependencyKey}
-      skeleton={<EstimateDocumentSkeleton data={documentData} />}
-    />
-  );
+  // 비교 키로 정규화하여 내부 메모·버전명 변경은 PDF 작업을 만들지 않는다.
+  const documentKey = getEstimateDocumentKey(documentData);
+  useEffect(() => {
+    onDocumentChange(JSON.parse(documentKey) as EstimateDocumentData);
+  }, [documentKey, onDocumentChange]);
+  useEffect(() => () => onDocumentChange(null), [onDocumentChange]);
+  return null;
 }
