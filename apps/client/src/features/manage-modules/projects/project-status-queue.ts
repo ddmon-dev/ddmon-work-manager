@@ -25,7 +25,6 @@ export function createProjectStatusQueue<T extends ProjectStatusPatch>(options: 
   onError: (error: unknown) => void;
 }) {
   const entries = new Map<string, Entry<T>>();
-  const listeners = new Set<() => void>();
   let revision = 0;
 
   const projected = (entry: Entry<T>): ProjectStatusPatch =>
@@ -34,7 +33,6 @@ export function createProjectStatusQueue<T extends ProjectStatusPatch>(options: 
   function publish(id: string, entry: Entry<T>) {
     entry.revision = ++revision;
     options.onChange(id, projected(entry));
-    listeners.forEach((listener) => listener());
   }
 
   async function drain(id: string, entry: Entry<T>) {
@@ -68,10 +66,6 @@ export function createProjectStatusQueue<T extends ProjectStatusPatch>(options: 
 
   return {
     get revision() { return revision; },
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => { listeners.delete(listener); };
-    },
     getState(id: string): ProjectSaveState { return entries.get(id)?.state ?? "idle"; },
     enqueue(id: string, patch: ProjectStatusPatch, initial: ProjectStatusPatch): Promise<T> {
       let entry = entries.get(id);

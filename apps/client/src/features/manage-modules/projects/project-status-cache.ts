@@ -1,5 +1,4 @@
-import { useSyncExternalStore } from "react";
-import { type QueryClient, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
@@ -60,9 +59,4 @@ export function getCachedProjectStatus(client: QueryClient, id: string): Project
   const item = candidates.filter((candidate) => candidate.item)
     .sort((a, b) => b.updatedAt - a.updatedAt)[0]?.item;
   return item ? { status: item.status, workPhase: item.workPhase } : {};
-}
-
-export function useProjectSaveState(id: string) {
-  const queue = getProjectStatusQueue(useQueryClient());
-  return useSyncExternalStore(queue.subscribe, () => queue.getState(id), () => "idle");
 }

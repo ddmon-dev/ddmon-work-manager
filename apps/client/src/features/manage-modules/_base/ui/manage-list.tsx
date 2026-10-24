@@ -85,8 +85,7 @@ export function ManageList<TData extends { id?: string }>({
 
   return (
     <div className="flex flex-1 flex-col gap-2" aria-busy={!!isFetching}>
-      {error && <QueryError onRetry={onRetry} message="최신 데이터를 가져오지 못했습니다. 이전 내용을 표시합니다." />}
-      {isFetching && <p role="status" className="text-xs text-muted-foreground">목록을 갱신하고 있습니다.</p>}
+      {error && <QueryError floating onRetry={onRetry} message="최신 데이터를 가져오지 못했습니다. 이전 내용을 표시합니다." />}
       <DataList
         key={enableBulkAction ? selectionKey : undefined}
         data={data}

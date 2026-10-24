@@ -208,7 +208,6 @@ export function ManageSheet<T>({
   const {
     data: prevValues,
     isLoading,
-    isFetching,
     error,
     refetch,
   } = useQuery({
@@ -310,8 +309,7 @@ export function ManageSheet<T>({
               </SheetHeader>
             )
           )}
-          {isFetching && !isLoading && !error && <p role="status" className="px-4 text-xs text-muted-foreground">최신 정보를 확인하고 있습니다.</p>}
-          {error && prevValues && <QueryError onRetry={() => void refetch()} message="최신 데이터를 가져오지 못했습니다. 이전 내용을 표시합니다." />}
+          {error && prevValues && <QueryError floating onRetry={() => void refetch()} message="최신 데이터를 가져오지 못했습니다. 이전 내용을 표시합니다." />}
           {renderContent()}
         </ManageSheetDataContext.Provider>
       </SheetContent>

@@ -6,7 +6,6 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
 import { cn } from "@/shared/utils/classnames";
-import { useProjectSaveState } from "./project-status-cache";
 import { useUpdateProjectStatus } from "./api";
 import { PROJECT_STATUS_LABELS } from "./config";
 import type { ProjectStatus } from "./types";
@@ -39,7 +38,6 @@ export function StatusBadge({
   className,
 }: StatusBadgeProps) {
   const updateStatus = useUpdateProjectStatus();
-  const saveState = useProjectSaveState(projectId);
   const variant = STATUS_VARIANTS[status] as Parameters<typeof Badge>[0]["variant"];
   const label = PROJECT_STATUS_LABELS[status];
 
@@ -60,39 +58,32 @@ export function StatusBadge({
   };
 
   return (
-    <span className="inline-flex flex-col items-center gap-1">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Badge
-            variant={variant}
-            className={cn("min-w-[60px] justify-center cursor-pointer", className)}
-            asChild
-          >
-            <button type="button">{label}</button>
-          </Badge>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-0">
-          {options.map((s) => {
-            const optVariant = STATUS_VARIANTS[s];
-            const dotColor = DOT_COLORS[optVariant] ?? "bg-muted-foreground/40";
-            return (
-              <DropdownMenuItem
-                key={s}
-                className="cursor-pointer pr-4"
-                onSelect={() => handleSelect(s)}
-              >
-                <span className={cn("size-2.5 rounded-full shrink-0", dotColor)} />
-                {PROJECT_STATUS_LABELS[s]}
-              </DropdownMenuItem>
-            );
-          })}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      {saveState !== "idle" && (
-        <span role="status" className={cn("text-[10px] whitespace-nowrap", saveState === "error" ? "text-destructive" : "text-muted-foreground")}>
-          {saveState === "saving" ? "저장 중" : "저장 실패"}
-        </span>
-      )}
-    </span>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Badge
+          variant={variant}
+          className={cn("min-w-[60px] justify-center cursor-pointer", className)}
+          asChild
+        >
+          <button type="button">{label}</button>
+        </Badge>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-0">
+        {options.map((s) => {
+          const optVariant = STATUS_VARIANTS[s];
+          const dotColor = DOT_COLORS[optVariant] ?? "bg-muted-foreground/40";
+          return (
+            <DropdownMenuItem
+              key={s}
+              className="cursor-pointer pr-4"
+              onSelect={() => handleSelect(s)}
+            >
+              <span className={cn("size-2.5 rounded-full shrink-0", dotColor)} />
+              {PROJECT_STATUS_LABELS[s]}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
