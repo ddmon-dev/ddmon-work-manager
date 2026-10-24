@@ -131,7 +131,6 @@ features/manage-modules/{module}/
 | `ClientSelect` | 클라이언트 선택 컴포넌트 |
 | `PartnerSelect` | 파트너 선택 컴포넌트 |
 | `DeleteButton` / `DuplicateButton` / `ModifyButton` / `ViewButton` | 상세뷰 액션 버튼 |
-| `ExportDataButton` | 엑셀 내보내기 |
 | `DetailSectionTitle` / `DetailInfoRow` | 상세뷰 레이아웃 |
 
 #### _base 훅
@@ -197,7 +196,7 @@ shared/ui/file-browser/
 `shared/lib/api-client.ts` — fetch wrapper.
 
 - `api.get/post/put/patch/delete<T>()` 메서드
-- 자동 타임아웃 (15초)
+- 자동 타임아웃 (15초). `api.get`의 세 번째 인자로 받은 Query 취소 신호와 합쳐서 fetch에 전달한다.
 - `credentials: "include"` (쿠키 전송)
 - 401 → sign-in, 403 → unauthorized 자동 리다이렉트
 - `{ success: true, data }` 구조에서 `data`만 반환
@@ -205,7 +204,7 @@ shared/ui/file-browser/
 #### TanStack Query
 
 - 쿼리 키: `shared/lib/query-keys.ts`에서 중앙 관리
-- 목록: `useQuery` + `keepPreviousData` (페이지 전환 중 이전 데이터 유지)
+- 목록: `useQuery` + `keepPreviousData`. 첫 조회와 조건 변경(`isPlaceholderData`)은 스켈레톤, 같은 조건의 재조회(`isFetching`)는 기존 내용과 갱신 표시를 함께 제공한다.
 - 생성/수정/삭제: `useMutation` + `onSuccess`에서 `invalidateQueries`
 - URL 파라미터: `useSearchParams` (React Router)로 page/search 관리
 
@@ -214,6 +213,18 @@ shared/ui/file-browser/
 적용 모듈: schedules 수정/순서 변경, schedules 인라인 편집, projects/clients/partners 메모 CRUD, projects 입금 내역 CRUD, projects 상태 변경, estimates 상태/계약버전 변경.
 
 패턴: `onMutate` → 캐시 즉시 반영 + `onError` → 롤백 + `cancelQueries` (list + detail 모두)
+
+#### 프로젝트 상태·작업단계의 연속 변경
+
+`projects/project-status-queue.ts`가 같은 QueryClient 안에서 프로젝트별 저장 순서를 관리한다. `project-status-cache.ts`가 목록·상세 캐시와 저장 상태 표시를 연결한다.
+
+- 화면에는 클릭한 최신 선택을 즉시 반영하고, 저장 중에도 상태·작업단계의 연속 조작을 허용한다.
+- 같은 프로젝트의 저장 요청은 한 번에 하나만 실행한다. 아직 보내지 않은 변경은 필드별 마지막 선택으로 합치고, 다른 프로젝트는 병렬 저장한다.
+- 응답을 받을 때 최신 대기 변경을 다시 합친다. 실패 시 목록 전체를 복구하지 않고 해당 프로젝트의 저장된 필드만 복구한다. 실패한 선택이 이미 더 최신 선택으로 대체되었으면 최신 선택을 유지한다.
+- 목록·상세의 이전 조회를 취소하고, 저장 도중 시작된 조회 응답에도 최신 선택을 합쳐 적용한다. 관련 상태 저장이 모두 끝난 뒤 목록·요약 캐시를 재조회한다.
+- 이 큐의 수명은 QueryClient에 묶여 있다. 여러 브라우저·사용자 사이의 동시 편집 충돌을 중재하는 서버 잠금은 아니다.
+
+검증: `npm run test --workspace=apps/client`. 연속 변경 병합, 다른 행의 동시 저장, 실패 복구, 오래된 조회 응답을 제어 가능한 Promise로 검증한다.
 
 ### 폼 패턴
 
@@ -276,6 +287,10 @@ FormTextInput, FormPhoneInput, FormEmailInput, FormPasswordInput, FormTextarea, 
 ### 페이지 로딩
 
 인증·레이아웃은 초기 번들에 포함하고, 업무 페이지는 React Router의 `lazy`로 방문 시 로드한다. PDF 렌더러·자료실 편집기·재무 차트를 로그인 전에 한꺼번에 내려받지 않는다.
+
+- 업무 페이지 코드를 불러오는 동안 본문에 스켈레톤을 표시하고 사이드바는 유지한다.
+- 공통 목록/상세와 견적 전용 상세에 스켈레톤을 연결한다. 조회 실패는 빈 결과와 구분하고 다시 시도 버튼을 제공한다. 캐시가 있으면 재조회 실패 시 이전 내용과 오류 안내를 함께 표시한다.
+- 사용 화면이 없는 엑셀 내보내기 컴포넌트·재내보내기·`xlsx-js-style` 의존성은 제거했다.
 
 ---
 

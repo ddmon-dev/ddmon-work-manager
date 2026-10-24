@@ -22,14 +22,14 @@ export function EstimatesModule() {
   const search = get("search") ?? undefined;
   const status = get("status") || undefined;
 
-  const { data, isLoading } = useEstimateList({ page, pageSize, search, status });
+  const { data, isLoading, isFetching, isPlaceholderData, error, refetch } = useEstimateList({ page, pageSize, search, status });
 
   return (
     <ManageContainer
       moduleName={CONFIG.moduleName}
       headerAddons={<CategoryButtonGroup options={ESTIMATE_STATUSES} paramKey="status" />}
     >
-      <List data={data?.items ?? []} totalCount={data?.total ?? 0} isLoading={isLoading} />
+      <List data={data?.items ?? []} totalCount={data?.total ?? 0} isLoading={isLoading} isFetching={isFetching} isPlaceholderData={isPlaceholderData} error={error} onRetry={() => void refetch()} />
       <ItemSheet />
     </ManageContainer>
   );

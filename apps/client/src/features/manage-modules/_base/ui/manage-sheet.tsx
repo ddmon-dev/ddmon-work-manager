@@ -9,6 +9,9 @@ import {
   SheetBody,
   SheetContainer,
 } from "@/shared/ui/sheet";
+import { DetailSkeleton } from "@/shared/ui/skeletons/detail-skeleton";
+import { FormSkeleton } from "@/shared/ui/skeletons/form-skeleton";
+import { QueryError } from "@/shared/ui/query-error";
 import { cn } from "@/shared/utils/classnames";
 import { useDialog } from "@/shared/ui/app-dialog";
 import type { ManageSheetMode } from "../types";
@@ -179,7 +182,7 @@ const VARIANTS = {
 interface ManageSheetProps<T> {
   // queryKey + fetchFn 대신 useQuery 옵션 직접 전달
   queryKeyFn: (id: string) => readonly unknown[];
-  fetchFn: (id: string) => Promise<T>;
+  fetchFn: (id: string, signal?: AbortSignal) => Promise<T>;
   formComponent?: React.ComponentType<{ id?: string; prevValues: T | null }>;
   viewComponent?: React.ComponentType<{ data: T; refetch: () => void }>;
   viewHeader?: React.ComponentType;
@@ -205,11 +208,12 @@ export function ManageSheet<T>({
   const {
     data: prevValues,
     isLoading,
+    isFetching,
     error,
     refetch,
   } = useQuery({
     queryKey: id ? queryKeyFn(id) : ["__disabled__"],
-    queryFn: () => fetchFn(id!),
+    queryFn: ({ signal }) => fetchFn(id!, signal),
     enabled: !!id && isOpen && mode !== "create",
     staleTime: 0,
   } as UseQueryOptions<T>);
@@ -231,15 +235,15 @@ export function ManageSheet<T>({
       ) : null;
     }
 
-    if (isLoading) return null;
+    if (isLoading) return (
+      <SheetBody><SheetContainer>{mode === "view" ? <DetailSkeleton /> : <div role="status" aria-label="수정 정보를 불러오고 있습니다"><FormSkeleton /></div>}</SheetContainer></SheetBody>
+    );
 
-    if (error) {
+    if (error && !prevValues) {
       return (
         <SheetBody>
           <SheetContainer className="flex items-center justify-center min-h-[200px]">
-            <p className="text-sm text-destructive">
-              데이터를 불러오는 중 오류가 발생했습니다.
-            </p>
+            <QueryError onRetry={() => void refetch()} />
           </SheetContainer>
         </SheetBody>
       );
@@ -271,7 +275,7 @@ export function ManageSheet<T>({
         )}
       >
         <ManageSheetDataContext.Provider value={dataContextValue}>
-          {!error && mode && (
+          {mode && (
             hideViewHeader && mode === "view" ? (
               <>
                 <SheetTitle className="sr-only">
@@ -306,6 +310,8 @@ export function ManageSheet<T>({
               </SheetHeader>
             )
           )}
+          {isFetching && !isLoading && !error && <p role="status" className="px-4 text-xs text-muted-foreground">최신 정보를 확인하고 있습니다.</p>}
+          {error && prevValues && <QueryError onRetry={() => void refetch()} message="최신 데이터를 가져오지 못했습니다. 이전 내용을 표시합니다." />}
           {renderContent()}
         </ManageSheetDataContext.Provider>
       </SheetContent>

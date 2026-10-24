@@ -15,6 +15,8 @@ import { useManageSheet, ManageSheetDataContext } from "../_base/ui";
 import { fetchEstimate } from "./api";
 import { CONFIG } from "./config";
 import { WriteForm } from "./write-form";
+import { EstimateSkeleton } from "./estimate-skeleton";
+import { QueryError } from "@/shared/ui/query-error";
 import { DetailView } from "./detail-view";
 import { VersionSelector } from "./version-selector";
 import type { EstimateWithDetails } from "./types";
@@ -34,6 +36,7 @@ export function ItemSheet() {
   const {
     data: prevValues,
     isLoading,
+    isFetching,
     error,
     refetch,
   } = useQuery({
@@ -53,12 +56,12 @@ export function ItemSheet() {
     if (mode === "create") {
       return <WriteForm id={undefined} prevValues={null} />;
     }
-    if (isLoading) return null;
-    if (error) {
+    if (isLoading) return <div role="status" aria-label="견적서를 불러오고 있습니다" className="flex min-h-0 flex-1 flex-col"><EstimateSkeleton /></div>;
+    if (error && !prevValues) {
       return (
         <SheetBody>
           <SheetContainer className="flex items-center justify-center min-h-[200px]">
-            <p className="text-sm text-destructive">데이터를 불러오는 중 오류가 발생했습니다.</p>
+            <QueryError onRetry={() => void refetch()} />
           </SheetContainer>
         </SheetBody>
       );
@@ -98,7 +101,7 @@ export function ItemSheet() {
         )}
       >
         <ManageSheetDataContext.Provider value={dataContextValue}>
-          {!error && mode && (
+          {mode && (
             <SheetHeader className={mode === "create" || (mode === "duplicate" && !manageSheet.data?.meta?.versionOf) ? undefined : "sr-only"}>
               <SheetTitle className="text-lg">
                 {CONFIG.moduleName}{" "}
@@ -149,6 +152,8 @@ export function ItemSheet() {
               </div>
             );
           })()}
+          {isFetching && !isLoading && !error && <p role="status" className="px-4 text-xs text-muted-foreground">최신 정보를 확인하고 있습니다.</p>}
+          {error && prevValues && <QueryError onRetry={() => void refetch()} message="최신 데이터를 가져오지 못했습니다. 이전 내용을 표시합니다." />}
           {renderContent()}
         </ManageSheetDataContext.Provider>
       </SheetContent>

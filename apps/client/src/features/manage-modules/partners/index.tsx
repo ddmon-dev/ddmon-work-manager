@@ -13,14 +13,14 @@ export function PartnersModule() {
   const pageSize = Number(get("pageSize")) || APP_CONFIG.UI.PAGINATION.PAGE_SIZE_OPTIONS[0];
   const search = get("search") || undefined;
 
-  const { data, isLoading } = usePartnerList({ page, pageSize, search });
+  const { data, isLoading, isFetching, isPlaceholderData, error, refetch } = usePartnerList({ page, pageSize, search });
 
   const items = data?.items ?? [];
   const totalCount = data?.total ?? 0;
 
   return (
     <ManageContainer moduleName={CONFIG.moduleName}>
-      <List data={items} totalCount={totalCount} isLoading={isLoading} />
+      <List data={items} totalCount={totalCount} isLoading={isLoading} isFetching={isFetching} isPlaceholderData={isPlaceholderData} error={error} onRetry={() => void refetch()} />
       <ItemSheet />
     </ManageContainer>
   );

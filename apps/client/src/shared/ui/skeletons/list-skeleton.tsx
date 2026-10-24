@@ -6,7 +6,7 @@ interface ListSkeletonProps {
 
 export function ListSkeleton({ rows = 10 }: ListSkeletonProps) {
   return (
-    <div className='flex flex-col flex-1 min-h-0'>
+    <div role='status' aria-label='목록을 불러오고 있습니다' className='flex flex-col flex-1 min-h-0 overflow-hidden'>
       {/* Total count skeleton */}
       <div className='flex items-center justify-between mb-3'>
         <Skeleton className='h-4 w-20' />

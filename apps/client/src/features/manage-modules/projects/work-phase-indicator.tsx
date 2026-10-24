@@ -18,9 +18,9 @@ export function WorkPhaseIndicator({
 }: WorkPhaseIndicatorProps) {
   const updateStatus = useUpdateProjectStatus();
 
-  async function handleClick(phase: WorkPhase) {
+  function handleClick(phase: WorkPhase) {
     if (readonly || phase === workPhase) return;
-    await updateStatus.mutateAsync({ id: projectId, workPhase: phase });
+    updateStatus.mutate({ id: projectId, workPhase: phase });
   }
 
   return (

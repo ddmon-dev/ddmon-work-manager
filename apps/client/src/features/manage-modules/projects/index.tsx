@@ -23,7 +23,7 @@ export function ProjectsModule() {
   const search = get("search") ?? undefined;
   const category = get("category") || PROJECT_CATEGORIES[0].value;
 
-  const { data, isLoading } = useProjectList({ page, pageSize, search, category });
+  const { data, isLoading, isFetching, isPlaceholderData, error, refetch } = useProjectList({ page, pageSize, search, category });
 
   const items = data?.items ?? [];
   const totalCount = data?.total ?? 0;
@@ -33,7 +33,7 @@ export function ProjectsModule() {
       moduleName={CONFIG.moduleName}
       headerAddons={<CategoryButtonGroup options={PROJECT_CATEGORIES} showAllOption={false} />}
     >
-      <List data={items} totalCount={totalCount} isLoading={isLoading} />
+      <List data={items} totalCount={totalCount} isLoading={isLoading} isFetching={isFetching} isPlaceholderData={isPlaceholderData} error={error} onRetry={() => void refetch()} />
       <ItemSheet />
       <UrlSheetOpener />
     </ManageContainer>

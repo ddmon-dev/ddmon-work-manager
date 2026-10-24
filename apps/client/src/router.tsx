@@ -3,6 +3,7 @@ import { RootLayout } from "@/layouts/root-layout";
 import { AuthLayout } from "@/layouts/auth-layout";
 import { ProtectedLayout } from "@/layouts/protected-layout";
 import { RouteErrorBoundary } from "@/layouts/route-error-boundary";
+import { AppLayoutSkeleton } from "@/shared/ui/skeletons/app-layout-skeleton";
 import { SignInPage } from "@/pages/auth/sign-in";
 import { NotFoundPage } from "@/pages/not-found";
 import { UnauthorizedPage } from "@/pages/unauthorized";
@@ -10,6 +11,7 @@ import { UnauthorizedPage } from "@/pages/unauthorized";
 export const router = createBrowserRouter([
   {
     element: <RootLayout />,
+    hydrateFallbackElement: <AppLayoutSkeleton />,
     errorElement: <RouteErrorBoundary />,
     children: [
       {

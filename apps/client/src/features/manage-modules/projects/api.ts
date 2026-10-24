@@ -4,6 +4,8 @@ import { api } from "@/shared/lib/api-client";
 import { queryKeys } from "@/shared/lib/query-keys";
 import { CRUD_ERRORS } from "@/shared/constants/error-messages";
 import { SUCCESS_MESSAGES } from "@/shared/constants/success-messages";
+import { queryClient } from "@/shared/lib/query-client";
+import { getProjectStatusQueue, getCachedProjectStatus } from "./project-status-cache";
 import { createMemoHooks } from "../_base/hooks/use-memo-mutations";
 import type {
   ProjectDTO,
@@ -26,23 +28,27 @@ type ListParams = {
 // ── 목록 조회 ────────────────────────────────────────────────
 
 export function useProjectList(params: ListParams = {}) {
+  const client = useQueryClient();
+  const queue = getProjectStatusQueue(client);
   return useQuery({
     queryKey: queryKeys.projects.list(params),
-    queryFn: () =>
-      api.get<ProjectListResponse>("/projects", {
-        page: params.page,
-        pageSize: params.pageSize,
-        search: params.search,
-        category: params.category,
-      }),
+    queryFn: async ({ signal }) => {
+      const revision = queue.revision;
+      const data = await api.get<ProjectListResponse>("/projects", params, { signal });
+      return { ...data, items: data.items.map((item) => queue.overlay(item, revision)) };
+    },
     placeholderData: keepPreviousData,
   });
 }
 
 // ── fetchFn (ManageSheet용) ─────────────────────────────────
 
-export const fetchProject = (id: string) =>
-  api.get<ProjectWithDetails>(`/projects/${id}`);
+export const fetchProject = async (id: string, signal?: AbortSignal) => {
+  const queue = getProjectStatusQueue(queryClient);
+  const revision = queue.revision;
+  const data = await api.get<ProjectWithDetails>(`/projects/${id}`, undefined, { signal });
+  return queue.overlay(data, revision);
+};
 
 // ── 프로젝트 연결 가능 견적서 목록 ───────────────────────────
 
@@ -146,58 +152,11 @@ export function useDeleteProject() {
 // ── 상태/단계 변경 ────────────────────────────────────────────
 
 export function useUpdateProjectStatus() {
-  const queryClient = useQueryClient();
-
+  const client = useQueryClient();
+  const queue = getProjectStatusQueue(client);
   return useMutation({
-    mutationFn: ({
-      id,
-      status,
-      workPhase,
-    }: {
-      id: string;
-      status?: ProjectStatus;
-      workPhase?: WorkPhase;
-    }) =>
-      api.patch<ProjectDTO>(`/projects/${id}/status`, { status, workPhase }),
-    onMutate: async ({ id, status, workPhase }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.projects.detail(id) });
-      const previousDetail = queryClient.getQueryData<ProjectWithDetails>(queryKeys.projects.detail(id));
-      const previousLists = queryClient.getQueriesData<ProjectListResponse>({ queryKey: ["projects", "list"] });
-
-      queryClient.setQueryData<ProjectWithDetails>(queryKeys.projects.detail(id), (old) =>
-        old
-          ? { ...old, status: status ?? old.status, workPhase: workPhase ?? old.workPhase }
-          : old
-      );
-      queryClient.setQueriesData<ProjectListResponse>({ queryKey: ["projects", "list"] }, (old) =>
-        old
-          ? {
-              ...old,
-              items: old.items.map((item) =>
-                item.id === id
-                  ? { ...item, status: status ?? item.status, workPhase: workPhase ?? item.workPhase }
-                  : item
-              ),
-            }
-          : old
-      );
-
-      return { previousDetail, previousLists };
-    },
-    onError: (_err, { id }, context) => {
-      if (context?.previousDetail) {
-        queryClient.setQueryData(queryKeys.projects.detail(id), context.previousDetail);
-      }
-      if (context?.previousLists) {
-        context.previousLists.forEach(([key, data]) => queryClient.setQueryData(key, data));
-      }
-      toast.error(CRUD_ERRORS.UPDATE_FAILED("프로젝트"));
-    },
-    onSettled: (_data, _err, { id }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.projectSchedules.overviews });
-    },
+    mutationFn: ({ id, ...patch }: { id: string; status?: ProjectStatus; workPhase?: WorkPhase }) =>
+      queue.enqueue(id, patch, getCachedProjectStatus(client, id)),
   });
 }
 

@@ -16,7 +16,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         ...options?.headers,
       },
       ...options,
-      signal: controller.signal,
+      signal: options?.signal
+        ? AbortSignal.any([controller.signal, options.signal])
+        : controller.signal,
     });
 
     if (res.status === 401) {
@@ -61,8 +63,8 @@ export function errorMessage(error: unknown, fallback: string): string {
 }
 
 export const api = {
-  get: <T>(path: string, params?: Params) =>
-    request<T>(`${path}${buildQuery(params)}`),
+  get: <T>(path: string, params?: Params, options?: RequestInit) =>
+    request<T>(`${path}${buildQuery(params)}`, options),
 
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: JSON.stringify(body) }),

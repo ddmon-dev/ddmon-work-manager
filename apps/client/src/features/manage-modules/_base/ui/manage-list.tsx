@@ -2,13 +2,22 @@ import { useState, useEffect, useRef } from "react";
 import { APP_CONFIG } from "@/app.config";
 import { type ColumnDef } from "@tanstack/react-table";
 import { DataList, useDataList, createSelectionColumn } from "@/shared/ui/data-list";
+import { ListSkeleton } from "@/shared/ui/skeletons/list-skeleton";
+import { QueryError } from "@/shared/ui/query-error";
 import type { ManageSheetMode } from "../types";
 import { useManageSheet } from "./manage-sheet";
 
-interface ManageListProps<TData extends { id?: string }> {
+export interface ManageListState {
+  isLoading?: boolean;
+  isFetching?: boolean;
+  isPlaceholderData?: boolean;
+  error?: Error | null;
+  onRetry?: () => void;
+}
+
+interface ManageListProps<TData extends { id?: string }> extends ManageListState {
   data: TData[];
   totalCount: number;
-  isLoading?: boolean;
   listColumns: ColumnDef<TData>[];
   enableBulkAction?: boolean;
   onRowClick?: (row: TData) => void;
@@ -19,6 +28,10 @@ export function ManageList<TData extends { id?: string }>({
   data,
   totalCount,
   isLoading,
+  isFetching,
+  isPlaceholderData,
+  error,
+  onRetry,
   listColumns,
   enableBulkAction = false,
   onRowClick,
@@ -67,22 +80,27 @@ export function ManageList<TData extends { id?: string }>({
     setSelectedRows(rows);
   };
 
-  if (isLoading) return null;
+  if (isLoading || isPlaceholderData) return <ListSkeleton />;
+  if (error && !data.length) return <QueryError onRetry={onRetry} />;
 
   return (
-    <DataList
-      key={enableBulkAction ? selectionKey : undefined}
-      data={data}
-      columns={processedColumns}
-      totalCount={totalCount}
-      pageCount={pageCount}
-      currentPage={page}
-      maxVisible={APP_CONFIG.UI.PAGINATION.MAX_VISIBLE_PAGES}
-      onPageChange={setPage}
-      sortingKey={sort}
-      onSortingChange={setSort}
-      onRowClick={handleRowClick}
-      onSelectionChange={enableBulkAction ? handleSelectionChange : undefined}
-    />
+    <div className="flex flex-1 flex-col gap-2" aria-busy={!!isFetching}>
+      {error && <QueryError onRetry={onRetry} message="최신 데이터를 가져오지 못했습니다. 이전 내용을 표시합니다." />}
+      {isFetching && <p role="status" className="text-xs text-muted-foreground">목록을 갱신하고 있습니다.</p>}
+      <DataList
+        key={enableBulkAction ? selectionKey : undefined}
+        data={data}
+        columns={processedColumns}
+        totalCount={totalCount}
+        pageCount={pageCount}
+        currentPage={page}
+        maxVisible={APP_CONFIG.UI.PAGINATION.MAX_VISIBLE_PAGES}
+        onPageChange={setPage}
+        sortingKey={sort}
+        onSortingChange={setSort}
+        onRowClick={handleRowClick}
+        onSelectionChange={enableBulkAction ? handleSelectionChange : undefined}
+      />
+    </div>
   );
 }
